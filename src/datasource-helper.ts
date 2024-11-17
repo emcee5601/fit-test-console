@@ -10,7 +10,7 @@ const utf8Decoder = new TextDecoder("utf-8");
  * @returns an iterator that returns data from the reader broken up into lines
  */
 
-export async function* getLines(reader) {
+export async function* getLines(reader: ReadableStreamDefaultReader<Uint8Array>) {
     async function readFromReader() {
         const result = await reader.read();
         if (!result.done && result.value) {
@@ -19,8 +19,8 @@ export async function* getLines(reader) {
         return result;
     }
 
-    let {value: chunk, done: readerDone} = await readFromReader();
-    chunk = chunk ? utf8Decoder.decode(chunk, {stream: true}) : "";
+    let {value: value, done: readerDone} = await readFromReader();
+    let chunk : string = value ? utf8Decoder.decode(value, {stream: true}) : "";
 
 
     let re = /\r\n|\n|\r/gm;
@@ -33,9 +33,9 @@ export async function* getLines(reader) {
                 break;
             }
             let remainder = chunk.substring(startIndex);
-            ({value: chunk, done: readerDone} = await readFromReader());
+            ({value: value, done: readerDone} = await readFromReader());
             chunk =
-                remainder + (chunk ? utf8Decoder.decode(chunk, {stream: true}) : "");
+                remainder + (value ? utf8Decoder.decode(value, {stream: true}) : "");
             startIndex = re.lastIndex = 0;
             continue;
         }
@@ -50,21 +50,21 @@ export async function* getLines(reader) {
 
 
 
-export function getReadableStreamFromDataSource(pushSource) {
+export function getReadableStreamFromDataSource(pushSource: DataFilePushSource) {
     return new ReadableStream({
         start(controller) {
-            readRepeatedly().catch((e) => controller.error(e));
+            readRepeatedly().catch((e: any) => controller.error(e));
 
-            function readRepeatedly() {
-                return pushSource.dataRequest().then((result) => {
-                    if (result.data.length === 0) {
+            async function readRepeatedly() :Promise<Uint8Array> {
+                return pushSource.dataRequest().then((result:Uint8Array) => {
+                    if (result.length === 0) {
                         logSource(`No data from source: closing`);
                         controller.close();
-                        return;
+                        return new Uint8Array();
                     }
 
                     // logSource(`Enqueue data: ${result.data}`);
-                    controller.enqueue(result.data);
+                    controller.enqueue(result);
                     return readRepeatedly();
                 });
             }
@@ -79,62 +79,57 @@ export function getReadableStreamFromDataSource(pushSource) {
 
 
 export class DataFilePushSource {
-    static delayMs = 10;
+    static DEFAULT_DELAY_MS = 10;
     static encoder = new TextEncoder();
-    reader = null;
-    buffer = null;
+    reader : ReadableStreamDefaultReader<Uint8Array> | undefined;
+    buffer : Uint8Array = new Uint8Array();
     bufferIndex = 0;
-    fileOrUrl;
+    fileOrUrl : string;
+    delayMs : number;
 
-    constructor(fileOrUrl) {
+    constructor(fileOrUrl : string, delayMs= DataFilePushSource.DEFAULT_DELAY_MS) {
         this.fileOrUrl = fileOrUrl;
+        this.delayMs = delayMs;
     }
 
     // Method returning promise when this push source is readable.
-    async dataRequest() {
-        const result = {
-            bytesRead: 0,
-            data: "",
-        };
-
-        if (this.buffer === null || this.bufferIndex >= this.buffer.length) {
+    async dataRequest() : Promise<Uint8Array> {
+        if (this.bufferIndex >= this.buffer.length) {
             // need (more) data
-            if (this.reader === null) {
-                this.reader = await fetch(this.fileOrUrl).then((result) => {
+            if (this.reader === undefined) {
+                this.reader = await fetch(this.fileOrUrl).then((result : Response) => {
                     if (result.ok) {
-                        return result.body.getReader();
+                        return result.body?.getReader();
                     } else {
-                        throw new Error(`Failed to load protocol definitions. error: ${result.status}`);
+                        throw new Error(`Failed to file: ${result.status}`);
                     }
                 })
             }
 
-            const result = await this.reader.read();
+            const result :ReadableStreamReadResult<Uint8Array> | undefined = await this.reader?.read();
             this.bufferIndex = 0;
-            if (result.done) {
+            if (result?.done) {
                 // no more data
-                this.buffer = []
+                this.buffer = new Uint8Array();
             } else {
-                this.buffer = result.value;
+                this.buffer = result ? result.value : new Uint8Array();
             }
         }
 
         if (this.buffer.length === 0) {
             // no more data
-            return new Promise((resolve) => resolve(result));
+            return new Promise((resolve) => resolve(new Uint8Array()));
         }
 
         // some data not sent
         const end = this.bufferIndex + (this.bufferIndex + 3 < this.buffer.length ? 3 : this.buffer.length);
-        const chunk = this.buffer.slice(this.bufferIndex, end);
+        const chunk = this.buffer?.slice(this.bufferIndex, end);
         this.bufferIndex += chunk.length;
         return new Promise((resolve) => {
             // Emulate slow read of data
             setTimeout(() => {
-                result.data = chunk;
-                result.bytesRead = chunk.length;
-                resolve(result);
-            }, DataFilePushSource.delayMs);
+                resolve(chunk);
+            }, this.delayMs);
         });
     }
 
@@ -146,10 +141,10 @@ export class DataFilePushSource {
 
 
 
-export function logSource(result) {
+export function logSource(result:string) {
     console.log(`source: ${result}`);
 }
 
-export function logData(result) {
-    // console.log(`data: ${result}`);
+export function logData(result:string) {
+    console.log(`data: ${result}`);
 }
