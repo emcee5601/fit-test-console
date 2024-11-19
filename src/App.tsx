@@ -187,9 +187,10 @@ function App() {
     function connectViaWebSerial() {
         if ("serial" in navigator) {
             logit("serial supported!")
+            // @ts-expect-error serial is only defined on chrome
             navigator.serial.requestPort().then((port) => {
                 logit(`got serial port ${port.toLocaleString()}, using baud rate ${baudRate}`)
-                port.open({baudRate: baudRate}).then((event) => {
+                port.open({baudRate: baudRate}).then((event: any) => {
                     logit(`opened ${event}`)
                     monitor(port.readable.getReader());
                     externalController.setWriter(port.writable.getWriter());
