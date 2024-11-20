@@ -3,7 +3,7 @@
  */
 
 
-import React from 'react'
+import React, {useEffect, useState} from 'react'
 
 import './index.css'
 
@@ -89,6 +89,11 @@ export function ResultsTable({state, rowUpdatedCallback}: {
     state: ResultsTableStates,
     rowUpdatedCallback: (record: SimpleResultsDBRecord) => void
 }) {
+    const [localTableData, setLocalTableData] = useState(state.results)
+    useEffect(() => {
+        console.log("result table saw change in state.results")
+        setLocalTableData(state.results)
+    }, [state.results]);
 
     function getExerciseResultCell(info: CellContext<SimpleResultsDBRecord, unknown>) {
         const val = info.getValue<number>();
@@ -167,7 +172,7 @@ export function ResultsTable({state, rowUpdatedCallback}: {
     const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
 
     const table = useReactTable({
-        data: state.results,
+        data: localTableData,
         columns,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
@@ -177,7 +182,7 @@ export function ResultsTable({state, rowUpdatedCallback}: {
             updateData: (rowIndex, columnId, value) => {
                 // Skip page index reset until after next rerender
                 skipAutoResetPageIndex()
-                state.setResults(old => {
+                setLocalTableData(old => {
                     const res = old.map((row, index) => {
                             if (index === rowIndex) {
                                 const updatedRow = {
@@ -190,8 +195,6 @@ export function ResultsTable({state, rowUpdatedCallback}: {
                             return row
                         }
                     );
-                    // this doesn't seem to do anything
-                    // state.results = [...res]; // need to change the reference (data) so react table can see the change
                     return res;
                 });
             },
