@@ -9,12 +9,14 @@ export interface SimpleDBRecord {
 
 export interface SimpleResultsDBRecord {
     ID: number,
-    [key:string]: string|number;
+
+    [key: string]: string | number;
 }
 
 export interface AppSettings {
     ID: "settings",
-    [key:string]: string | number,
+
+    [key: string]: string | number,
 }
 
 export class SettingsDB {
@@ -52,7 +54,7 @@ export class SettingsDB {
 
     async getSettings() {
         const transaction = this.openTransaction("readonly");
-        if(!transaction) {
+        if (!transaction) {
             console.log("settings db not ready")
             return;
         }
@@ -72,7 +74,7 @@ export class SettingsDB {
 
     async saveSettings(settings: AppSettings) {
         const transaction = this.openTransaction("readwrite");
-        if(!transaction) {
+        if (!transaction) {
             console.log("settings db not ready")
             return;
         }
@@ -91,8 +93,8 @@ export class SettingsDB {
     }
 
 
-    openTransaction(mode:IDBTransactionMode) {
-        if(!this.db) {
+    openTransaction(mode: IDBTransactionMode) {
+        if (!this.db) {
             console.log(`${this.dbName} database not ready`);
             return;
         }
@@ -112,8 +114,9 @@ export class SimpleDB {
     static DEFAULT_DB_NAME = "raw-serial-line-data-db";
     static SERIAL_LINE_OBJECT_STORE = "serial-line-data";
     db: IDBDatabase | undefined;
-    dbOpenRequest : IDBOpenDBRequest;
+    dbOpenRequest: IDBOpenDBRequest;
     dbName;
+
     constructor(name = SimpleDB.DEFAULT_DB_NAME) {
         this.dbName = name;
         this.dbOpenRequest = window.indexedDB.open(this.dbName, 1);
@@ -144,7 +147,7 @@ export class SimpleDB {
 
     // TODO: wrap these into an object
     static ONE_HOUR = 60 * 60 * 1000;
-    keepRecords:SimpleDBRecord[] = [];
+    keepRecords: SimpleDBRecord[] = [];
     now = new Date(); // use .getTime() to get epoch time
 
     /**
@@ -152,9 +155,9 @@ export class SimpleDB {
      * Don't return anything if the most recent record is more than 1 hour old.
      * @param callback
      */
-    getSomeRecentLines(callback:((keepLines:SimpleDBRecord) => void)) {
+    getSomeRecentLines(callback: ((keepLines: SimpleDBRecord) => void)) {
         const transaction = this.openTransaction("readonly");
-        if(!transaction) {
+        if (!transaction) {
             console.log(`${this.dbName} database not ready`);
             return;
         }
@@ -184,12 +187,12 @@ export class SimpleDB {
                 done = true;
             }
 
-            if(done) {
+            if (done) {
                 // now we can call the callback with records we're keeping in order of oldest to newest
                 console.log(`collected ${this.keepRecords.length} records`);
                 while (this.keepRecords.length > 0) {
                     const record = this.keepRecords.pop();
-                    if(record) {
+                    if (record) {
                         callback(record);
                     }
                 }
@@ -201,9 +204,9 @@ export class SimpleDB {
      * Return the json representation of the data that was inserted. Includes the generated primary key.
      * @param line
      */
-    addLine(line:string) {
+    addLine(line: string) {
         const transaction = this.openTransaction("readwrite");
-        if(!transaction) {
+        if (!transaction) {
             console.log(`${this.dbName} database not ready`);
             return {};
         }
@@ -221,8 +224,8 @@ export class SimpleDB {
         }
     }
 
-    openTransaction(mode:IDBTransactionMode) {
-        if(!this.db) {
+    openTransaction(mode: IDBTransactionMode) {
+        if (!this.db) {
             console.log(`${this.dbName} database not ready`);
             return;
         }
@@ -245,8 +248,9 @@ Stores data from results table.
 export class SimpleResultsDB {
     static DEFAULT_DB_NAME = "fit-test-data-db";
     static TEST_RESULTS_OBJECT_STORE = "test-results-table-data";
-    db:IDBDatabase | undefined;
+    db: IDBDatabase | undefined;
     dbName;
+
     // dbOpenDBRequest: IDBOpenDBRequest | undefined;
     constructor(name = SimpleResultsDB.DEFAULT_DB_NAME) {
         this.dbName = name;
@@ -275,6 +279,7 @@ export class SimpleResultsDB {
             console.log("SimpleResultsDB.open() called")
         })
     }
+
     close() {
         this.db?.close();
         console.log(`${this.dbName} closed`);
@@ -291,7 +296,7 @@ export class SimpleResultsDB {
 
     // TODO: wrap these into an object
     static ONE_HOUR = 60 * 60 * 1000;
-    keepRecords:SimpleResultsDBRecord[] = [];
+    keepRecords: SimpleResultsDBRecord[] = [];
     now = new Date(); // use .getTime() to get epoch time
 
 
@@ -301,8 +306,8 @@ export class SimpleResultsDB {
     async getAllData() {
         return new Promise<SimpleResultsDBRecord[]>((resolve, reject) => {
             const transaction = this.openTransaction("readonly");
-            const allRecords:SimpleResultsDBRecord[] = [];
-            if(!transaction) {
+            const allRecords: SimpleResultsDBRecord[] = [];
+            if (!transaction) {
                 console.log(`${this.dbName} database not ready`);
                 reject(`${this.dbName} database not ready`);
                 return;
@@ -337,9 +342,9 @@ export class SimpleResultsDB {
      * Don't return anything if the most recent record is more than 1 hour old.
      * @param callback
      */
-    getSomeRecentData(callback:((data:SimpleResultsDBRecord) => void)) {
+    getSomeRecentData(callback: ((data: SimpleResultsDBRecord) => void)) {
         const transaction = this.openTransaction("readonly");
-        if(!transaction) {
+        if (!transaction) {
             console.log("database not ready");
             return;
         }
@@ -366,12 +371,12 @@ export class SimpleResultsDB {
                 done = true;
             }
 
-            if(done) {
+            if (done) {
                 // now we can call the callback with records we're keeping in order of oldest to newest
                 console.log(`collected ${this.keepRecords.length} records`);
                 while (this.keepRecords.length > 0) {
                     const record = this.keepRecords.pop();
-                    if(record) {
+                    if (record) {
                         callback(record);
                     }
                 }
@@ -383,9 +388,9 @@ export class SimpleResultsDB {
      * Inserts an empty record into the database. This generates a new ID for the record.
      * Return the json representation of the data that was inserted. Includes the generated primary key.
      */
-    async createNewTest(timestamp:string):Promise<SimpleResultsDBRecord> {
+    async createNewTest(timestamp: string): Promise<SimpleResultsDBRecord> {
         const transaction = this.openTransaction("readwrite");
-        if(!transaction) {
+        if (!transaction) {
             console.log("database not ready");
             return new Promise((_resolve, reject) => reject(`${this.dbName} database not ready`));
         }
@@ -408,33 +413,34 @@ export class SimpleResultsDB {
         });
     }
 
-    async updateTest(record:SimpleResultsDBRecord) {
-        const transaction = this.openTransaction("readwrite");
-        if(!transaction) {
-            console.log("database not ready");
-            return new Promise((_resolve, reject) => reject(`${this.dbName} database not ready`));
-        }
-
-        // make sure ID is numeric?
-        record.ID = Number(record.ID);
-
-        const request = transaction?.objectStore(SimpleResultsDB.TEST_RESULTS_OBJECT_STORE).put(record);
+    async updateTest(record: SimpleResultsDBRecord) {
         return new Promise((resolve, reject) => {
+            const transaction = this.openTransaction("readwrite");
+            if (!transaction) {
+                console.log("database not ready");
+                reject(`${this.dbName} database not ready`);
+                return
+            }
+
+            // make sure ID is numeric?
+            record.ID = Number(record.ID);
+
+            const request = transaction.objectStore(SimpleResultsDB.TEST_RESULTS_OBJECT_STORE).put(record);
             request.onerror = (event) => {
                 const errorMessage = `updateTest request error ${event}`;
                 console.log(errorMessage);
                 reject(errorMessage);
             }
             request.onsuccess = (event) => {
-                console.log(`updateTest request complete: ${event}, key is ${request.result}`);
+                console.log(`updateTest request complete: ${JSON.stringify(event)}, record: ${JSON.stringify(record)}`);
                 resolve({ID: request.result}); // todo: return something more appropriate for an update
             }
         });
     }
 
 
-    openTransaction(mode:IDBTransactionMode) {
-        if(!this.db) {
+    openTransaction(mode: IDBTransactionMode) {
+        if (!this.db) {
             console.log(`${this.dbName} database not ready`);
             return;
         }

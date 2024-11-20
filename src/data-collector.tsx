@@ -307,10 +307,6 @@ export function DataCollectorPanel({dataCollector}: { dataCollector: DataCollect
     const processedDataTextAreaRef = React.useRef<HTMLTextAreaElement>(null)
 
     useEffect(() => {
-        console.log(`allResultsData changed detected by data collector panel, num rows: ${dataCollector.states.results.length}`)
-    }, [dataCollector.states.results]);
-
-    useEffect(() => {
         setInstructions(dataCollector.states.instructions)
     }, [dataCollector.states.instructions]);
     useEffect(() => {

@@ -39,10 +39,10 @@ function useEditableColumn({
 
     // When the input is blurred, we'll call our table meta's updateData function
     const onBlur = () => {
-        if(!table.options.meta) {
-            console.log(`meta is falsy! ${index}, ${id}, ${value}`)
+        if(value != initialValue) {
+            // only update if changed
+            table.options.meta?.updateData(index, id, value)
         }
-        table.options.meta?.updateData(index, id, value)
     }
 
     // If the initialValue is changed external, sync it up with our state
@@ -92,7 +92,7 @@ export function ResultsTable({state, rowUpdatedCallback}: {
     const [localTableData, setLocalTableData] = useState(state.results)
     useEffect(() => {
         console.log("result table saw change in state.results")
-        setLocalTableData(state.results)
+        setLocalTableData(state.results) // this copies the detected data change from inserted rows to the local table
     }, [state.results]);
 
     function getExerciseResultCell(info: CellContext<SimpleResultsDBRecord, unknown>) {
@@ -182,14 +182,14 @@ export function ResultsTable({state, rowUpdatedCallback}: {
             updateData: (rowIndex, columnId, value) => {
                 // Skip page index reset until after next rerender
                 skipAutoResetPageIndex()
-                setLocalTableData(old => {
+                setLocalTableData(old => { // this updates the local data used by the table?
                     const res = old.map((row, index) => {
                             if (index === rowIndex) {
                                 const updatedRow = {
                                     ...old[rowIndex]!,
-                                    [columnId]: value,
+                                    [columnId]: value,  // this updates the cell that was changed
                                 };
-                                rowUpdatedCallback(updatedRow);
+                                rowUpdatedCallback(updatedRow); // this saves the changes to the db
                                 return updatedRow;
                             }
                             return row
