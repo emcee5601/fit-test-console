@@ -39,6 +39,9 @@ function useEditableColumn({
 
     // When the input is blurred, we'll call our table meta's updateData function
     const onBlur = () => {
+        if(!table.options.meta) {
+            console.log(`meta is falsy! ${index}, ${id}, ${value}`)
+        }
         table.options.meta?.updateData(index, id, value)
     }
 
@@ -76,8 +79,8 @@ function useSkipper() {
 }
 
 export interface ResultsTableStates {
-    data: SimpleResultsDBRecord[],
-    readonly setData: React.Dispatch<React.SetStateAction<SimpleResultsDBRecord[]>>,
+    results: SimpleResultsDBRecord[],
+    readonly setResults: React.Dispatch<React.SetStateAction<SimpleResultsDBRecord[]>>,
 }
 
 //This is a dynamic row height example, which is more complicated, but allows for a more realistic table.
@@ -164,7 +167,7 @@ export function ResultsTable({state, rowUpdatedCallback}: {
     const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
 
     const table = useReactTable({
-        data: state.data,
+        data: state.results,
         columns,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
@@ -174,7 +177,7 @@ export function ResultsTable({state, rowUpdatedCallback}: {
             updateData: (rowIndex, columnId, value) => {
                 // Skip page index reset until after next rerender
                 skipAutoResetPageIndex()
-                state.setData(old => {
+                state.setResults(old => {
                     const res = old.map((row, index) => {
                             if (index === rowIndex) {
                                 const updatedRow = {
@@ -188,7 +191,7 @@ export function ResultsTable({state, rowUpdatedCallback}: {
                         }
                     );
                     // this doesn't seem to do anything
-                    // state.data = res; // need to change the reference (data) so react table can see the change
+                    // state.results = [...res]; // need to change the reference (data) so react table can see the change
                     return res;
                 });
             },

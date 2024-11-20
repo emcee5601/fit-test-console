@@ -249,7 +249,8 @@ export class DataCollector {
         if (this.currentTestData) {
             console.log(`new test added: ${JSON.stringify(this.currentTestData)}`)
             // this triggers an update
-            this.states.allResultsData = [...this.states.allResultsData, this.currentTestData as SimpleResultsDBRecord] // force an update?
+            this.states.results = [...this.states.results, this.currentTestData as SimpleResultsDBRecord] // lets react table see the change, so adding rows shows up in the ui
+            this.states.setResults(this.states.results) // this lets react table's update call to setData see the new rows so editing the newly added rows in the ui saves changes to the db (because the callback is called)
         }
     }
 
@@ -266,7 +267,7 @@ export class DataCollector {
         }
 
         // update table data
-        this.states.allResultsData = [...this.states.allResultsData] // force an update?
+        this.states.results = [...this.states.results] // force an update?
         this.updateCurrentRowInDatabase();
 
     }
@@ -291,8 +292,8 @@ export interface DataCollectorStates {
     processedData: string,
     setProcessedData: React.Dispatch<React.SetStateAction<string>>,
     fitTestDataTableRef: RefObject<HTMLTableElement>,
-    allResultsData: SimpleResultsDBRecord[],
-    setAllResultsData: React.Dispatch<React.SetStateAction<SimpleResultsDBRecord[]>>,
+    results: SimpleResultsDBRecord[],
+    setResults: React.Dispatch<React.SetStateAction<SimpleResultsDBRecord[]>>,
 }
 
 export function DataCollectorPanel({dataCollector}: { dataCollector: DataCollector }) {
@@ -306,8 +307,8 @@ export function DataCollectorPanel({dataCollector}: { dataCollector: DataCollect
     const processedDataTextAreaRef = React.useRef<HTMLTextAreaElement>(null)
 
     useEffect(() => {
-        console.log(`allResultsData changed detected by data collector panel, num rows: ${dataCollector.states.allResultsData.length}`)
-    }, [dataCollector.states.allResultsData]);
+        console.log(`allResultsData changed detected by data collector panel, num rows: ${dataCollector.states.results.length}`)
+    }, [dataCollector.states.results]);
 
     useEffect(() => {
         setInstructions(dataCollector.states.instructions)
@@ -341,11 +342,11 @@ export function DataCollectorPanel({dataCollector}: { dataCollector: DataCollect
             <section id="collected-data" style={{display: "inline-block", width: "100%"}}>
                 <fieldset>
                     <legend>Test Info</legend>
-                    {dataCollector.states.allResultsData.length > 0 ?
+                    {dataCollector.states.results.length > 0 ?
                         <ResultsTable
                             state={{
-                                data: dataCollector.states.allResultsData,
-                                setData: dataCollector.states.setAllResultsData,
+                                results: dataCollector.states.results,
+                                setResults: dataCollector.states.setResults,
                             }}
                             rowUpdatedCallback={(row) => dataCollector.resultsDatabase.updateTest(row)}/> : null}
 

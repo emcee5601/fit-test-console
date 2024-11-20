@@ -49,8 +49,8 @@ function App() {
         processedData: processedData,
         setProcessedData: setProcessedData,
         fitTestDataTableRef: fitTestDataTableRef,
-        allResultsData: allResultsData,
-        setAllResultsData: setAllResultsData,
+        results: allResultsData,
+        setResults: setAllResultsData,
     };
     const [dataCollectorStates] = useState(initialDataCollectorState);
     const [dataCollector] = useState(()  => new DataCollector(dataCollectorStates, logCallback, rawDataCallback,
@@ -60,7 +60,7 @@ function App() {
     useEffect(() => {
         console.log(`initializing results db`)
         resultsDatabase.open().then((db) => db.getAllData().then(data => {
-            dataCollectorStates.allResultsData = data;
+            dataCollectorStates.results = data;
             setAllResultsData(data);
         }));
         return () => resultsDatabase.close();
