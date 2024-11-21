@@ -72,22 +72,25 @@ table {
 }
 
 table th {
-  border-bottom: 1px solid black;
-  border-left: 1px solid black;
-}
-
-th {
-  /*position: sticky;*/
   top: 0;
   background-color: white;
+  border-top: 1px solid black;
+  border-left: 1px solid black;
   border-bottom: 5px solid black;
+  text-indent: 0.2rem;
+}
+table th:last-child {
+  border-right: 1px solid black;
 }
 
-table td {
-  border: 1px solid black;
-  }
 
-table th:last-child {
+table td {
+  border-left: 1px solid black;
+  border-bottom: 1px solid black;
+  text-indent: 0.2rem;
+  text-align: left;
+}
+table td:last-child {
   border-right: 1px solid black;
 }
 

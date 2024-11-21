@@ -153,9 +153,13 @@ function App() {
             case "simulator":
                 connectViaSimulator()
                 break;
-            case "database":
-                loadFromSerialDataDatabase();
+            case "web-usb":
+                // this is our internal drivers
                 break;
+            // case "database":
+                // don't update results from saved raw data since we don't have participant info
+            //     loadFromSerialDataDatabase();
+            //     break;
             default:
                 console.log(`unexpected dataSource : ${dataSource}`);
                 break

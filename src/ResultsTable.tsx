@@ -134,7 +134,7 @@ export function ResultsTable({state, rowUpdatedCallback}: {
                         return null;
                     }
                 },
-                size: 180,
+                size: 200,
             },
             {
                 accessorKey: 'Participant',
