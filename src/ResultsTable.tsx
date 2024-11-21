@@ -64,7 +64,7 @@ function useEditableColumn({
     // only seems to affect rendering
     // textarea has double the default height compared to input. 100% height will bleed out of the containing table cell
     return (
-        <textarea ref={ref} style={{height: "auto", width: "fit-content"}}
+        <textarea ref={ref} style={{height: "auto", width: "fit-content", border:"none"}}
                   value={value as string}
                   onChange={e => setValue(e.target.value)}
                   onBlur={onBlur}
