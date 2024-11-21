@@ -5,13 +5,14 @@ import {DataCollector, DataCollectorPanel, DataCollectorStates} from "./data-col
 import {sayIt, sayItLater, SpeechSynthesisPanel} from "./speech.tsx";
 import {ExternalController, ExternalControlPanel, ExternalControlStates} from "./external-control.tsx";
 import {SettingsDB, SimpleDB, SimpleDBRecord, SimpleResultsDB, SimpleResultsDBRecord} from "./database.ts";
-import {downloadRawData, downloadTableAsCSV, downloadTableAsJSON} from "./html-data-downloader.ts";
+import {downloadData, downloadTableAsCSV, downloadTableAsJSON} from "./html-data-downloader.ts";
+import {json2csv} from "json-2-csv";
 
 
 function App() {
     const [baudRate, setBaudRate] = useState<number>(1200)
     const [dataSource, setDataSource] = useState<string>("web-serial")
-    const [downloadFileFormat, setDownloadFileFormat] = useState<string>("csv")
+    const [dataToDownload, setDataToDownload] = useState<string>("all-results")
     const [rawConsoleData, setRawConsoleData] = useState<string>("")
     const rawConsoleDataTextAreaRef = React.useRef<HTMLTextAreaElement>(null)
     const [logData, setLogData] = useState<string>("")
@@ -104,8 +105,8 @@ function App() {
         console.log(`datasource is now ${dataSource}`)
     }, [dataSource]);
     useEffect(() => {
-        console.log(`Download File Format set to ${downloadFileFormat}`)
-    }, [downloadFileFormat]);
+        console.log(`Download File Format set to ${dataToDownload}`)
+    }, [dataToDownload]);
 
 
     function logCallback(message: string) {
@@ -137,7 +138,7 @@ function App() {
     }
 
     function downloadFileFormatChanged(event: ChangeEvent<HTMLSelectElement>) {
-        setDownloadFileFormat(event.target.value);
+        setDataToDownload(event.target.value);
     }
 
     function logit(message: string) {
@@ -167,26 +168,39 @@ function App() {
     }
 
     function downloadButtonClickHandler() {
-        const table = fitTestDataTableRef.current
-        if(!table) {
-            console.log("ui not ready")
-            return;
-        }
-        switch (downloadFileFormat) {
-            case "raw":
-                downloadRawData(rawConsoleData, "raw-fit-test-data");
+        switch (dataToDownload) {
+            case "all-raw-data":
+                // downloadRawData(rawConsoleData, "raw-fit-test-data");
+                downloadAllRawDataAsJSON()
                 break;
-            case "csv":
-                downloadTableAsCSV(table, "fit-test-results");
-                break;
-            case "json":
-                downloadTableAsJSON(table, "fit-test-results");
+            case "all-results":
+                // downloadTableAsCSV(table, "fit-test-results");
+                downloadAllResultsAsCSV();
                 break;
             default:
-                console.log(`unsupported download file format: ${downloadFileFormat}`);
+                console.log(`unsupported data to download: ${dataToDownload}`);
         }
-
     }
+
+    function downloadAllRawDataAsJSON() {
+        // grab all data from the database and download it
+        rawDatabase.getAllData().then(data => {
+            downloadData(JSON.stringify(data), "fit-test-all-raw-data", "json");
+        })
+    }
+
+    function downloadAllResultsAsCSV() {
+        // TODO: use the same column order as results table instead of hardcoding
+        // "ID":39,"Time":"11/19/2024, 11:18:52 PM","Ex 1":"983","Ex 2":"425","Ex 3":"24","Ex 4":"832","Final":"89"}
+        resultsDatabase.getAllData().then(data => {
+            const csv = json2csv(data, {
+                keys: ['ID', 'Time', 'Participant', 'Mask', 'Notes', 'Ex 1', 'Ex 2', 'Ex 3', 'Ex 4', 'Final'],
+                emptyFieldValue: "",
+            })
+            downloadData(csv, "fit-test-all-results", "csv");
+        });
+    }
+
 
     function connectViaWebSerial() {
         if ("serial" in navigator) {
@@ -265,11 +279,10 @@ function App() {
                 <input type="button" value="Connect" id="connect-button" onClick={connectButtonClickHandler}/>
             </fieldset>
             <fieldset style={{maxWidth: "fit-content", float: "left"}}>
-                <select id="download-file-format-selector" defaultValue={downloadFileFormat}
+                <select id="download-file-format-selector" defaultValue={dataToDownload}
                         onChange={downloadFileFormatChanged}>
-                    <option value="raw">Raw</option>
-                    <option value="csv">CSV</option>
-                    <option value="json">JSON</option>
+                    <option value="all-results">All Results as CSV</option>
+                    <option value="all-raw-data">All Raw data as json</option>
                 </select>
                 <input type="button" value="Download!" id="download-button" onClick={downloadButtonClickHandler}/>
             </fieldset>

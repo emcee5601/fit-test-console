@@ -151,6 +151,43 @@ export class SimpleDB {
     now = new Date(); // use .getTime() to get epoch time
 
     /**
+     * read the whole db
+     */
+    async getAllData() {
+        return new Promise<SimpleDBRecord[]>((resolve, reject) => {
+            const transaction = this.openTransaction("readonly");
+            const allRecords: SimpleDBRecord[] = [];
+            if (!transaction) {
+                console.log(`${this.dbName} database not ready`);
+                reject(`${this.dbName} database not ready`);
+                return;
+            }
+
+            const request = transaction.objectStore(SimpleDB.SERIAL_LINE_OBJECT_STORE).openCursor(null, "next");
+
+            request.onerror = (event) => {
+                console.log(`getAllData openCursor request error ${event}`);
+                reject(`error ${event}`);
+            }
+            request.onsuccess = (event) => {
+                // console.log(`getAllData openCursor request complete: ${event}`);
+                const cursor = request.result;
+                if (cursor) {
+                    // console.log(`got key ${cursor.key}`);
+
+                    allRecords.push(cursor.value);
+                    cursor.continue();
+
+                } else {
+                    // no more results
+                    console.log(`${this.dbName} cursor done ${event}. got ${allRecords.length} records`);
+                    resolve(allRecords);
+                }
+            }
+        });
+    }
+
+    /**
      * Return a recent contiguous block of lines. Look at the timestamp of the record. Stop when there is a gap of more than 1 hour between timestamps.
      * Don't return anything if the most recent record is more than 1 hour old.
      * @param callback

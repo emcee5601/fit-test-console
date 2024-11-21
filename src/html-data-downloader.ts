@@ -22,11 +22,13 @@ function createFauxLink(fileName:string, contents:string) {
 }
 
 /**
- * @param data must have a value property (for now)
+ * Constructs a file named filenameHint_date.ext with the given data and downloads it.
+ * @param data
  * @param filenameHint
+ * @param extension
  */
-export function downloadRawData(data:string, filenameHint = "data") {
-    const fauxLink = createFauxLink(`${filenameHint}_${new Date().getTime()}.txt`, data);
+export function downloadData(data:string, filenameHint = "data", extension="txt") {
+    const fauxLink = createFauxLink(`${filenameHint}_${new Date().getTime()}.${extension}`, data);
     fauxLink.click();
 }
 
