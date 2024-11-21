@@ -19,7 +19,9 @@ import {
 
 import {useVirtualizer} from '@tanstack/react-virtual'
 import {SimpleResultsDBRecord} from "./database.ts";
-import {InView, useInView} from "react-intersection-observer";
+import {useInView} from "react-intersection-observer";
+import {mkConfig} from "export-to-csv";
+import {download, generateCsv} from "export-to-csv";
 
 declare module '@tanstack/react-table' {
     interface TableMeta<TData extends RowData> {
@@ -37,7 +39,7 @@ function useEditableColumn({
     const initialValue = getValue()
     // We need to keep and update the state of the cell normally
     const [value, setValue] = React.useState(initialValue)
-    const {ref, inView, entry} = useInView()
+    const {ref, inView} = useInView()
 
     // When the input is blurred, we'll call our table meta's updateData function
     const onBlur = () => {
@@ -229,9 +231,24 @@ export function ResultsTable({state, rowUpdatedCallback}: {
         overscan: 5,
     })
 
+    function handleExportAsCsv() {
+        const csvConfig = mkConfig({
+            fieldSeparator: ',',
+            filename: `fit-test-results-${new Date().getTime()}`,
+            decimalSeparator: '.',
+            // useKeysAsHeaders: true,
+            columnHeaders: table.getAllColumns().map(col => col.id)
+        });
+        const rows = table.getSortedRowModel().rows
+        const rowData = rows.map((row) => row.original)
+        const csv = generateCsv(csvConfig)(rowData)
+        download(csvConfig)(csv)
+    }
+
     //All important CSS styles are included as inline styles for this example. This is not recommended for your code.
     return (
-        <div className="app">
+        <div>
+            <input type={"button"} value={"Export as CSV"} onClick={() => handleExportAsCsv()} />
             <div
                 className="container"
                 ref={tableContainerRef}

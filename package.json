@@ -12,6 +12,7 @@
   "dependencies": {
     "@tanstack/react-table": "^8.20.5",
     "@tanstack/react-virtual": "^3.10.9",
+    "export-to-csv": "^1.4.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-intersection-observer": "^9.13.1"

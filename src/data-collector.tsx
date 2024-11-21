@@ -344,7 +344,8 @@ export function DataCollectorPanel({dataCollector}: { dataCollector: DataCollect
                                 results: dataCollector.states.results,
                                 setResults: dataCollector.states.setResults,
                             }}
-                            rowUpdatedCallback={(row) => dataCollector.resultsDatabase.updateTest(row)}/> : null}
+                            rowUpdatedCallback={(row) => dataCollector.resultsDatabase.updateTest(row)}
+                        /> : null}
 
                 </fieldset>
             </section>
