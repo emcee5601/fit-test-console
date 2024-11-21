@@ -19,6 +19,7 @@ import {
 
 import {useVirtualizer} from '@tanstack/react-virtual'
 import {SimpleResultsDBRecord} from "./database.ts";
+import {InView, useInView} from "react-intersection-observer";
 
 declare module '@tanstack/react-table' {
     interface TableMeta<TData extends RowData> {
@@ -36,6 +37,7 @@ function useEditableColumn({
     const initialValue = getValue()
     // We need to keep and update the state of the cell normally
     const [value, setValue] = React.useState(initialValue)
+    const {ref, inView, entry} = useInView()
 
     // When the input is blurred, we'll call our table meta's updateData function
     const onBlur = () => {
@@ -49,12 +51,18 @@ function useEditableColumn({
     React.useEffect(() => {
         setValue(initialValue)
     }, [initialValue])
+    useEffect(() => {
+        // console.log(`inview is now ${inView}`)
+        if(!inView) {
+            onBlur();
+        }
+    }, [inView]);
 
     // there's some sort of bug where inserting new rows at the top causes the editable cell's values to pull from the previous table's first record.
     // only seems to affect rendering
     // textarea has double the default height compared to input. 100% height will bleed out of the containing table cell
     return (
-        <textarea style={{height: "auto", width: "fit-content"}}
+        <textarea ref={ref} style={{height: "auto", width: "fit-content"}}
                   value={value as string}
                   onChange={e => setValue(e.target.value)}
                   onBlur={onBlur}
