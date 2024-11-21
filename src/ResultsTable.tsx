@@ -66,6 +66,7 @@ function useEditableColumn({
                   value={value as string}
                   onChange={e => setValue(e.target.value)}
                   onBlur={onBlur}
+                  placeholder={`Click to add ${id}`}
         />
     )
 };
