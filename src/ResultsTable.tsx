@@ -108,11 +108,17 @@ export function ResultsTable({state, rowUpdatedCallback}: {
 
     function getExerciseResultCell(info: CellContext<SimpleResultsDBRecord, unknown>) {
         const val = info.getValue<number>();
-        if (val < 100) {
-            return <span className={"fail result"}>{val}</span>
-        } else if (val > 100) {
-            return <span className={"pass result"}>{val}</span>
+        if( val < 1.1) {
+            // probably aborted
+            return <span className={"aborted result"}>{val}</span>
+        } else if( val < 20) {
+            return <span className={"result"} style={{backgroundColor:"darkred", color:"whitesmoke"}}>{val}</span>
+        } else if (val < 100) {
+            return <span className={"result"} style={{backgroundColor:"darkorange", color:"whitesmoke"}}>{val}</span>
+        } else if (val >= 100) {
+            return <span className={"result"} style={{backgroundColor:"green", color:"whitesmoke"}}>{val}</span>
         } else {
+            // NaN
             return <span className={"aborted result"}>{val}</span>
         }
     }
