@@ -46,7 +46,6 @@ export class DataCollector {
     logCallback;
     dataCallback;
     processedDataCallback;
-    instructionsCallback;
     currentTestData: SimpleResultsDBRecord | null = null;
     lastExerciseNum: number = 0;
     sampleSource: string = "undefined";
@@ -57,14 +56,12 @@ export class DataCollector {
                 logCallback: (message: string) => void,
                 dataCallback: (message: string) => void,
                 processedDataCallback: (message: string) => void,
-                instructionsCallback: (message: string) => void,
                 externalControlStates: ExternalControlStates,
                 resultsDatabase: SimpleResultsDB,
                 settingsDatabase: SettingsDB) {
         this.logCallback = logCallback;
         this.dataCallback = dataCallback;
         this.processedDataCallback = processedDataCallback;
-        this.instructionsCallback = instructionsCallback;
         this.resultsDatabase = resultsDatabase;
         this.settingsDatabase = settingsDatabase
         this.control = externalControlStates;
@@ -81,7 +78,9 @@ export class DataCollector {
     }
 
     setInstructions(message: string) {
-        this.instructionsCallback(message);
+        if(this.states.setInstructions) {
+            this.states.setInstructions(message)
+        }
         sayItLater(message); // make sure instructions are queued.
     }
 
@@ -283,8 +282,7 @@ export class DataCollector {
 
 
 export interface DataCollectorStates {
-    instructions: string,
-    readonly setInstructions: React.Dispatch<React.SetStateAction<string>>,
+    setInstructions: React.Dispatch<React.SetStateAction<string>>|null,
     logData: string,
     setLogData: React.Dispatch<React.SetStateAction<string>>,
     rawConsoleData: string,
@@ -306,9 +304,7 @@ export function DataCollectorPanel({dataCollector}: { dataCollector: DataCollect
     const [processedData, setProcessedData] = useState<string>("")
     const processedDataTextAreaRef = React.useRef<HTMLTextAreaElement>(null)
 
-    useEffect(() => {
-        setInstructions(dataCollector.states.instructions)
-    }, [dataCollector.states.instructions]);
+    dataCollector.states.setInstructions = setInstructions
     useEffect(() => {
         setRawConsoleData(dataCollector.states.rawConsoleData);
     }, [dataCollector.states.rawConsoleData]);

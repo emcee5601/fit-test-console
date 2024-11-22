@@ -5,7 +5,7 @@ import {DataCollector, DataCollectorPanel, DataCollectorStates} from "./data-col
 import {sayIt, sayItLater, SpeechSynthesisPanel} from "./speech.tsx";
 import {ExternalController, ExternalControlPanel, ExternalControlStates} from "./external-control.tsx";
 import {SettingsDB, SimpleDB, SimpleDBRecord, SimpleResultsDB, SimpleResultsDBRecord} from "./database.ts";
-import {downloadData, downloadTableAsCSV, downloadTableAsJSON} from "./html-data-downloader.ts";
+import {downloadData} from "./html-data-downloader.ts";
 import {json2csv} from "json-2-csv";
 
 
@@ -16,7 +16,6 @@ function App() {
     const [rawConsoleData, setRawConsoleData] = useState<string>("")
     const rawConsoleDataTextAreaRef = React.useRef<HTMLTextAreaElement>(null)
     const [logData, setLogData] = useState<string>("")
-    const [instructions, setInstructions] = useState<string>("")
     const [processedData, setProcessedData] = useState<string>("")
     const fitTestDataTableRef = React.useRef<HTMLTableElement>(null)
 
@@ -41,8 +40,7 @@ function App() {
     const [allResultsData, setAllResultsData] = useState<SimpleResultsDBRecord[]>([]);
 
     const initialDataCollectorState: DataCollectorStates = {
-        instructions: instructions,
-        setInstructions: setInstructions,
+        setInstructions: null,
         logData: logData,
         setLogData: setLogData,
         rawConsoleData: rawConsoleData,
@@ -55,7 +53,7 @@ function App() {
     };
     const [dataCollectorStates] = useState(initialDataCollectorState);
     const [dataCollector] = useState(()  => new DataCollector(dataCollectorStates, logCallback, rawDataCallback,
-        processedDataCallback, instructionsCallback, externalControlStates, resultsDatabase, settingsDatabase))
+        processedDataCallback, externalControlStates, resultsDatabase, settingsDatabase))
 
 
     useEffect(() => {
@@ -84,9 +82,6 @@ function App() {
     }, [controlMode]);
 
     // propagate states
-    useEffect(() => {
-        dataCollectorStates.instructions = instructions;
-    }, [instructions]);
     useEffect(() => {
         dataCollectorStates.logData = logData;
     }, [logData]);
@@ -122,11 +117,6 @@ function App() {
         const timestamp = new Date().toISOString(); // todo: want the timestamp to match up, so need to get it externally
         setProcessedData((prev) => prev + `${timestamp} ${message}`);
     }
-
-    function instructionsCallback(message: string) {
-        setInstructions(message);
-    }
-
 
     function baudRateChanged(event: ChangeEvent<HTMLSelectElement>) {
         console.log(`setting baud rate to ${event.target.value}`)
