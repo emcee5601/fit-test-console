@@ -19,32 +19,77 @@ export interface AppSettings {
     [key: string]: string | number,
 }
 
-export class SettingsDB {
-    static DB_NAME = "settings-db";
-    static OBJECT_STORE_NAME = "settings-data";
-    dbName: string;
+abstract class AbstractDB {
     db: IDBDatabase | undefined;
+    dbName: string;
+    version: number;
+    defaultDataStores: string[];
 
-    constructor(name = SettingsDB.DB_NAME) {
-        this.dbName = name;
-        const request = window.indexedDB.open(name, 1);
-        // use arrow here so `this` inside the callback points to the SimpleDB instance.
-        request.onsuccess = () => this.onOpenSuccess(request); // function call to create a closure since we need "this"
-        request.onerror = () => this.onOpenError(request);
-        request.onupgradeneeded = () => this.onUpgradeNeeded(request);
+    protected constructor(dbName: string, defaultDataStores:string[]=[], version: number=1) {
+        this.dbName = dbName;
+        this.version = version;
+        this.defaultDataStores = defaultDataStores;
     }
+
+    abstract onUpgradeNeeded(request: IDBOpenDBRequest): void;
 
     onOpenSuccess(request: IDBOpenDBRequest) {
         this.db = request.result;
-        console.log("Database Opened", this.db);
+        console.log(`${this.dbName} Database Opened`, this.db);
     }
 
     onOpenError(request: IDBOpenDBRequest) {
-        console.error(`Database error: ${request.error?.message}`);
+        console.error(`${this.dbName} Database error: ${request.error?.message}`);
     }
 
-    onUpgradeNeeded(request: IDBOpenDBRequest) {
-        // Save the IDBDatabase interface
+    openTransaction(mode: IDBTransactionMode, objectStoreNames:string[] = this.defaultDataStores) {
+        if (!this.db) {
+            console.log(`${this.dbName} database not ready`);
+            return;
+        }
+        const transaction = this.db.transaction(objectStoreNames, mode);
+        transaction.oncomplete = (event) => {
+            console.log(`${this.dbName} transaction complete: ${event}`);
+        }
+        transaction.onerror = (event) => {
+            console.log(`${this.dbName} transaction error ${event}`);
+        }
+        return transaction;
+    }
+
+    async open() {
+        return new Promise((resolve, reject) => {
+            const request = window.indexedDB.open(this.dbName, this.version);
+            request.onsuccess = () => {
+                this.onOpenSuccess(request);
+                resolve(this.db)
+            };
+            request.onerror = () => {
+                this.onOpenError(request)
+                reject(request.error?.message);
+            };
+            request.onupgradeneeded = () => {
+                this.onUpgradeNeeded(request)
+                reject("upgrade needed")
+            };
+        });
+    }
+
+    close() {
+        this.db?.close();
+        console.log(`${this.dbName} closed`);
+    }
+}
+
+export class SettingsDB extends AbstractDB {
+    static DB_NAME = "settings-db";
+    static OBJECT_STORE_NAME = "settings-data";
+
+    constructor(name = SettingsDB.DB_NAME) {
+        super(name, [SettingsDB.OBJECT_STORE_NAME], 1)
+    }
+
+    override onUpgradeNeeded(request: IDBOpenDBRequest) {
         const theDb = request.result;
 
         console.warn(`Database upgrade needed: ${theDb.name}`);
@@ -91,62 +136,25 @@ export class SettingsDB {
             }
         });
     }
-
-
-    openTransaction(mode: IDBTransactionMode) {
-        if (!this.db) {
-            console.log(`${this.dbName} database not ready`);
-            return;
-        }
-        const transaction = this.db.transaction([SimpleDB.SERIAL_LINE_OBJECT_STORE], mode);
-        transaction.oncomplete = (event) => {
-            console.log(`SettingsDB transaction complete: ${event}`);
-        }
-        transaction.onerror = (event) => {
-            console.log(`SettingsDB transaction error ${event}`);
-        }
-        return transaction;
-    }
 }
 
 
-export class SimpleDB {
+export class SimpleDB extends AbstractDB {
     static DEFAULT_DB_NAME = "raw-serial-line-data-db";
     static SERIAL_LINE_OBJECT_STORE = "serial-line-data";
-    db: IDBDatabase | undefined;
-    dbOpenRequest: IDBOpenDBRequest;
-    dbName;
 
     constructor(name = SimpleDB.DEFAULT_DB_NAME) {
-        this.dbName = name;
-        this.dbOpenRequest = window.indexedDB.open(this.dbName, 1);
-        // use arrow here so `this` inside the callback points to the SimpleDB instance.
-        this.dbOpenRequest.onsuccess = () => this.onOpenSuccess(); // function call to create a closure since we need "this"
-        this.dbOpenRequest.onerror = () => this.onOpenError();
-        this.dbOpenRequest.onupgradeneeded = () => this.onUpgradeNeeded();
+        super(name, [SimpleDB.SERIAL_LINE_OBJECT_STORE], 1);
     }
 
-    onOpenSuccess() {
-        this.db = this.dbOpenRequest.result;
-        console.log("Database Opened", this.db);
-    }
-
-    onOpenError() {
-        console.error(`Database error: ${this.dbOpenRequest.error?.message}`);
-    }
-
-    onUpgradeNeeded() {
-        // Save the IDBDatabase interface
-        const theDb = this.dbOpenRequest.result;
-
-        console.warn(`Database upgrade needed: ${theDb.name}`);
+    override onUpgradeNeeded(request: IDBOpenDBRequest) {
+        const theDb = request.result;
+        console.warn(`Database upgrade needed: ${this.dbName}`);
         // Create an objectStore for this database
         theDb.createObjectStore(SimpleDB.SERIAL_LINE_OBJECT_STORE, {autoIncrement: true, keyPath: "index"});
     }
 
 
-    // TODO: wrap these into an object
-    static ONE_HOUR = 60 * 60 * 1000;
     keepRecords: SimpleDBRecord[] = [];
     now = new Date(); // use .getTime() to get epoch time
 
@@ -260,21 +268,6 @@ export class SimpleDB {
             console.log(`addRecord request complete: ${event}, new key is ${request.result}`);
         }
     }
-
-    openTransaction(mode: IDBTransactionMode) {
-        if (!this.db) {
-            console.log(`${this.dbName} database not ready`);
-            return;
-        }
-        const transaction = this.db.transaction([SimpleDB.SERIAL_LINE_OBJECT_STORE], mode);
-        transaction.oncomplete = (event) => {
-            console.log(`SimpleDB transaction complete: ${event}`);
-        }
-        transaction.onerror = (event) => {
-            console.log(`SimpleDB transaction error ${event}`);
-        }
-        return transaction;
-    }
 }
 
 
@@ -282,48 +275,16 @@ export class SimpleDB {
 Stores data from results table.
  */
 
-export class SimpleResultsDB {
+export class SimpleResultsDB extends AbstractDB {
     static DEFAULT_DB_NAME = "fit-test-data-db";
     static TEST_RESULTS_OBJECT_STORE = "test-results-table-data";
-    db: IDBDatabase | undefined;
-    dbName;
 
     // dbOpenDBRequest: IDBOpenDBRequest | undefined;
     constructor(name = SimpleResultsDB.DEFAULT_DB_NAME) {
-        this.dbName = name;
-        console.log("SimpleResultsDB constructor called")
+        super(name, [SimpleResultsDB.TEST_RESULTS_OBJECT_STORE], 2)
     }
 
-    async open() {
-        const request = window.indexedDB.open(this.dbName, 2)
-        return new Promise<SimpleResultsDB>((resolve, reject) => {
-            // this.dbOpenDBRequest = request;
-            // use arrow here so `this` inside the callback points to the SimpleResultsDB instance.
-            request.onsuccess = () => {
-                this.db = request.result;
-                console.log(`${this.dbName} Database Opened`, this.db);
-                resolve(this);
-            }; // needs to be a function call to create a closure
-            request.onerror = () => {
-                const errorMessage = `${this.dbName} Database error: ${request?.error?.message}`;
-                console.error(errorMessage);
-                reject(errorMessage);
-            }
-            request.onupgradeneeded = () => {
-                this.onUpgradeNeeded(request);
-                // TODO: do we need to resolve here? or does this call onsuccess later?
-            };
-            console.log("SimpleResultsDB.open() called")
-        })
-    }
-
-    close() {
-        this.db?.close();
-        console.log(`${this.dbName} closed`);
-    }
-
-    private onUpgradeNeeded(request: IDBOpenDBRequest) {
-        // Save the IDBDatabase interface
+    override onUpgradeNeeded(request: IDBOpenDBRequest) {
         const theDb = request.result;
 
         console.warn(`${this.dbName} Database upgrade needed: ${theDb.name}`);
@@ -331,8 +292,6 @@ export class SimpleResultsDB {
         theDb.createObjectStore(SimpleResultsDB.TEST_RESULTS_OBJECT_STORE, {autoIncrement: true, keyPath: "ID"});
     }
 
-    // TODO: wrap these into an object
-    static ONE_HOUR = 60 * 60 * 1000;
     keepRecords: SimpleResultsDBRecord[] = [];
     now = new Date(); // use .getTime() to get epoch time
 
@@ -473,21 +432,5 @@ export class SimpleResultsDB {
                 resolve({ID: request.result}); // todo: return something more appropriate for an update
             }
         });
-    }
-
-
-    openTransaction(mode: IDBTransactionMode) {
-        if (!this.db) {
-            console.log(`${this.dbName} database not ready`);
-            return;
-        }
-        const transaction = this.db.transaction([SimpleResultsDB.TEST_RESULTS_OBJECT_STORE], mode);
-        transaction.oncomplete = (event) => {
-            console.log(`SimpleResultsDB transaction complete: ${event.target}`);
-        }
-        transaction.onerror = (event) => {
-            console.log(`SimpleResultsDB transaction error ${event}`);
-        }
-        return transaction;
     }
 }

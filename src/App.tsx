@@ -58,11 +58,17 @@ function App() {
 
     useEffect(() => {
         console.log(`initializing results db`)
-        resultsDatabase.open().then((db) => db.getAllData().then(data => {
+        resultsDatabase.open().then(() => resultsDatabase.getAllData().then(data => {
             dataCollectorStates.results = data;
             setAllResultsData(data);
         }));
-        return () => resultsDatabase.close();
+
+        console.log(`initializing settings db`)
+        settingsDatabase.open()
+
+        console.log(`initializing raw logs db`)
+        rawDatabase.open();
+        return () => closeDatabases();
     },[]);
 
     useEffect(() => {
@@ -103,6 +109,12 @@ function App() {
         console.log(`Download File Format set to ${dataToDownload}`)
     }, [dataToDownload]);
 
+
+    function closeDatabases() {
+        resultsDatabase.close();
+        rawDatabase.close();
+        settingsDatabase.close();
+    }
 
     function logCallback(message: string) {
         setLogData((prev) => prev + message);
