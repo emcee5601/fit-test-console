@@ -33,6 +33,43 @@ abstract class AbstractDB {
 
     abstract onUpgradeNeeded(request: IDBOpenDBRequest): void;
 
+    /**
+     * read the whole db
+     */
+    protected async getAllDataFromDataSource<T>(dataStoreName:string): Promise<T[]> {
+        return new Promise<T[]>((resolve, reject) => {
+            const transaction = this.openTransaction("readonly");
+            const allRecords: T[] = [];
+            if (!transaction) {
+                console.log(`${this.dbName} database not ready`);
+                reject(`${this.dbName} database not ready`);
+                return;
+            }
+
+            const request = transaction.objectStore(dataStoreName).openCursor(null, "next");
+
+            request.onerror = (event) => {
+                console.log(`getAllDataFromDataSource openCursor request error ${event}`);
+                reject(`error ${event}`);
+            }
+            request.onsuccess = (event) => {
+                // console.log(`getAllData openCursor request complete: ${event}`);
+                const cursor = request.result;
+                if (cursor) {
+                    // console.log(`got key ${cursor.key}`);
+
+                    allRecords.push(cursor.value);
+                    cursor.continue();
+
+                } else {
+                    // no more results
+                    console.log(`${this.dbName} cursor done ${event}. got ${allRecords.length} records`);
+                    resolve(allRecords);
+                }
+            }
+        });
+    }
+
     onOpenSuccess(request: IDBOpenDBRequest) {
         this.db = request.result;
         console.log(`${this.dbName} Database Opened`, this.db);
@@ -158,41 +195,8 @@ export class SimpleDB extends AbstractDB {
     keepRecords: SimpleDBRecord[] = [];
     now = new Date(); // use .getTime() to get epoch time
 
-    /**
-     * read the whole db
-     */
-    async getAllData() {
-        return new Promise<SimpleDBRecord[]>((resolve, reject) => {
-            const transaction = this.openTransaction("readonly");
-            const allRecords: SimpleDBRecord[] = [];
-            if (!transaction) {
-                console.log(`${this.dbName} database not ready`);
-                reject(`${this.dbName} database not ready`);
-                return;
-            }
-
-            const request = transaction.objectStore(SimpleDB.SERIAL_LINE_OBJECT_STORE).openCursor(null, "next");
-
-            request.onerror = (event) => {
-                console.log(`getAllData openCursor request error ${event}`);
-                reject(`error ${event}`);
-            }
-            request.onsuccess = (event) => {
-                // console.log(`getAllData openCursor request complete: ${event}`);
-                const cursor = request.result;
-                if (cursor) {
-                    // console.log(`got key ${cursor.key}`);
-
-                    allRecords.push(cursor.value);
-                    cursor.continue();
-
-                } else {
-                    // no more results
-                    console.log(`${this.dbName} cursor done ${event}. got ${allRecords.length} records`);
-                    resolve(allRecords);
-                }
-            }
-        });
+    async getAllData(): Promise<SimpleDBRecord[]> {
+        return super.getAllDataFromDataSource(SimpleDB.SERIAL_LINE_OBJECT_STORE);
     }
 
     /**
@@ -293,44 +297,9 @@ export class SimpleResultsDB extends AbstractDB {
     }
 
     keepRecords: SimpleResultsDBRecord[] = [];
-    now = new Date(); // use .getTime() to get epoch time
 
-
-    /**
-     * read the whole db
-     */
-    async getAllData() {
-        return new Promise<SimpleResultsDBRecord[]>((resolve, reject) => {
-            const transaction = this.openTransaction("readonly");
-            const allRecords: SimpleResultsDBRecord[] = [];
-            if (!transaction) {
-                console.log(`${this.dbName} database not ready`);
-                reject(`${this.dbName} database not ready`);
-                return;
-            }
-
-            const request = transaction.objectStore(SimpleResultsDB.TEST_RESULTS_OBJECT_STORE).openCursor(null, "next");
-
-            request.onerror = (event) => {
-                console.log(`getAllData openCursor request error ${event}`);
-                reject(`error ${event}`);
-            }
-            request.onsuccess = (event) => {
-                // console.log(`getAllData openCursor request complete: ${event}`);
-                const cursor = request.result;
-                if (cursor) {
-                    // console.log(`got key ${cursor.key}`);
-
-                    allRecords.push(cursor.value);
-                    cursor.continue();
-
-                } else {
-                    // no more results
-                    console.log(`${this.dbName} cursor done ${event}. got ${allRecords.length} records`);
-                    resolve(allRecords);
-                }
-            }
-        });
+    async getAllData(): Promise<SimpleResultsDBRecord[]> {
+        return super.getAllDataFromDataSource(SimpleResultsDB.TEST_RESULTS_OBJECT_STORE);
     }
 
     /**
