@@ -289,7 +289,7 @@ function App() {
                 <input type="button" value="Download!" id="download-button" onClick={downloadButtonClickHandler}/>
             </fieldset>
             <fieldset style={{maxWidth: "fit-content", float: "left"}}>
-                <SpeechSynthesisPanel/>
+                <SpeechSynthesisPanel settingsDb={settingsDatabase}/>
                 <div style={{display: "inline-block"}}>
                     <input type="checkbox" id="enable-verbose-speech-checkbox"/>
                     <label htmlFor="enable-verbose-speech-checkbox">Verbose</label>

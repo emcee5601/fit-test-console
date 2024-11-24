@@ -2,17 +2,18 @@
  Text-to-speech functions
  */
 import {ChangeEvent, useEffect, useRef, useState} from "react";
+import {AppSettings, SettingsDB} from "./database.ts";
 
 let theSelectedVoice:SpeechSynthesisVoice|null = null;
-let speechRate:number = 1;
+const speechRate:number = 1;
 let theSpeechEnabled:boolean = true;
 let speechSynthesis: SpeechSynthesis;
 
-export function SpeechSynthesisPanel() {
+export function SpeechSynthesisPanel({settingsDb}:{settingsDb: SettingsDB}) {
     const [synth, setSynth] = useState<SpeechSynthesis|null>(null);
     const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
     const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice|null>(null);
-    const [speechEnabled, setSpeechEnabled] = useState(true);
+    const [speechEnabled, setSpeechEnabled] = useState<boolean>(false);
     const enableSpeechCheckboxRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -49,6 +50,10 @@ export function SpeechSynthesisPanel() {
         }
     }, [speechEnabled]);
 
+    useEffect(() => {
+        settingsDb.getSetting(AppSettings.ENABLE_SPEECH).then((res) => setSpeechEnabled(res))
+    }, [settingsDb.db]);
+
     function findDefaultVoice(allVoices: SpeechSynthesisVoice[]) {
         const foundVoice = allVoices.find((voice) => voice.default);
         return foundVoice ? foundVoice : null;
@@ -64,6 +69,7 @@ export function SpeechSynthesisPanel() {
             return;
         }
         setSpeechEnabled(enableSpeechCheckboxRef.current.checked)
+        settingsDb.saveSetting(AppSettings.ENABLE_SPEECH, enableSpeechCheckboxRef.current.checked)
     }
 
     return(

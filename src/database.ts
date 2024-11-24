@@ -13,10 +13,9 @@ export interface SimpleResultsDBRecord {
     [key: string]: string | number;
 }
 
-export interface AppSettings {
-    ID: "settings",
-
-    [key: string]: string | number,
+export enum AppSettings {
+    ENABLE_SPEECH = "enable-speech",
+    ADVANCED_MODE = "advanced-mode",
 }
 
 abstract class AbstractDB {
@@ -134,41 +133,42 @@ export class SettingsDB extends AbstractDB {
         theDb.createObjectStore(SettingsDB.OBJECT_STORE_NAME, {keyPath: "ID"});
     }
 
-    async getSettings() {
+    public async getSetting(name:AppSettings) {
         const transaction = this.openTransaction("readonly");
         if (!transaction) {
-            console.log("settings db not ready")
-            return;
+            return false;
         }
-        const request = transaction.objectStore(SettingsDB.OBJECT_STORE_NAME).get("settings")
-        return new Promise((resolve, reject) => {
+        const request = transaction.objectStore(SettingsDB.OBJECT_STORE_NAME).get(name)
+        return new Promise<boolean>((resolve, reject) => {
             request.onerror = (event) => {
-                const errorMessage = `getSettings request error ${event}`;
+                const errorMessage = `failed to get setting for ${name}; error: ${event}`;
                 console.log(errorMessage);
                 reject(errorMessage);
             }
-            request.onsuccess = (event) => {
-                console.log(`getSettings request complete: ${event}, result: ${request.result}`);
-                resolve(request.result);
+            request.onsuccess = () => {
+                console.log(`getSetting ${name} = ${JSON.stringify(request.result)}`);
+                resolve(request.result.value);
             }
         });
     }
 
-    async saveSettings(settings: AppSettings) {
+    async saveSetting(name:AppSettings, value: string|number|boolean) {
         const transaction = this.openTransaction("readwrite");
         if (!transaction) {
             console.log("settings db not ready")
             return;
         }
-        const request = transaction.objectStore(SettingsDB.OBJECT_STORE_NAME).put(settings);
+
+        const entry = {ID: name, value:value}
+        const request = transaction.objectStore(SettingsDB.OBJECT_STORE_NAME).put(entry);
         return new Promise((resolve, reject) => {
             request.onerror = (event) => {
-                const errorMessage = `saveSettings request error ${event}`;
+                const errorMessage = `failed to save setting ${name} = ${value}; error: ${event}`;
                 console.log(errorMessage);
                 reject(errorMessage);
             }
-            request.onsuccess = (event) => {
-                console.log(`saveSettings request complete: ${event}, result: ${request.result}`);
+            request.onsuccess = () => {
+                console.log(`saved setting ${JSON.stringify(entry)}`);
                 resolve(request.result);
             }
         });
