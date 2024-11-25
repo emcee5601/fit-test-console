@@ -22,6 +22,7 @@ import {SimpleResultsDBRecord} from "./database.ts";
 import {useInView} from "react-intersection-observer";
 import {mkConfig} from "export-to-csv";
 import {download, generateCsv} from "export-to-csv";
+import {DataCollector} from "./data-collector.tsx";
 
 declare module '@tanstack/react-table' {
     interface TableMeta<TData extends RowData> {
@@ -96,15 +97,11 @@ export interface ResultsTableStates {
 
 //This is a dynamic row height example, which is more complicated, but allows for a more realistic table.
 //See https://tanstack.com/virtual/v3/docs/examples/react/table for a simpler fixed row height example.
-export function ResultsTable({state, rowUpdatedCallback}: {
-    state: ResultsTableStates,
-    rowUpdatedCallback: (record: SimpleResultsDBRecord) => void
+export function ResultsTable({dataCollector}: {
+    dataCollector: DataCollector,
 }) {
-    const [localTableData, setLocalTableData] = useState(state.results)
-    useEffect(() => {
-        console.log("result table saw change in state.results")
-        setLocalTableData(state.results) // this copies the detected data change from inserted rows to the local table
-    }, [state.results]);
+    const [localTableData, setLocalTableData] = useState<SimpleResultsDBRecord[]>([])
+    dataCollector.setResultsCallback(setLocalTableData)
 
     function getExerciseResultCell(info: CellContext<SimpleResultsDBRecord, unknown>) {
         const val = info.getValue<number>();
@@ -206,7 +203,8 @@ export function ResultsTable({state, rowUpdatedCallback}: {
                                     ...old[rowIndex]!,
                                     [columnId]: value,  // this updates the cell that was changed
                                 };
-                                rowUpdatedCallback(updatedRow); // this saves the changes to the db
+                                // TODO: roll this in a function in dataCollector
+                                dataCollector.resultsDatabase.updateTest(updatedRow); // this saves the changes to the db
                                 return updatedRow;
                             }
                             return row
@@ -236,6 +234,15 @@ export function ResultsTable({state, rowUpdatedCallback}: {
                 : undefined,
         overscan: 5,
     })
+
+
+    useEffect(() => {
+        console.log(`initializing results db`)
+        dataCollector.resultsDatabase.open().then(() => dataCollector.resultsDatabase.getAllData().then(data => {
+            setLocalTableData(data);
+        }));
+    }, []);
+
 
     function handleExportAsCsv() {
         const csvConfig = mkConfig({

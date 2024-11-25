@@ -4,7 +4,7 @@ import {DataFilePushSource, getLines, getReadableStreamFromDataSource} from "./d
 import {DataCollector, DataCollectorPanel, DataCollectorStates} from "./data-collector.tsx";
 import {sayIt, sayItLater, SpeechSynthesisPanel} from "./speech.tsx";
 import {ExternalController, ExternalControlPanel, ExternalControlStates} from "./external-control.tsx";
-import {SettingsDB, SimpleDB, SimpleDBRecord, SimpleResultsDB, SimpleResultsDBRecord} from "./database.ts";
+import {SettingsDB, SimpleDB, SimpleDBRecord, SimpleResultsDB} from "./database.ts";
 import {downloadData} from "./html-data-downloader.ts";
 import {json2csv} from "json-2-csv";
 
@@ -37,7 +37,6 @@ function App() {
     const [resultsDatabase] = useState(() => new SimpleResultsDB());
     const [rawDatabase] = useState(() => new SimpleDB());
     const [settingsDatabase] = useState(() => new SettingsDB())
-    const [allResultsData, setAllResultsData] = useState<SimpleResultsDBRecord[]>([]);
 
     const initialDataCollectorState: DataCollectorStates = {
         setInstructions: null,
@@ -48,8 +47,6 @@ function App() {
         processedData: processedData,
         setProcessedData: setProcessedData,
         fitTestDataTableRef: fitTestDataTableRef,
-        results: allResultsData,
-        setResults: setAllResultsData,
     };
     const [dataCollectorStates] = useState(initialDataCollectorState);
     const [dataCollector] = useState(()  => new DataCollector(dataCollectorStates, logCallback, rawDataCallback,
@@ -57,11 +54,11 @@ function App() {
 
 
     useEffect(() => {
-        console.log(`initializing results db`)
-        resultsDatabase.open().then(() => resultsDatabase.getAllData().then(data => {
-            dataCollectorStates.results = data;
-            setAllResultsData(data);
-        }));
+        // console.log(`initializing results db`)
+        // resultsDatabase.open().then(() => resultsDatabase.getAllData().then(data => {
+        //     dataCollectorStates.results = data;
+        //     setAllResultsData(data);
+        // }));
 
         console.log(`initializing settings db`)
         settingsDatabase.open()

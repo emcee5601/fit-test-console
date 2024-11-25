@@ -51,6 +51,7 @@ export class DataCollector {
     sampleSource: string = "undefined";
     private control: ExternalControlStates;
     states: DataCollectorStates;
+    private setResults: React.Dispatch<React.SetStateAction<SimpleResultsDBRecord[]>>|undefined;
 
     constructor(states: DataCollectorStates,
                 logCallback: (message: string) => void,
@@ -248,8 +249,7 @@ export class DataCollector {
         if (this.currentTestData) {
             console.log(`new test added: ${JSON.stringify(this.currentTestData)}`)
             // this triggers an update
-            this.states.results = [...this.states.results, this.currentTestData as SimpleResultsDBRecord] // lets react table see the change, so adding rows shows up in the ui
-            this.states.setResults(this.states.results) // this lets react table's update call to setData see the new rows so editing the newly added rows in the ui saves changes to the db (because the callback is called)
+            this.setResults((prev) => [...prev, this.currentTestData as SimpleResultsDBRecord] );
         }
     }
 
@@ -266,9 +266,8 @@ export class DataCollector {
         }
 
         // update table data
-        this.states.results = [...this.states.results] // force an update?
+        this.setResults((prev) => [...prev]) // force an update by changing the ref
         this.updateCurrentRowInDatabase();
-
     }
 
     updateCurrentRowInDatabase() {
@@ -277,6 +276,10 @@ export class DataCollector {
             return;
         }
         this.resultsDatabase.updateTest(this.currentTestData);
+    }
+
+    setResultsCallback(callback: React.Dispatch<React.SetStateAction<SimpleResultsDBRecord[]>>) {
+        this.setResults = callback
     }
 }
 
@@ -290,8 +293,6 @@ export interface DataCollectorStates {
     processedData: string,
     setProcessedData: React.Dispatch<React.SetStateAction<string>>,
     fitTestDataTableRef: RefObject<HTMLTableElement>,
-    results: SimpleResultsDBRecord[],
-    setResults: React.Dispatch<React.SetStateAction<SimpleResultsDBRecord[]>>,
 }
 
 export function DataCollectorPanel({dataCollector}: { dataCollector: DataCollector }) {
@@ -334,14 +335,7 @@ export function DataCollectorPanel({dataCollector}: { dataCollector: DataCollect
             <section id="collected-data" style={{display: "inline-block", width: "100%"}}>
                 <fieldset>
                     <legend>Test Info</legend>
-                    {dataCollector.states.results.length > 0 ?
-                        <ResultsTable
-                            state={{
-                                results: dataCollector.states.results,
-                                setResults: dataCollector.states.setResults,
-                            }}
-                            rowUpdatedCallback={(row) => dataCollector.resultsDatabase.updateTest(row)}
-                        /> : null}
+                    <ResultsTable dataCollector={dataCollector}/>
 
                 </fieldset>
             </section>
