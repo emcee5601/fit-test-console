@@ -23,6 +23,7 @@ import {useInView} from "react-intersection-observer";
 import {mkConfig} from "export-to-csv";
 import {download, generateCsv} from "export-to-csv";
 import {DataCollector} from "./data-collector.tsx";
+import {createMailtoLink} from "./html-data-downloader.ts";
 
 declare module '@tanstack/react-table' {
     interface TableMeta<TData extends RowData> {
@@ -272,10 +273,33 @@ export function ResultsTable({dataCollector}: {
         download(csvConfig)(csv)
     }
 
+    function handleMailto() {
+        // can't have html body, so we'll construct something that's easily readable (not csv)
+
+        const rows = table.getSortedRowModel().rows
+        const rowData:SimpleResultsDBRecord[] = rows.map((row) => row.original)
+        let body = "Your fit test results:\n\n"
+        const fields = ['Time', 'Participant', 'Mask', 'Notes', 'Ex 1', 'Ex 2', 'Ex 3', 'Ex 4', 'Final'];
+        rowData.forEach((row) => {
+            const rowInfo:string[] = []
+            fields.forEach((key) => {
+                if(key in row) {
+                    rowInfo.push(`${key}: ${row[key]}`)
+                }
+            })
+
+            body = body + rowInfo.join("\n") + "\n\n"
+        })
+
+        const link = createMailtoLink( "", "Fit test results", body);
+        link.click()
+    }
+
     //All important CSS styles are included as inline styles for this example. This is not recommended for your code.
     return (
         <div>
-            <input type={"button"} value={"Export as CSV"} onClick={() => handleExportAsCsv()} />
+            <input type={"button"} value={"Export as CSV"} onClick={() => handleExportAsCsv()}/>
+            <input type={"button"} value={"Email"} onClick={() => handleMailto()}/>
             <div
                 className="container"
                 ref={tableContainerRef}
@@ -328,7 +352,7 @@ export function ResultsTable({dataCollector}: {
                                         </div>
                                         {header.column.getCanFilter() ? (
                                             <div>
-                                                <Filter column={header.column} />
+                                                <Filter column={header.column}/>
                                             </div>
                                         ) : null}
 
@@ -386,7 +410,7 @@ export function ResultsTable({dataCollector}: {
 }
 
 
-function Filter({ column }: { column: Column<any, unknown> }) {
+function Filter({column}: { column: Column<any, unknown> }) {
     const columnFilterValue = column.getFilterValue()
     const { filterVariant } = column.columnDef.meta ?? {}
 

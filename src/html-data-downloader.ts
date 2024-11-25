@@ -21,6 +21,15 @@ function createFauxLink(fileName:string, contents:string) {
     return fauxLink;
 }
 
+// TODO: move this to a utility class
+export function createMailtoLink(to:string = "", subject:string = "", body:string = "") {
+    const fauxLink = document.createElement('a');
+    body = body.substring(0, 1900);  // limit is around 2000?
+    fauxLink.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    fauxLink.target = '_blank';
+    return fauxLink
+}
+
 /**
  * Constructs a file named filenameHint_date.ext with the given data and downloads it.
  * @param data
