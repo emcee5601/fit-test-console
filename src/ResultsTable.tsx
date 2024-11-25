@@ -8,10 +8,10 @@ import React, {useEffect, useState} from 'react'
 import './index.css'
 
 import {
-    CellContext,
-    ColumnDef,
+    CellContext, Column,
+    ColumnDef, ColumnFiltersState,
     flexRender,
-    getCoreRowModel,
+    getCoreRowModel, getFilteredRowModel,
     getSortedRowModel,
     Row, RowData,
     useReactTable,
@@ -125,6 +125,7 @@ export function ResultsTable({dataCollector}: {
             {
                 accessorKey: 'ID',
                 header: 'ID',
+                enableColumnFilter: false,
                 size: 50,
             },
             {
@@ -137,11 +138,13 @@ export function ResultsTable({dataCollector}: {
                         return null;
                     }
                 },
+                enableColumnFilter: false,
                 size: 200,
             },
             {
                 accessorKey: 'Participant',
                 cell: useEditableColumn,
+                enableColumnFilter: true,
                 size: 150,
             },
             {
@@ -157,26 +160,31 @@ export function ResultsTable({dataCollector}: {
             {
                 accessorKey: 'Ex 1',
                 cell: getExerciseResultCell,
+                enableColumnFilter: false,
                 size: 50,
             },
             {
                 accessorKey: 'Ex 2',
                 cell: getExerciseResultCell,
+                enableColumnFilter: false,
                 size: 50,
             },
             {
                 accessorKey: 'Ex 3',
                 cell: getExerciseResultCell,
+                enableColumnFilter: false,
                 size: 50,
             },
             {
                 accessorKey: 'Ex 4',
                 cell: getExerciseResultCell,
+                enableColumnFilter: false,
                 size: 50,
             },
             {
                 accessorKey: 'Final',
                 cell: getExerciseResultCell,
+                enableColumnFilter: false,
                 size: 50,
             },
         ],
@@ -184,12 +192,18 @@ export function ResultsTable({dataCollector}: {
     )
 
     const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
+    const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
 
     const table = useReactTable({
         data: localTableData,
         columns,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+        state: {
+            columnFilters,
+        },
+        onColumnFiltersChange: setColumnFilters,
         autoResetPageIndex,
         // Provide our updateData function to our table meta
         meta: {
@@ -312,6 +326,12 @@ export function ResultsTable({dataCollector}: {
                                                 desc: ' 🔽',
                                             }[header.column.getIsSorted() as string] ?? null}
                                         </div>
+                                        {header.column.getCanFilter() ? (
+                                            <div>
+                                                <Filter column={header.column} />
+                                            </div>
+                                        ) : null}
+
                                     </th>
                                 )
                             })}
@@ -365,3 +385,85 @@ export function ResultsTable({dataCollector}: {
     )
 }
 
+
+function Filter({ column }: { column: Column<any, unknown> }) {
+    const columnFilterValue = column.getFilterValue()
+    const { filterVariant } = column.columnDef.meta ?? {}
+
+    return filterVariant === 'range' ? (
+        <div>
+            <div className="flex space-x-2">
+                {/* See faceted column filters example for min max values functionality */}
+                <DebouncedInput
+                    type="number"
+                    value={(columnFilterValue as [number, number])?.[0] ?? ''}
+                    onChange={value =>
+                        column.setFilterValue((old: [number, number]) => [value, old?.[1]])
+                    }
+                    placeholder={`Min`}
+                    className="w-24 border shadow rounded"
+                />
+                <DebouncedInput
+                    type="number"
+                    value={(columnFilterValue as [number, number])?.[1] ?? ''}
+                    onChange={value =>
+                        column.setFilterValue((old: [number, number]) => [old?.[0], value])
+                    }
+                    placeholder={`Max`}
+                    className="w-24 border shadow rounded"
+                />
+            </div>
+            <div className="h-1" />
+        </div>
+    ) : filterVariant === 'select' ? (
+        <select
+            onChange={e => column.setFilterValue(e.target.value)}
+            value={columnFilterValue?.toString()}
+        >
+            {/* See faceted column filters example for dynamic select options */}
+            <option value="">All</option>
+            <option value="complicated">complicated</option>
+            <option value="relationship">relationship</option>
+            <option value="single">single</option>
+        </select>
+    ) : (
+        <DebouncedInput
+            className="w-36 border shadow rounded"
+            onChange={value => column.setFilterValue(value)}
+            placeholder={`Search...`}
+            type="text"
+            value={(columnFilterValue ?? '') as string}
+        />
+        // See faceted column filters example for datalist search suggestions
+    )
+}
+
+// A typical debounced input react component
+function DebouncedInput({
+                            value: initialValue,
+                            onChange,
+                            debounce = 500,
+                            ...props
+                        }: {
+    value: string | number
+    onChange: (value: string | number) => void
+    debounce?: number
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'>) {
+    const [value, setValue] = React.useState(initialValue)
+
+    React.useEffect(() => {
+        setValue(initialValue)
+    }, [initialValue])
+
+    React.useEffect(() => {
+        const timeout = setTimeout(() => {
+            onChange(value)
+        }, debounce)
+
+        return () => clearTimeout(timeout)
+    }, [value])
+
+    return (
+        <input {...props} value={value} onChange={e => setValue(e.target.value)} />
+    )
+}

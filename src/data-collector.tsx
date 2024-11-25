@@ -248,8 +248,13 @@ export class DataCollector {
         this.currentTestData = await this.resultsDatabase.createNewTest(timestamp); // primary key is the "ID" field
         if (this.currentTestData) {
             console.log(`new test added: ${JSON.stringify(this.currentTestData)}`)
-            // this triggers an update
-            this.setResults((prev) => [...prev, this.currentTestData as SimpleResultsDBRecord] );
+            if(this.setResults) {
+                // this triggers an update
+                this.setResults((prev) => [...prev, this.currentTestData as SimpleResultsDBRecord]);
+            } else {
+                // shouldn't happen, but setResults callback starts off uninitialized
+                console.log("have current test data, but setResults callback hasn't been initialized. this shouldn't happen?")
+            }
         }
     }
 
@@ -265,8 +270,13 @@ export class DataCollector {
             this.currentTestData[`${exerciseNum}`] = `${Math.floor(ff)}`; // probably "Final"
         }
 
-        // update table data
-        this.setResults((prev) => [...prev]) // force an update by changing the ref
+        if(this.setResults) {
+            // update table data
+            this.setResults((prev) => [...prev]) // force an update by changing the ref
+        } else {
+            // shouldn't happen, but setResults callback starts off uninitialized
+            console.log("have current test data, but setResults callback hasn't been initialized. this shouldn't happen?")
+        }
         this.updateCurrentRowInDatabase();
     }
 
