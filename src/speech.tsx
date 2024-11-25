@@ -9,7 +9,8 @@ const speechRate:number = 1;
 let theSpeechEnabled:boolean = true;
 let speechSynthesis: SpeechSynthesis;
 
-export function SpeechSynthesisPanel({settingsDb}:{settingsDb: SettingsDB}) {
+export function SpeechSynthesisPanel() {
+    const [settingsDb] = useState(() => new SettingsDB())
     const [synth, setSynth] = useState<SpeechSynthesis|null>(null);
     const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
     const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice|null>(null);
@@ -33,6 +34,10 @@ export function SpeechSynthesisPanel({settingsDb}:{settingsDb: SettingsDB}) {
             console.log(`found ${voices.length} voices`);
             setSelectedVoice(findDefaultVoice(allVoices));
         }
+        settingsDb.open().then(() => {
+            console.log("settings db ready, loading speech settings")
+            settingsDb.getSetting(AppSettings.ENABLE_SPEECH).then((res) => setSpeechEnabled(res))
+        });
     }, [])
 
     useEffect(() => {
@@ -50,9 +55,6 @@ export function SpeechSynthesisPanel({settingsDb}:{settingsDb: SettingsDB}) {
         }
     }, [speechEnabled]);
 
-    useEffect(() => {
-        settingsDb.getSetting(AppSettings.ENABLE_SPEECH).then((res) => setSpeechEnabled(res))
-    }, [settingsDb.db]);
 
     function findDefaultVoice(allVoices: SpeechSynthesisVoice[]) {
         const foundVoice = allVoices.find((voice) => voice.default);

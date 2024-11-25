@@ -98,7 +98,7 @@ abstract class AbstractDB {
             const request = window.indexedDB.open(this.dbName, this.version);
             request.onsuccess = () => {
                 this.onOpenSuccess(request);
-                resolve(this.db)
+                resolve(this.db as IDBDatabase)
             };
             request.onerror = () => {
                 this.onOpenError(request)

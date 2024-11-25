@@ -36,7 +36,6 @@ function App() {
     const [externalController] = useState(new ExternalController(externalControlStates));
     const [resultsDatabase] = useState(() => new SimpleResultsDB());
     const [rawDatabase] = useState(() => new SimpleDB());
-    const [settingsDatabase] = useState(() => new SettingsDB())
 
     const initialDataCollectorState: DataCollectorStates = {
         setInstructions: null,
@@ -50,19 +49,10 @@ function App() {
     };
     const [dataCollectorStates] = useState(initialDataCollectorState);
     const [dataCollector] = useState(()  => new DataCollector(dataCollectorStates, logCallback, rawDataCallback,
-        processedDataCallback, externalControlStates, resultsDatabase, settingsDatabase))
+        processedDataCallback, externalControlStates, resultsDatabase))
 
 
     useEffect(() => {
-        // console.log(`initializing results db`)
-        // resultsDatabase.open().then(() => resultsDatabase.getAllData().then(data => {
-        //     dataCollectorStates.results = data;
-        //     setAllResultsData(data);
-        // }));
-
-        console.log(`initializing settings db`)
-        settingsDatabase.open()
-
         console.log(`initializing raw logs db`)
         rawDatabase.open();
         return () => closeDatabases();
@@ -110,7 +100,6 @@ function App() {
     function closeDatabases() {
         resultsDatabase.close();
         rawDatabase.close();
-        settingsDatabase.close();
     }
 
     function logCallback(message: string) {
@@ -286,7 +275,7 @@ function App() {
                 <input type="button" value="Download!" id="download-button" onClick={downloadButtonClickHandler}/>
             </fieldset>
             <fieldset style={{maxWidth: "fit-content", float: "left"}}>
-                <SpeechSynthesisPanel settingsDb={settingsDatabase}/>
+                <SpeechSynthesisPanel/>
                 <div style={{display: "inline-block"}}>
                     <input type="checkbox" id="enable-verbose-speech-checkbox"/>
                     <label htmlFor="enable-verbose-speech-checkbox">Verbose</label>
