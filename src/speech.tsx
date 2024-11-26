@@ -7,28 +7,25 @@ import {AppSettings, SettingsDB} from "./database.ts";
 let theSelectedVoice: SpeechSynthesisVoice | null = null;
 const speechRate: number = 1;
 let theSpeechEnabled: boolean = true;
-let speechSynthesis: SpeechSynthesis;
+let allVoices: SpeechSynthesisVoice[] = [];
+const speechSynthesis: SpeechSynthesis = window.speechSynthesis;
 
 export function SpeechSynthesisPanel() {
     const [settingsDb] = useState(() => new SettingsDB())
-    const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
     const [selectedVoiceName, setSelectedVoiceName] = useState<string | undefined>(undefined);
     const [speechEnabled, setSpeechEnabled] = useState<boolean>(false);
     const enableSpeechCheckboxRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         console.log(`speech useEffect init`)
-        speechSynthesis = window.speechSynthesis;
         if (!speechSynthesis) {
             console.log("no SpeechSynthesis");
             return;
         }
 
-        const allVoices = speechSynthesis.getVoices();
-        setVoices(allVoices);
+        updateVoiceList(speechSynthesis.getVoices());
         speechSynthesis.onvoiceschanged = () => {
-            setVoices(speechSynthesis.getVoices());
-            // setSelectedVoiceName(findDefaultVoice()?.name);
+            updateVoiceList(speechSynthesis.getVoices());
         };
 
         settingsDb.open().then(() => {
@@ -38,16 +35,6 @@ export function SpeechSynthesisPanel() {
             getSelectedVoiceSetting();
         });
     }, [])
-
-    useEffect(() => {
-        console.log(`voices changed, there are now ${voices.length} voices, selectedVoiceName: ${selectedVoiceName}`);
-        if(selectedVoiceName) {
-            updateSelectedVoice(selectedVoiceName)
-        } else {
-            // db hasn't loaded yet, but voices changed
-            getSelectedVoiceSetting();
-        }
-    }, [voices])
 
     useEffect(() => {
         theSpeechEnabled = speechEnabled;
@@ -77,7 +64,7 @@ export function SpeechSynthesisPanel() {
     }
 
     function findVoiceByName(name: string) {
-        return voices.find((voice) => voice.name === name) || null;
+        return allVoices.find((voice) => voice.name === name) || null;
     }
 
     function updateSelectedVoice(voiceName: string) {
@@ -91,6 +78,24 @@ export function SpeechSynthesisPanel() {
                 }
                 return voiceName;
             }); // this syncs the ui state(?)
+            sayItLater(`This is ${theSelectedVoice.name} speaking.`)
+        }
+    }
+
+    /**
+     * Exclude non-english voices
+     * @param voices
+     */
+    function updateVoiceList(voices: SpeechSynthesisVoice[]) {
+        allVoices = voices.filter((voice) => {
+            console.log(`voice ${voice.name} has lang ${voice.lang}`);
+            return voice.lang.startsWith("en")
+        }).sort((a, b) => `${a.lang} ${a.name}`.localeCompare(`${b.lang} ${b.name}`));
+        if(selectedVoiceName) {
+            updateSelectedVoice(selectedVoiceName)
+        } else {
+            // db hasn't loaded yet, but voices changed
+            getSelectedVoiceSetting();
         }
     }
 
@@ -118,7 +123,7 @@ export function SpeechSynthesisPanel() {
             &nbsp;
             <select value={selectedVoiceName} onChange={voiceSelectionChanged}>
                 {
-                    voices.map((voice) => {
+                    allVoices.map((voice) => {
                         return <option key={voice.name}
                                        value={voice.name}>{`${voice.name} (${voice.lang}) ${voice.default ? " DEFAULT" : ""}`}</option>
                     })
