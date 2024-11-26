@@ -58,13 +58,12 @@ export class DataCollector {
                 dataCallback: (message: string) => void,
                 processedDataCallback: (message: string) => void,
                 externalControlStates: ExternalControlStates,
-                resultsDatabase: SimpleResultsDB,
-                settingsDatabase: SettingsDB) {
+                resultsDatabase: SimpleResultsDB) {
         this.logCallback = logCallback;
         this.dataCallback = dataCallback;
         this.processedDataCallback = processedDataCallback;
         this.resultsDatabase = resultsDatabase;
-        this.settingsDatabase = settingsDatabase
+        this.settingsDatabase = new SettingsDB();
         this.control = externalControlStates;
         this.states = states;
         console.log("DataCollector constructor called")

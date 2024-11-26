@@ -4,7 +4,7 @@ import {DataFilePushSource, getLines, getReadableStreamFromDataSource} from "./d
 import {DataCollector, DataCollectorPanel, DataCollectorStates} from "./data-collector.tsx";
 import {sayIt, sayItLater, SpeechSynthesisPanel} from "./speech.tsx";
 import {ExternalController, ExternalControlPanel, ExternalControlStates} from "./external-control.tsx";
-import {SettingsDB, SimpleDB, SimpleDBRecord, SimpleResultsDB} from "./database.ts";
+import {SimpleDB, SimpleResultsDB} from "./database.ts";
 import {downloadData} from "./html-data-downloader.ts";
 import {json2csv} from "json-2-csv";
 
@@ -211,14 +211,6 @@ function App() {
     function connectViaSimulator() {
         const fakeReader = getReadableStreamFromDataSource(new DataFilePushSource("/src/test-data.txt", 0)).getReader();
         monitor(fakeReader);
-    }
-
-    function loadFromSerialDataDatabase() {
-        const f = function (record:SimpleDBRecord) {
-            console.log(`loading from db: ${record.data}\n`);
-            dataCollector?.processLine(record.data);
-        };
-        rawDatabase?.getSomeRecentLines(f);
     }
 
     async function monitor(reader: ReadableStreamDefaultReader<Uint8Array>) {

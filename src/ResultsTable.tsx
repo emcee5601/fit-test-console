@@ -29,6 +29,11 @@ declare module '@tanstack/react-table' {
     interface TableMeta<TData extends RowData> {
         updateData: (rowIndex: number, columnId: string, value: string | number) => void
     }
+
+    //allows us to define custom properties for our columns
+    interface ColumnMeta<TData extends RowData, TValue> {
+        filterVariant?: 'text' | 'range' | 'select'
+    }
 }
 
 // Give our default column cell renderer editing superpowers!
