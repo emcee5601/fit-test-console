@@ -56,23 +56,23 @@ function App() {
         console.log(`initializing raw logs db`)
         rawDatabase.open();
         return () => closeDatabases();
-    },[]);
+    },[rawDatabase]);
 
     useEffect(() => {
         // need to propagate these down?
         externalControlStates.valvePosition = valvePosition;
         sayItLater(valvePosition);
-    }, [valvePosition]);
+    }, [valvePosition, externalControlStates]);
     useEffect(() => {
         externalControlStates.dataTransmissionMode = dataTransmissionMode;
         console.log(`dataTransmissionMode changed: ${dataTransmissionMode}`);
         sayItLater(dataTransmissionMode);
-    }, [dataTransmissionMode]);
+    }, [dataTransmissionMode, externalControlStates]);
     useEffect(() => {
         externalControlStates.controlMode = controlMode;
         console.log(`control mode changed: ${controlMode}`);
         sayItLater(controlMode);
-    }, [controlMode]);
+    }, [controlMode, externalControlStates]);
 
     // propagate states
     useEffect(() => {
@@ -80,10 +80,10 @@ function App() {
     }, [logData]);
     useEffect(() => {
         dataCollectorStates.rawConsoleData = rawConsoleData;
-    }, [rawConsoleData]);
+    }, [rawConsoleData, dataCollectorStates]);
     useEffect(() => {
         dataCollectorStates.processedData = processedData;
-    }, [processedData]);
+    }, [processedData, dataCollectorStates]);
 
     useEffect(() => {
         console.log(`baud rate updated to ${baudRate}`)
@@ -193,13 +193,16 @@ function App() {
     function connectViaWebSerial() {
         if ("serial" in navigator) {
             logit("serial supported!")
-            // @ts-expect-error serial is only defined on chrome
             navigator.serial.requestPort().then((port) => {
                 logit(`got serial port ${port.toLocaleString()}, using baud rate ${baudRate}`)
-                port.open({baudRate: baudRate}).then((event: any) => {
+                port.open({baudRate: baudRate}).then((event) => {
                     logit(`opened ${event}`)
-                    monitor(port.readable.getReader());
-                    externalController.setWriter(port.writable.getWriter());
+                    if(port.readable) {
+                        monitor(port.readable.getReader());
+                    }
+                    if(port.writable) {
+                        externalController.setWriter(port.writable.getWriter());
+                    }
                 })
             })
         } else {
