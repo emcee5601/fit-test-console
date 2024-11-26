@@ -53,7 +53,7 @@ export async function* getLines(reader: ReadableStreamDefaultReader<Uint8Array>)
 export function getReadableStreamFromDataSource(pushSource: DataFilePushSource) {
     return new ReadableStream({
         start(controller) {
-            readRepeatedly().catch((e: any) => controller.error(e));
+            readRepeatedly().catch((e) => controller.error(e));
 
             async function readRepeatedly() :Promise<Uint8Array> {
                 return pushSource.dataRequest().then((result:Uint8Array) => {
