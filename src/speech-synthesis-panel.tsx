@@ -1,7 +1,7 @@
 /*
  Text-to-speech functions
  */
-import {ChangeEvent, useEffect, useRef, useState} from "react";
+import {ChangeEvent, useCallback, useEffect, useRef, useState} from "react";
 import {AppSettings, SettingsDB} from "./database.ts";
 import {speech} from "./speech.ts";
 
@@ -11,6 +11,30 @@ export function SpeechSynthesisPanel() {
     const [selectedVoiceName, setSelectedVoiceName] = useState<string | undefined>(undefined);
     const [speechEnabled, setSpeechEnabled] = useState<boolean>(false);
     const enableSpeechCheckboxRef = useRef<HTMLInputElement>(null);
+
+    const updateSelectedVoice = useCallback((voiceName: string) => {
+        const foundVoice = findVoiceByName(voiceName);
+        console.log(`looking for voice '${voiceName}'; found voice ${foundVoice?.name}`)
+        if(foundVoice) {
+            speech.setSelectedVoice(foundVoice);
+            setSelectedVoiceName((prev) => {
+                if(prev !== voiceName){
+                    settingsDb.saveSetting(AppSettings.SPEECH_VOICE, voiceName);
+                }
+                return voiceName;
+            }); // this syncs the ui state(?)
+            speech.sayItLater(`This is ${foundVoice.name} speaking.`)
+        }
+    }, [settingsDb])
+
+    const getSelectedVoiceSetting = useCallback(() => {
+        settingsDb.getSetting(AppSettings.SPEECH_VOICE, findDefaultVoice()?.name)
+            .then((res) => {
+                console.log(`got speech voice, res is ${res}`)
+                updateSelectedVoice(res as string)
+            })
+    },[settingsDb, updateSelectedVoice])
+
 
     useEffect(() => {
         console.log(`speech useEffect init`)
@@ -25,7 +49,7 @@ export function SpeechSynthesisPanel() {
             settingsDb.getSetting(AppSettings.SPEECH_ENABLED, false).then((res) => setSpeechEnabled(res as boolean))
             getSelectedVoiceSetting();
         });
-    }, [])
+    }, [settingsDb, getSelectedVoiceSetting])
 
     useEffect(() => {
         speech.setSpeechEnabled(speechEnabled);
@@ -33,15 +57,6 @@ export function SpeechSynthesisPanel() {
             speechSynthesis.cancel();
         }
     }, [speechEnabled]);
-
-
-    function getSelectedVoiceSetting() {
-        settingsDb.getSetting(AppSettings.SPEECH_VOICE, findDefaultVoice()?.name)
-            .then((res) => {
-                console.log(`got speech voice, res is ${res}`)
-                updateSelectedVoice(res as string)
-            })
-    }
 
 
     function findDefaultVoice() {
@@ -56,21 +71,6 @@ export function SpeechSynthesisPanel() {
 
     function findVoiceByName(name: string) {
         return speech.getAllVoices().find((voice) => voice.name === name) || null;
-    }
-
-    function updateSelectedVoice(voiceName: string) {
-        const foundVoice = findVoiceByName(voiceName);
-        console.log(`looking for voice '${voiceName}'; found voice ${foundVoice?.name}`)
-        if(foundVoice) {
-            speech.setSelectedVoice(foundVoice);
-            setSelectedVoiceName((prev) => {
-                if(prev !== voiceName){
-                    settingsDb.saveSetting(AppSettings.SPEECH_VOICE, voiceName);
-                }
-                return voiceName;
-            }); // this syncs the ui state(?)
-            speech.sayItLater(`This is ${foundVoice.name} speaking.`)
-        }
     }
 
 
