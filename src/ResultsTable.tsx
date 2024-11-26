@@ -13,7 +13,7 @@ import {
     flexRender,
     getCoreRowModel, getFilteredRowModel,
     getSortedRowModel,
-    Row, RowData,
+    Row, RowData, SortingState,
     useReactTable,
 } from '@tanstack/react-table'
 
@@ -194,6 +194,12 @@ export function ResultsTable({dataCollector}: {
 
     const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+    const [sorting, setSorting] = useState<SortingState>([
+        {
+            id: 'ID',
+            desc: true,
+        }
+    ])
 
     const table = useReactTable({
         data: localTableData,
@@ -202,9 +208,11 @@ export function ResultsTable({dataCollector}: {
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         state: {
+            sorting,
             columnFilters,
         },
         onColumnFiltersChange: setColumnFilters,
+        onSortingChange: setSorting,
         autoResetPageIndex,
         // Provide our updateData function to our table meta
         meta: {
