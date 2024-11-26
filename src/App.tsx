@@ -55,7 +55,8 @@ function App() {
     useEffect(() => {
         console.log(`initializing raw logs db`)
         rawDatabase.open();
-        return () => closeDatabases();
+
+        return () => rawDatabase.close();
     },[rawDatabase]);
 
     useEffect(() => {
@@ -77,7 +78,7 @@ function App() {
     // propagate states
     useEffect(() => {
         dataCollectorStates.logData = logData;
-    }, [logData]);
+    }, [logData, dataCollectorStates]);
     useEffect(() => {
         dataCollectorStates.rawConsoleData = rawConsoleData;
     }, [rawConsoleData, dataCollectorStates]);
@@ -96,11 +97,6 @@ function App() {
         console.log(`Download File Format set to ${dataToDownload}`)
     }, [dataToDownload]);
 
-
-    function closeDatabases() {
-        resultsDatabase.close();
-        rawDatabase.close();
-    }
 
     function logCallback(message: string) {
         setLogData((prev) => prev + message);

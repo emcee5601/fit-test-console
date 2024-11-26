@@ -3,7 +3,7 @@
  */
 
 
-import React, {useEffect, useState} from 'react'
+import React, {useCallback, useEffect, useState} from 'react'
 
 import './index.css'
 
@@ -26,11 +26,13 @@ import {DataCollector} from "./data-collector.tsx";
 import {createMailtoLink} from "./html-data-downloader.ts";
 
 declare module '@tanstack/react-table' {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     interface TableMeta<TData extends RowData> {
         updateData: (rowIndex: number, columnId: string, value: string | number) => void
     }
 
     //allows us to define custom properties for our columns
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     interface ColumnMeta<TData extends RowData, TValue> {
         filterVariant?: 'text' | 'range' | 'select'
     }
@@ -49,12 +51,12 @@ function useEditableColumn({
     const {ref, inView} = useInView()
 
     // When the input is blurred, we'll call our table meta's updateData function
-    const onBlur = () => {
+    const onBlur = useCallback(() => {
         if(value != initialValue) {
             // only update if changed
             table.options.meta?.updateData(index, id, value)
         }
-    }
+    }, [value, id, index, table.options.meta, initialValue])
 
     // If the initialValue is changed external, sync it up with our state
     React.useEffect(() => {
@@ -65,7 +67,7 @@ function useEditableColumn({
         if(!inView) {
             onBlur();
         }
-    }, [inView]);
+    }, [inView, onBlur]);
 
     // there's some sort of bug where inserting new rows at the top causes the editable cell's values to pull from the previous table's first record.
     // only seems to affect rendering
@@ -269,7 +271,7 @@ export function ResultsTable({dataCollector}: {
         dataCollector.resultsDatabase.open().then(() => dataCollector.resultsDatabase.getAllData().then(data => {
             setLocalTableData(data);
         }));
-    }, []);
+    }, [dataCollector.resultsDatabase]);
 
 
     function handleExportAsCsv() {
@@ -423,7 +425,7 @@ export function ResultsTable({dataCollector}: {
 }
 
 
-function Filter({column}: { column: Column<any, unknown> }) {
+function Filter({column}: { column: Column<never, unknown> }) {
     const columnFilterValue = column.getFilterValue()
     const { filterVariant } = column.columnDef.meta ?? {}
 
