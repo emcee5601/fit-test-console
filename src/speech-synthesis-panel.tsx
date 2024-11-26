@@ -3,12 +3,8 @@
  */
 import {ChangeEvent, useEffect, useRef, useState} from "react";
 import {AppSettings, SettingsDB} from "./database.ts";
+import {speech} from "./speech.ts";
 
-let theSelectedVoice: SpeechSynthesisVoice | null = null;
-const speechRate: number = 1;
-let theSpeechEnabled: boolean = true;
-let allVoices: SpeechSynthesisVoice[] = [];
-const speechSynthesis: SpeechSynthesis = window.speechSynthesis;
 
 export function SpeechSynthesisPanel() {
     const [settingsDb] = useState(() => new SettingsDB())
@@ -23,11 +19,6 @@ export function SpeechSynthesisPanel() {
             return;
         }
 
-        updateVoiceList(speechSynthesis.getVoices());
-        speechSynthesis.onvoiceschanged = () => {
-            updateVoiceList(speechSynthesis.getVoices());
-        };
-
         settingsDb.open().then(() => {
             console.log("settings db ready, loading speech settings")
 
@@ -37,7 +28,7 @@ export function SpeechSynthesisPanel() {
     }, [])
 
     useEffect(() => {
-        theSpeechEnabled = speechEnabled;
+        speech.setSpeechEnabled(speechEnabled);
         if (!speechEnabled) {
             speechSynthesis.cancel();
         }
@@ -64,40 +55,24 @@ export function SpeechSynthesisPanel() {
     }
 
     function findVoiceByName(name: string) {
-        return allVoices.find((voice) => voice.name === name) || null;
+        return speech.getAllVoices().find((voice) => voice.name === name) || null;
     }
 
     function updateSelectedVoice(voiceName: string) {
         const foundVoice = findVoiceByName(voiceName);
         console.log(`looking for voice '${voiceName}'; found voice ${foundVoice?.name}`)
         if(foundVoice) {
-            theSelectedVoice = foundVoice;
+            speech.setSelectedVoice(foundVoice);
             setSelectedVoiceName((prev) => {
                 if(prev !== voiceName){
                     settingsDb.saveSetting(AppSettings.SPEECH_VOICE, voiceName);
                 }
                 return voiceName;
             }); // this syncs the ui state(?)
-            sayItLater(`This is ${theSelectedVoice.name} speaking.`)
+            speech.sayItLater(`This is ${foundVoice.name} speaking.`)
         }
     }
 
-    /**
-     * Exclude non-english voices
-     * @param voices
-     */
-    function updateVoiceList(voices: SpeechSynthesisVoice[]) {
-        allVoices = voices.filter((voice) => {
-            console.log(`voice ${voice.name} has lang ${voice.lang}`);
-            return voice.lang.startsWith("en")
-        }).sort((a, b) => `${a.lang} ${a.name}`.localeCompare(`${b.lang} ${b.name}`));
-        if(selectedVoiceName) {
-            updateSelectedVoice(selectedVoiceName)
-        } else {
-            // db hasn't loaded yet, but voices changed
-            getSelectedVoiceSetting();
-        }
-    }
 
     function voiceSelectionChanged(event: ChangeEvent<HTMLSelectElement>) {
         const voiceName = event.target.value;
@@ -123,7 +98,7 @@ export function SpeechSynthesisPanel() {
             &nbsp;
             <select value={selectedVoiceName} onChange={voiceSelectionChanged}>
                 {
-                    allVoices.map((voice) => {
+                    speech.getAllVoices().map((voice) => {
                         return <option key={voice.name}
                                        value={voice.name}>{`${voice.name} (${voice.lang}) ${voice.default ? " DEFAULT" : ""}`}</option>
                     })
@@ -131,43 +106,4 @@ export function SpeechSynthesisPanel() {
             </select>
         </>
     );
-}
-
-export function isSayingSomething() {
-    return speechSynthesis.speaking;
-}
-
-/**
- * enqueue
- * @param message
- */
-export function sayItLater(message: string) {
-    if (!theSpeechEnabled) {
-        return;
-    }
-    console.log(`say it later: ${message}`)
-    const utterThis = new SpeechSynthesisUtterance(message);
-    utterThis.voice = theSelectedVoice;
-    utterThis.rate = speechRate;
-
-    speechSynthesis.speak(utterThis); // this enqueues
-}
-
-export function sayIt(message: string) {
-    if (!theSpeechEnabled) {
-        return;
-    }
-    console.log(`using ${theSelectedVoice?.name} say it ${message}`)
-    const utterThis = new SpeechSynthesisUtterance(message);
-    utterThis.voice = theSelectedVoice;
-    utterThis.rate = speechRate;
-
-    if (speechSynthesis.speaking) {
-        speechSynthesis.cancel(); // stop current utterance
-        // chrome needs a delay here for some reason, otherwise speak doesn't do anything.
-        // 60 ms seems to be around the minimum delay
-        setTimeout(() => speechSynthesis.speak(utterThis), 60)
-    } else {
-        speechSynthesis.speak(utterThis);
-    }
 }

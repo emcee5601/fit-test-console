@@ -2,7 +2,8 @@ import React, {ChangeEvent, RefObject, useEffect, useState} from 'react'
 import './App.css'
 import {DataFilePushSource, getLines, getReadableStreamFromDataSource} from "./datasource-helper.ts";
 import {DataCollector, DataCollectorPanel, DataCollectorStates} from "./data-collector.tsx";
-import {sayIt, sayItLater, SpeechSynthesisPanel} from "./speech.tsx";
+import {SpeechSynthesisPanel} from "./speech-synthesis-panel.tsx";
+import {speech} from "./speech.ts"
 import {ExternalController, ExternalControlPanel, ExternalControlStates} from "./external-control.tsx";
 import {SimpleDB, SimpleResultsDB} from "./database.ts";
 import {downloadData} from "./html-data-downloader.ts";
@@ -62,17 +63,17 @@ function App() {
     useEffect(() => {
         // need to propagate these down?
         externalControlStates.valvePosition = valvePosition;
-        sayItLater(valvePosition);
+        speech.sayItLater(valvePosition);
     }, [valvePosition, externalControlStates]);
     useEffect(() => {
         externalControlStates.dataTransmissionMode = dataTransmissionMode;
         console.log(`dataTransmissionMode changed: ${dataTransmissionMode}`);
-        sayItLater(dataTransmissionMode);
+        speech.sayItLater(dataTransmissionMode);
     }, [dataTransmissionMode, externalControlStates]);
     useEffect(() => {
         externalControlStates.controlMode = controlMode;
         console.log(`control mode changed: ${controlMode}`);
-        sayItLater(controlMode);
+        speech.sayItLater(controlMode);
     }, [controlMode, externalControlStates]);
 
     // propagate states
@@ -88,7 +89,7 @@ function App() {
 
     useEffect(() => {
         console.log(`baud rate updated to ${baudRate}`)
-        sayIt(`baud rate is now ${baudRate}`)
+        speech.sayIt(`baud rate is now ${baudRate}`)
     }, [baudRate])
     useEffect(() => {
         console.log(`datasource is now ${dataSource}`)

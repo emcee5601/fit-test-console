@@ -500,6 +500,8 @@ function DebouncedInput({
         }, debounce)
 
         return () => clearTimeout(timeout)
+        // adding onChange and debounce here cause constant re-renders. The linter says to useCallback on them, then to memoize the deps of the callback, but suppressing is simpler for now since we don't actually want to do anything when those change
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [value])
 
     return (

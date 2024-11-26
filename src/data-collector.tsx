@@ -4,7 +4,7 @@ Collect data from PortaCount 8020a
 // import {isSayingSomething, sayIt, sayItLater} from "./speech.js";
 
 // data output patterns
-import {isSayingSomething, sayIt, sayItLater} from "./speech.tsx";
+import {speech} from "./speech.ts";
 import {ExternalControlStates} from "./external-control.tsx";
 import {SettingsDB, SimpleResultsDB, SimpleResultsDBRecord} from "./database.ts";
 import React, {RefObject, useEffect, useState} from "react";
@@ -81,7 +81,7 @@ export class DataCollector {
         if(this.states.setInstructions) {
             this.states.setInstructions(message)
         }
-        sayItLater(message); // make sure instructions are queued.
+        speech.sayItLater(message); // make sure instructions are queued.
     }
 
     setInstructionsForExercise(exerciseNum: number) {
@@ -177,7 +177,7 @@ export class DataCollector {
             // this.appendToData(`Exercise ${exerciseNum}: Fit factor is ${ff}. Result: ${result}\n`)
             this.appendToProcessedData(`Exercise ${exerciseNum}: Fit factor is ${ff}. Result: ${result}\n`)
             this.setInstructionsForExercise(exerciseNum + 1);
-            sayItLater(`Score was ${ff}`)
+            speech.sayItLater(`Score was ${ff}`)
             // this.beginExerciseTimoutId = this.scheduleBeginExercisePrompt(exerciseNum+1);
             // this.currentTestData.results.push({exercise_num: exerciseNum, fit_factor: ff, result: result});
             this.recordExerciseResult(exerciseNum, ff);
@@ -206,12 +206,12 @@ export class DataCollector {
         match = line.match(DataCollector.COUNT_READING_PATTERN) || line.match(DataCollector.EXTERNAL_CONTROL_PARTICLE_COUNT_PATTERN);
         if (match) {
             const concentration = Number(match.groups?.concentration);
-            if (!isSayingSomething()) {
+            if (!speech.isSayingSomething()) {
                 if (this.shouldSayParticleCount()) {
                     const intConcentration = Math.ceil(concentration);
                     const roundedConcentration = intConcentration < 20 ? (Math.ceil(concentration * 10) / 10).toFixed(1) : intConcentration;
                     const message = this.speechVerbose() ? `Particle count is ${roundedConcentration}` : roundedConcentration.toString();
-                    sayIt(message);
+                    speech.sayIt(message);
                 }
             }
             if (line.match(DataCollector.EXTERNAL_CONTROL_PARTICLE_COUNT_PATTERN)) {

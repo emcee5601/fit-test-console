@@ -4,7 +4,7 @@ The technical addendum describes the interface. Starts on page 13.
  https://tsi.com/getmedia/0d5db6cd-c54d-4644-8c31-40cc8c9d8a9f/PortaCount_Model_8020_Technical_Addendum_US?ext=.pdf
  */
 import React, {useEffect, useRef} from "react";
-import {sayItLater} from "./speech.tsx";
+import {speech} from "./speech.ts";
 
 export interface ExternalControlStates {
     dataTransmissionMode: string;
@@ -175,7 +175,7 @@ export function ExternalControlPanel({control}: { control: ExternalController })
 
     function powerOff() {
         control.sendCommand(ExternalController.TURN_POWER_OFF);
-        sayItLater("Power off");
+        speech.sayItLater("Power off");
     }
 
     function beep() {
