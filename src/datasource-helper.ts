@@ -23,16 +23,16 @@ export async function* getLines(reader: ReadableStreamDefaultReader<Uint8Array>)
     let chunk : string = value ? utf8Decoder.decode(value, {stream: true}) : "";
 
 
-    let re = /\r\n|\n|\r/gm;
+    const re = /\r\n|\n|\r/gm;
     let startIndex = 0;
 
     for (; ;) {
-        let result = re.exec(chunk);
+        const result = re.exec(chunk);
         if (!result) {
             if (readerDone) {
                 break;
             }
-            let remainder = chunk.substring(startIndex);
+            const remainder = chunk.substring(startIndex);
             ({value: value, done: readerDone} = await readFromReader());
             chunk =
                 remainder + (value ? utf8Decoder.decode(value, {stream: true}) : "");
