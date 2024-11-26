@@ -425,7 +425,8 @@ export function ResultsTable({dataCollector}: {
 }
 
 
-function Filter({column}: { column: Column<never, unknown> }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function Filter({column}: { column: Column<any, unknown> }) {
     const columnFilterValue = column.getFilterValue()
     const { filterVariant } = column.columnDef.meta ?? {}
 
