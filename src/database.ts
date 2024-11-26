@@ -14,8 +14,9 @@ export interface SimpleResultsDBRecord {
 }
 
 export enum AppSettings {
-    ENABLE_SPEECH = "enable-speech",
+    SPEECH_ENABLED = "speech-enabled",
     ADVANCED_MODE = "advanced-mode",
+    SPEECH_VOICE = "speech-voice",
 }
 
 abstract class AbstractDB {
@@ -133,13 +134,13 @@ export class SettingsDB extends AbstractDB {
         theDb.createObjectStore(SettingsDB.OBJECT_STORE_NAME, {keyPath: "ID"});
     }
 
-    public async getSetting(name:AppSettings) {
+    public async getSetting(name:AppSettings, defaultValue:string|boolean|number|undefined) {
         const transaction = this.openTransaction("readonly");
         if (!transaction) {
-            return false;
+            return undefined;
         }
         const request = transaction.objectStore(SettingsDB.OBJECT_STORE_NAME).get(name)
-        return new Promise<boolean>((resolve, reject) => {
+        return new Promise<boolean|string|number|undefined>((resolve, reject) => {
             request.onerror = (event) => {
                 const errorMessage = `failed to get setting for ${name}; error: ${event}`;
                 console.log(errorMessage);
@@ -147,12 +148,18 @@ export class SettingsDB extends AbstractDB {
             }
             request.onsuccess = () => {
                 console.log(`getSetting ${name} = ${JSON.stringify(request.result)}`);
-                resolve(request.result.value);
+                if(request.result) {
+                    resolve(request.result.value);
+                } else {
+                    // no value in db, return default
+                    resolve(defaultValue)
+                }
             }
         });
     }
 
     async saveSetting(name:AppSettings, value: string|number|boolean) {
+        console.log(`saving setting ${name} = ${value}`)
         const transaction = this.openTransaction("readwrite");
         if (!transaction) {
             console.log("settings db not ready")
