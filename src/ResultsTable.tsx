@@ -127,6 +127,20 @@ export function ResultsTable({dataCollector}: {
         }
     }
 
+    function compareNumericString(rowA:Row<SimpleResultsDBRecord>, rowB:Row<SimpleResultsDBRecord>, id:string) {
+        let a = Number.parseFloat(rowA.getValue(id));
+        let b = Number.parseFloat(rowB.getValue(id));
+        if (Number.isNaN(a)) {  // Blanks and non-numeric strings to bottom
+            a = Number.NEGATIVE_INFINITY;
+        }
+        if (Number.isNaN(b)) {
+            b = Number.NEGATIVE_INFINITY;
+        }
+        if (a > b) return 1;
+        if (a < b) return -1;
+        return 0;
+    }
+
     const columns = React.useMemo<ColumnDef<SimpleResultsDBRecord, string | number>[]>(
         () => [
             {
@@ -175,6 +189,8 @@ export function ResultsTable({dataCollector}: {
                 cell: getExerciseResultCell,
                 enableColumnFilter: false,
                 sortUndefined: undefined,
+                sortingFn: compareNumericString,
+                sortDescFirst:true,
                 size: 50,
             },
             {
@@ -182,6 +198,8 @@ export function ResultsTable({dataCollector}: {
                 cell: getExerciseResultCell,
                 enableColumnFilter: false,
                 sortUndefined: undefined,
+                sortingFn: compareNumericString,
+                sortDescFirst:true,
                 size: 50,
             },
             {
@@ -189,6 +207,8 @@ export function ResultsTable({dataCollector}: {
                 cell: getExerciseResultCell,
                 enableColumnFilter: false,
                 sortUndefined: undefined,
+                sortingFn: compareNumericString,
+                sortDescFirst:true,
                 size: 50,
             },
             {
@@ -196,6 +216,8 @@ export function ResultsTable({dataCollector}: {
                 cell: getExerciseResultCell,
                 enableColumnFilter: false,
                 sortUndefined: undefined,
+                sortingFn: compareNumericString,
+                sortDescFirst:true,
                 size: 50,
             },
             {
@@ -203,6 +225,8 @@ export function ResultsTable({dataCollector}: {
                 cell: getExerciseResultCell,
                 enableColumnFilter: false,
                 sortUndefined: undefined,
+                sortingFn: compareNumericString,
+                sortDescFirst:true,
                 size: 50,
             },
         ],
