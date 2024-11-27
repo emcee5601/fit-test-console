@@ -50,7 +50,7 @@ export async function* getLines(reader: ReadableStreamDefaultReader<Uint8Array>)
 
 
 
-export function getReadableStreamFromDataSource(pushSource: DataFilePushSource) {
+export function getReadableStreamFromDataSource(pushSource: PushSource) {
     return new ReadableStream({
         start(controller) {
             readRepeatedly().catch((e) => controller.error(e));
@@ -77,8 +77,12 @@ export function getReadableStreamFromDataSource(pushSource: DataFilePushSource) 
     });
 }
 
+export interface PushSource {
+    dataRequest() : Promise<Uint8Array>
+    close() : void
+}
 
-export class DataFilePushSource {
+export class DataFilePushSource implements PushSource {
     static DEFAULT_DELAY_MS = 10;
     static encoder = new TextEncoder();
     reader : ReadableStreamDefaultReader<Uint8Array> | undefined;

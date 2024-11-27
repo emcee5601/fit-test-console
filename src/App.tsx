@@ -8,6 +8,7 @@ import {ExternalController, ExternalControlPanel, ExternalControlStates} from ".
 import {SimpleDB, SimpleResultsDB} from "./database.ts";
 import {downloadData} from "./html-data-downloader.ts";
 import {json2csv} from "json-2-csv";
+import {FTDISerial} from "./web-usb-serial-drivers.ts";
 
 
 function App() {
@@ -133,6 +134,9 @@ function App() {
 
     function connectButtonClickHandler() {
         switch (dataSource) {
+            case "ftdi":
+                connectViaFtdi();
+                break;
             case "web-serial":
                 connectViaWebSerial()
                 break;
@@ -186,6 +190,21 @@ function App() {
         });
     }
 
+    function connectViaFtdi() {
+        const serial = new FTDISerial()
+        serial.requestPort().then((port) => {
+            port.open({baudRate: baudRate}).then((event) => {
+                logit(`ftdi opened ${event}`)
+                if(port.readable) {
+                    monitor(port.readable.getReader());
+                }
+                if(port.writable) {
+                    externalController.setWriter(port.writable.getWriter());
+                }
+            })
+        })
+    }
+
 
     function connectViaWebSerial() {
         if ("serial" in navigator) {
@@ -209,7 +228,7 @@ function App() {
 
 
     function connectViaSimulator() {
-        const fakeReader = getReadableStreamFromDataSource(new DataFilePushSource("/src/test-data.txt", 0)).getReader();
+        const fakeReader = getReadableStreamFromDataSource(new DataFilePushSource("/public/simulator-data/test-data.txt", 0)).getReader();
         monitor(fakeReader);
     }
 
