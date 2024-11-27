@@ -6,20 +6,24 @@ import React, {useCallback, useEffect, useState} from 'react'
 import './index.css'
 
 import {
-    CellContext, Column,
-    ColumnDef, ColumnFiltersState,
+    CellContext,
+    Column,
+    ColumnDef,
+    ColumnFiltersState,
     flexRender,
-    getCoreRowModel, getFilteredRowModel,
+    getCoreRowModel,
+    getFilteredRowModel,
     getSortedRowModel,
-    Row, RowData, SortingState,
+    Row,
+    RowData,
+    SortingState,
     useReactTable,
 } from '@tanstack/react-table'
 
 import {useVirtualizer} from '@tanstack/react-virtual'
 import {SimpleResultsDBRecord} from "./database.ts";
 import {useInView} from "react-intersection-observer";
-import {mkConfig} from "export-to-csv";
-import {download, generateCsv} from "export-to-csv";
+import {download, generateCsv, mkConfig} from "export-to-csv";
 import {DataCollector} from "./data-collector.tsx";
 import {createMailtoLink} from "./html-data-downloader.ts";
 import DatePicker from "react-datepicker";
@@ -249,6 +253,7 @@ export function ResultsTable({dataCollector}: {
     })
 
     const {rows} = table.getRowModel()
+    const dates:Date[] = [...new Set<Date>(localTableData.map((row) => new Date(row.Time)))]
 
     //The virtualizer needs to know the scrollable container element
     const tableContainerRef = React.useRef<HTMLDivElement>(null)
@@ -345,7 +350,6 @@ export function ResultsTable({dataCollector}: {
                                     <th
                                         key={header.id}
                                         style={{
-                                            display: 'flex',
                                             width: header.getSize(),
                                         }}
                                     >
@@ -368,7 +372,7 @@ export function ResultsTable({dataCollector}: {
                                         </div>
                                         {header.column.getCanFilter() ? (
                                             <div>
-                                                <Filter column={header.column}/>
+                                                <Filter column={header.column} dates={dates}/>
                                             </div>
                                         ) : null}
 
@@ -427,7 +431,7 @@ export function ResultsTable({dataCollector}: {
 
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function Filter({column}: { column: Column<any, unknown> }) {
+function Filter({column, dates}: { column: Column<any, unknown>, dates: Date[] }) {
     const columnFilterValue = column.getFilterValue()
     const { filterVariant } = column.columnDef.meta ?? {}
 
@@ -471,15 +475,20 @@ function Filter({column}: { column: Column<any, unknown> }) {
         case 'date': {
             const curFilter = column.getFilterValue() as string;
             const selectedDate = curFilter? new Date(curFilter) : null;
-            return <DatePicker showMonthYearDropdown={true} minDate={new Date("2024-01-01")} maxDate={new Date()}
+            return <DatePicker minDate={new Date("2024-01-01")} maxDate={new Date()}
                                isClearable={true}
                                placeholderText={"Search..."}
                                selected={selectedDate}
-                               onChange={(value) => column.setFilterValue(value?.toLocaleDateString())}></DatePicker>
+                               includeDates={dates}
+                               showIcon={true}
+                               showDisabledMonthNavigation={true}
+                               todayButton={<input type={"button"} value={"Today"} />}
+                               onChange={(value) => column.setFilterValue(value?.toLocaleDateString())}
+            ></DatePicker>
         }
         default:
             return <DebouncedInput
-                className="w-36 border shadow rounded"
+                className="filterInput"
                 onChange={value => column.setFilterValue(value)}
                 placeholder={`Search...`}
                 type="text"
