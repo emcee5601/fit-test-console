@@ -1,0 +1,97 @@
+NEW TEST  PASS =   100
+Ambient         5250 #/cc
+Mask            9.85 #/cc
+Ambient         5730 #/cc
+FF    1          557 PASS
+Mask            1730 #/cc
+Ambient         3140 #/cc
+FF    2          2.5 FAIL
+Mask             740 #/cc
+Ambient         5280 #/cc
+FF    3          5.6 FAIL
+Mask             548 #/cc
+Ambient         4810 #/cc
+FF    4          9.2 FAIL
+Overall FF       5.8 FAIL
+
+
+PORTACOUNT PLUS PROM V1.7
+COPYRIGHT(c)1992 TSI INC
+ALL RIGHTS RESERVED
+Serial Number 17754
+FF pass level  =   100
+No. of exers   =  4
+Ambt purge     =  4 sec.
+Ambt sample    =  5 sec.
+Mask purge     = 11 sec.
+Mask sample  1 = 40 sec.
+Mask sample  2 = 40 sec.
+Mask sample  3 = 40 sec.
+Mask sample  4 = 40 sec.
+DIP switch     = 10111111
+Conc.           0.00 #/cc
+Conc.           0.00 #/cc
+Conc.           0.30 #/cc
+NEW TEST  PASS =   100
+Ambient         2290 #/cc
+Mask            5.62 #/cc
+Ambient         1670 #/cc
+FF    1          352 PASS
+Test Terminated
+Conc.          65.40 #/cc
+Conc.           4.80 #/cc
+NEW TEST  PASS =   100
+Ambient         1420 #/cc
+Mask            1.38 #/cc
+Ambient         1290 #/cc
+FF    1          983 PASS
+Mask            3.03 #/cc
+Ambient         1280 #/cc
+FF    2          425 PASS
+Mask           52.30 #/cc
+Ambient         1320 #/cc
+FF    3           24 FAIL
+Mask            1.56 #/cc
+Ambient         1270 #/cc
+FF    4          832 PASS
+Overall FF        89 FAIL
+Conc.           2.10 #/cc
+NEW TEST  PASS =   100
+Ambient         1210 #/cc
+Mask            1.24 #/cc
+970/cc Low Particle Count
+Test Terminated
+Conc.           1450 #/cc
+PORTACOUNT PLUS PROM V1.7
+COPYRIGHT(c)1992 TSI INC
+ALL RIGHTS RESERVED
+Serial Number 17754
+FF pass level  =   100
+No. of exers   =  4
+Ambt purge     =  4 sec.
+Ambt sample    =  5 sec.
+Mask purge     = 11 sec.
+Mask sample  1 = 40 sec.
+Mask sample  2 = 40 sec.
+Mask sample  3 = 40 sec.
+Mask sample  4 = 40 sec.
+DIP switch     = 10111111
+Conc.           6990 #/cc
+NEW TEST  PASS =   100
+Ambient         5250 #/cc
+Mask            9.85 #/cc
+Ambient         5730 #/cc
+FF    1          557 PASS
+Mask            1730 #/cc
+Ambient         3140 #/cc
+FF    2          2.5 FAIL
+Mask             740 #/cc
+Ambient         5280 #/cc
+FF    3          5.6 FAIL
+Mask             548 #/cc
+Ambient         4810 #/cc
+FF    4          9.2 FAIL
+Overall FF       5.8 FAIL
+NEW TEST  PASS =   100
+Ambient         3400 #/cc
+Test Terminated
