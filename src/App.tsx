@@ -193,7 +193,7 @@ function App() {
     function connectViaFtdi() {
         const serial = new FTDISerial()
         serial.requestPort().then((port) => {
-            port.open({baudRate: baudRate}).then((event) => {
+            port.open({baudRate: baudRate.toString()}).then((event) => {
                 logit(`ftdi opened ${event}`)
                 if(port.readable) {
                     monitor(port.readable.getReader());
@@ -261,6 +261,7 @@ function App() {
     return (
         <>
             <fieldset style={{maxWidth: "fit-content", float: "left"}}>
+                {`mftc v${__APP_VERSION__}`}&nbsp;
                 <select id="baud-rate-selector" defaultValue={baudRate} onChange={baudRateChanged}>
                     <option value={300}>300</option>
                     <option value={600}>600</option>
