@@ -47,3 +47,7 @@
 .filterInput {
     width: 90%;
 }
+
+.datePickerInput {
+    width: 100px
+}

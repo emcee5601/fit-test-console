@@ -511,6 +511,7 @@ function Filter({column, dates}: { column: Column<any, unknown>, dates: Date[] }
                                includeDates={dates}
                                showIcon={true}
                                showDisabledMonthNavigation={true}
+                               className={'datePickerInput'}
                                todayButton={<input type={"button"} value={"Today"} />}
                                onChange={(value) => column.setFilterValue(value?.toLocaleDateString())}
             ></DatePicker>
