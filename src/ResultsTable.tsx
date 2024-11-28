@@ -1,7 +1,7 @@
 /**
  * Table to store the results of fit tests.
  */
-import React, {useCallback, useEffect, useState} from 'react'
+import React, {useEffect, useState} from 'react'
 
 import './index.css'
 
@@ -22,12 +22,13 @@ import {
 
 import {useVirtualizer} from '@tanstack/react-virtual'
 import {SimpleResultsDBRecord} from "./database.ts";
-import {useInView} from "react-intersection-observer";
 import {download, generateCsv, mkConfig} from "export-to-csv";
 import {DataCollector} from "./data-collector.tsx";
 import {createMailtoLink} from "./html-data-downloader.ts";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import {useEditableColumn} from "./use-editable-column-hook.tsx";
+import {useSkipper} from "./use-skipper-hook.ts";
 
 declare module '@tanstack/react-table' {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -40,66 +41,6 @@ declare module '@tanstack/react-table' {
     interface ColumnMeta<TData extends RowData, TValue> {
         filterVariant?: 'text' | 'range' | 'select' | 'date'
     }
-}
-
-// Give our default column cell renderer editing superpowers!
-function useEditableColumn({
-                               getValue,
-                               row: {index},
-                               column: {id},
-                               table
-                           }: CellContext<SimpleResultsDBRecord, string | number>) {
-    const initialValue = getValue()
-    // We need to keep and update the state of the cell normally
-    const [value, setValue] = React.useState(initialValue)
-    const {ref, inView} = useInView()
-
-    // When the input is blurred, we'll call our table meta's updateData function
-    const onBlur = useCallback(() => {
-        if(value != initialValue) {
-            // only update if changed
-            table.options.meta?.updateData(index, id, value)
-        }
-    }, [value, id, index, table.options.meta, initialValue])
-
-    // If the initialValue is changed external, sync it up with our state
-    React.useEffect(() => {
-        setValue(initialValue)
-    }, [initialValue])
-    useEffect(() => {
-        // console.log(`inview is now ${inView}`)
-        if(!inView) {
-            onBlur();
-        }
-    }, [inView, onBlur]);
-
-    // there's some sort of bug where inserting new rows at the top causes the editable cell's values to pull from the previous table's first record.
-    // only seems to affect rendering
-    // textarea has double the default height compared to input. 100% height will bleed out of the containing table cell
-    return (
-        <textarea ref={ref} style={{height: "auto", width: "fit-content", border:"none"}}
-                  value={value as string}
-                  onChange={e => setValue(e.target.value)}
-                  onBlur={onBlur}
-                  placeholder={`Click to add ${id}`}
-        />
-    )
-};
-
-function useSkipper() {
-    const shouldSkipRef = React.useRef(true)
-    const shouldSkip = shouldSkipRef.current
-
-    // Wrap a function with this to skip a pagination reset temporarily
-    const skip = React.useCallback(() => {
-        shouldSkipRef.current = false
-    }, [])
-
-    React.useEffect(() => {
-        shouldSkipRef.current = true
-    })
-
-    return [shouldSkip, skip] as const
 }
 
 //This is a dynamic row height example, which is more complicated, but allows for a more realistic table.

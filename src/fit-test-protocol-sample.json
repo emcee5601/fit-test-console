@@ -1,0 +1,109 @@
+[
+  {
+    "name": "m3-fast",
+    "fit-factor-calculation-method": "ambient-mask",
+    "stages": [
+      {
+        "name": "ambient 1",
+        "source": "ambient",
+        "purge": 4,
+        "purge-instructions": "reticulating splines",
+        "sample": 5,
+        "sample-instructions": ""
+      },
+      {
+        "name": "mask purge",
+        "source": "mask",
+        "purge": 4,
+        "purge-instructions": "relax",
+        "sample": 0,
+        "sample-instructions": ""
+      },
+      {
+        "name": "mask 1",
+        "source": "mask",
+        "purge": 0,
+        "purge-instructions": "get ready",
+        "sample": 40,
+        "sample-instructions": "take deep breaths"
+      },
+      {
+        "name": "mask 2",
+        "source": "mask",
+        "purge": 0,
+        "sample": 40
+      }
+    ]
+  },
+  {
+    "name": "m2",
+    "fit-factor-calculation-method": "ambient-mask-ambient",
+    "stages": [
+      {
+        "name": "ambient 1",
+        "source": "ambient",
+        "purge": 4,
+        "sample": 11
+      },
+      {
+        "name": "mask 1",
+        "source": "mask",
+        "purge": 4,
+        "sample": 40
+      },
+      {
+        "name": "ambient 2",
+        "source": "ambient",
+        "purge": 4,
+        "sample": 11
+      },
+      {
+        "name": "mask 2",
+        "source": "mask",
+        "purge": 4,
+        "sample": 40
+      },
+      {
+        "name": "tail ambient",
+        "source": "ambient",
+        "purge": 4,
+        "sample": 11
+      }
+    ]
+  },
+  {
+    "name": "m1",
+    "stages": [
+      {
+        "name": "ex 1 - sample",
+        "source": "mask",
+        "duration": 11,
+        "retention": "keep"
+      },
+      {
+        "name": "ambient purge",
+        "source": "ambient",
+        "duration": 4,
+        "retention": "purge"
+      },
+      {
+        "name": "ambient 1",
+        "source": "ambient",
+        "duration": 4,
+        "retention": "keep"
+      },
+      {
+        "name": "mask purge",
+        "source": "mask",
+        "duration": 4,
+        "retention": "purge"
+      },
+      {
+        "name": "ex 2",
+        "source": "mask",
+        "duration": 22,
+        "retention": "keep"
+      }
+    ]
+  }
+]
