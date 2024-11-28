@@ -1,10 +1,6 @@
-import React from "react";
-import {
-    ColumnDef, flexRender,
-    getCoreRowModel,
-    useReactTable
-} from "@tanstack/react-table";
-import {SamplingStage} from "./fit-test-protocol.ts";
+import React, {useEffect} from "react";
+import {ColumnDef, flexRender, getCoreRowModel, useReactTable} from "@tanstack/react-table";
+import {FitFactorCalculationMethod, FitTestProtocol, fitTestProtocolDb, SamplingStage} from "./fit-test-protocol.ts";
 import {useEditableColumn} from "./use-editable-column-hook.tsx";
 import {useSkipper} from "./use-skipper-hook.ts";
 
@@ -49,6 +45,13 @@ export function FitTestProtocolPanel() {
     function addStage() {
         setData((prev) => ([ ...prev, new SamplingStage(prev.length+1) ]))
     }
+    function saveProtocol() {
+        const protocol = new FitTestProtocol();
+        protocol.fitFactorCalculationMethod = FitFactorCalculationMethod.Before
+        protocol.name = "my protocol"
+        protocol.setStages(data)
+        fitTestProtocolDb.saveProtocol( protocol)
+    }
 
     const table = useReactTable({
         data,
@@ -77,10 +80,15 @@ export function FitTestProtocolPanel() {
         debugTable: true,
     })
 
+    useEffect(() => {
+        fitTestProtocolDb.open().then(() => "fit test protocol database opened")
+    }, []);
+
     return (
         <div className="p-2">
-            <div className="h-2" />
-            <input type={"button"} value={"Add stage"} onClick={addStage} />
+            <div className="h-2"/>
+            <input type={"button"} value={"Add stage"} onClick={addStage}/>
+            <input type={"button"} value={"Save protocol"} onClick={saveProtocol}/>
             <table>
                 <thead>
                 {table.getHeaderGroups().map(headerGroup => (

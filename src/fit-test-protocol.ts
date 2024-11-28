@@ -1,22 +1,25 @@
 /**
  * Describes a fit test protocol.
  */
+import AbstractDB from "./abstract-db.ts";
 
 enum SampleSource {
     Ambient = 'Ambient',
     Mask = 'Mask',
 }
 
-enum FitFactorCalculationMethod {
+export enum FitFactorCalculationMethod {
+    /**
+     * Use 2 ambient readings (time weighted average) to calculate fit factor.
+     * Take the last reading from before the mask sample
+     * and the first reading from after the mask sample.
+     */
+    BeforeAndAfter = 'BeforeAndAfter',
     /**
      * Use a single ambient reading to calculate fit factor. Prefer the reading closest in time.
      */
-    NearestAmbient = 'NearestAmbient',
-    /**
-     * Use 2 ambient readings (time weighted average) to calculate fit factor. Take the 2 readings closest in time to the mask reading.
-     * This will typically be the sample before and the sample after the mask.
-     */
-    TwoNearestAmbient = 'TwoNearestAmbient',
+    Before = 'Before',
+
     /**
      * Use the (time weighted) average of all ambient readings in the test.
      */
@@ -54,17 +57,47 @@ export class SamplingStage {
 }
 
 export class FitTestProtocol {
-    readonly name: string;
-    readonly fitFactorCalculationMethod: FitFactorCalculationMethod;
-    readonly stages: SamplingStage[] = []
+    name: string| undefined;
+    fitFactorCalculationMethod: FitFactorCalculationMethod | undefined;
+    stages: SamplingStage[] = []
 
-    constructor(name: string, fitFactorCalculationMethod: FitFactorCalculationMethod = FitFactorCalculationMethod.NearestAmbient) {
+    constructor(name = undefined,
+                fitFactorCalculationMethod = undefined) {
         this.name = name;
         this.fitFactorCalculationMethod = fitFactorCalculationMethod;
     }
 
-    addStage(index:number, name: string, source: SampleSource, purgeDuration: number, purgeInstructions: string, sampleDuration: number, sampleInstructions: string) {
-        this.stages.push(new SamplingStage(index, name, source, purgeDuration, purgeInstructions, sampleDuration, sampleInstructions));
+    addStage(stage:SamplingStage) {
+        this.stages.push(stage);
+    }
+    setStages(stages: SamplingStage[]) {
+        this.stages = stages;
+    }
+}
+
+class FitTestProtocolDB extends AbstractDB {
+    static readonly DB_NAME = "fit-test-protocols"
+    static readonly PROTOCOLS_OBJECT_STORE = "protocol-definitions"
+    constructor(name = FitTestProtocolDB.DB_NAME) {
+        super(name, [FitTestProtocolDB.PROTOCOLS_OBJECT_STORE], 1);
     }
 
+    saveProtocol(protocol: FitTestProtocol) {
+        this.put(FitTestProtocolDB.PROTOCOLS_OBJECT_STORE, protocol).then((result) => {
+            console.log(`saveProtocol succeeded; index=${JSON.stringify(result)}, ${JSON.stringify(protocol)}`);
+        })
+    }
+
+    async getAllData(): Promise<FitTestProtocol[]> {
+        return super.getAllDataFromDataSource(FitTestProtocolDB.PROTOCOLS_OBJECT_STORE);
+    }
+
+    override onUpgradeNeeded(request: IDBOpenDBRequest) {
+        const theDb = request.result;
+        console.warn(`Database upgrade needed: ${this.dbName}`);
+        // Create an objectStore for this database
+        theDb.createObjectStore(FitTestProtocolDB.PROTOCOLS_OBJECT_STORE, {autoIncrement: true, keyPath: "index"});
+    }
 }
+
+export const fitTestProtocolDb = new FitTestProtocolDB();

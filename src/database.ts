@@ -2,6 +2,8 @@
 Stores raw data lines from the data collector. Suitable for parsing with the updated simulator.
  */
 
+import AbstractDB from "./abstract-db.ts";
+
 export interface SimpleDBRecord {
     timestamp: string;
     data: string;
@@ -19,104 +21,6 @@ export enum AppSettings {
     SPEECH_VOICE = "speech-voice",
 }
 
-abstract class AbstractDB {
-    db: IDBDatabase | undefined;
-    dbName: string;
-    version: number;
-    defaultDataStores: string[];
-
-    protected constructor(dbName: string, defaultDataStores:string[]=[], version: number=1) {
-        this.dbName = dbName;
-        this.version = version;
-        this.defaultDataStores = defaultDataStores;
-    }
-
-    abstract onUpgradeNeeded(request: IDBOpenDBRequest): void;
-
-    /**
-     * read the whole db
-     */
-    protected async getAllDataFromDataSource<T>(dataStoreName:string): Promise<T[]> {
-        return new Promise<T[]>((resolve, reject) => {
-            const transaction = this.openTransaction("readonly");
-            const allRecords: T[] = [];
-            if (!transaction) {
-                console.log(`${this.dbName} database not ready`);
-                reject(`${this.dbName} database not ready`);
-                return;
-            }
-
-            const request = transaction.objectStore(dataStoreName).openCursor(null, "next");
-
-            request.onerror = (event) => {
-                console.log(`getAllDataFromDataSource openCursor request error ${event}`);
-                reject(`error ${event}`);
-            }
-            request.onsuccess = (event) => {
-                // console.log(`getAllData openCursor request complete: ${event}`);
-                const cursor = request.result;
-                if (cursor) {
-                    // console.log(`got key ${cursor.key}`);
-
-                    allRecords.push(cursor.value);
-                    cursor.continue();
-
-                } else {
-                    // no more results
-                    console.log(`${this.dbName} cursor done ${event}. got ${allRecords.length} records`);
-                    resolve(allRecords);
-                }
-            }
-        });
-    }
-
-    onOpenSuccess(request: IDBOpenDBRequest) {
-        this.db = request.result;
-        console.log(`${this.dbName} Database Opened`, this.db);
-    }
-
-    onOpenError(request: IDBOpenDBRequest) {
-        console.error(`${this.dbName} Database error: ${request.error?.message}`);
-    }
-
-    openTransaction(mode: IDBTransactionMode, objectStoreNames:string[] = this.defaultDataStores) {
-        if (!this.db) {
-            console.log(`${this.dbName} database not ready`);
-            return;
-        }
-        const transaction = this.db.transaction(objectStoreNames, mode);
-        transaction.oncomplete = (event) => {
-            console.log(`${this.dbName} transaction complete: ${event}`);
-        }
-        transaction.onerror = (event) => {
-            console.log(`${this.dbName} transaction error ${event}`);
-        }
-        return transaction;
-    }
-
-    async open() {
-        return new Promise((resolve, reject) => {
-            const request = window.indexedDB.open(this.dbName, this.version);
-            request.onsuccess = () => {
-                this.onOpenSuccess(request);
-                resolve(this.db as IDBDatabase)
-            };
-            request.onerror = () => {
-                this.onOpenError(request)
-                reject(request.error?.message);
-            };
-            request.onupgradeneeded = () => {
-                this.onUpgradeNeeded(request)
-                reject("upgrade needed")
-            };
-        });
-    }
-
-    close() {
-        this.db?.close();
-        console.log(`${this.dbName} closed`);
-    }
-}
 
 class SettingsDB extends AbstractDB {
     static DB_NAME = "settings-db";
@@ -135,7 +39,7 @@ class SettingsDB extends AbstractDB {
     }
 
     public async getSetting(name:AppSettings, defaultValue:string|boolean|number|undefined) {
-        const transaction = this.openTransaction("readonly");
+        const transaction = this.openTransactionClassic("readonly");
         if (!transaction) {
             return undefined;
         }
@@ -160,7 +64,7 @@ class SettingsDB extends AbstractDB {
 
     async saveSetting(name:AppSettings, value: string|number|boolean) {
         console.log(`saving setting ${name} = ${value}`)
-        const transaction = this.openTransaction("readwrite");
+        const transaction = this.openTransactionClassic("readwrite");
         if (!transaction) {
             console.log("settings db not ready")
             return;
@@ -212,7 +116,7 @@ export class SimpleDB extends AbstractDB {
      * @param callback
      */
     getSomeRecentLines(callback: ((keepLines: SimpleDBRecord) => void)) {
-        const transaction = this.openTransaction("readonly");
+        const transaction = this.openTransactionClassic("readonly");
         if (!transaction) {
             console.log(`${this.dbName} database not ready`);
             return;
@@ -261,7 +165,7 @@ export class SimpleDB extends AbstractDB {
      * @param line
      */
     addLine(line: string) {
-        const transaction = this.openTransaction("readwrite");
+        const transaction = this.openTransactionClassic("readwrite");
         if (!transaction) {
             console.log(`${this.dbName} database not ready`);
             return {};
@@ -315,7 +219,7 @@ export class SimpleResultsDB extends AbstractDB {
      * @param callback
      */
     getSomeRecentData(callback: ((data: SimpleResultsDBRecord) => void)) {
-        const transaction = this.openTransaction("readonly");
+        const transaction = this.openTransactionClassic("readonly");
         if (!transaction) {
             console.log("database not ready");
             return;
@@ -361,7 +265,7 @@ export class SimpleResultsDB extends AbstractDB {
      * Return the json representation of the data that was inserted. Includes the generated primary key.
      */
     async createNewTest(timestamp: string): Promise<SimpleResultsDBRecord> {
-        const transaction = this.openTransaction("readwrite");
+        const transaction = this.openTransactionClassic("readwrite");
         if (!transaction) {
             console.log("database not ready");
             return new Promise((_resolve, reject) => reject(`${this.dbName} database not ready`));
@@ -387,7 +291,7 @@ export class SimpleResultsDB extends AbstractDB {
 
     async updateTest(record: SimpleResultsDBRecord) {
         return new Promise((resolve, reject) => {
-            const transaction = this.openTransaction("readwrite");
+            const transaction = this.openTransactionClassic("readwrite");
             if (!transaction) {
                 console.log("database not ready");
                 reject(`${this.dbName} database not ready`);
