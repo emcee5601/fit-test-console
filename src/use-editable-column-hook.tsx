@@ -1,16 +1,30 @@
-import {CellContext} from "@tanstack/react-table";
+import {CellContext, RowData} from "@tanstack/react-table";
 import React, {useCallback, useEffect} from "react";
 import {useInView} from "react-intersection-observer";
 
-export function useEditableColumn<T, U>({
+declare module '@tanstack/react-table' {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    interface TableMeta<TData extends RowData> {
+        updateData: (rowIndex: number, columnId: string, value: string | number|unknown) => void
+    }
+
+    //allows us to define custom properties for our columns
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    interface ColumnMeta<TData extends RowData, TValue> {
+        filterVariant?: 'text' | 'range' | 'select' | 'date'
+    }
+}
+
+
+export function useEditableColumn<T,V>({
                                   getValue,
                                   row: {index},
                                   column: {id},
                                   table
-                              }: CellContext<T, U>) {
+                              }: CellContext<T, V|unknown>) {
     const initialValue = getValue()
     // We need to keep and update the state of the cell normally
-    const [value, setValue] = React.useState<U>(initialValue)
+    const [value, setValue] = React.useState<V|unknown>(initialValue)
     const {ref, inView} = useInView()
 
     // When the input is blurred, we'll call our table meta's updateData function

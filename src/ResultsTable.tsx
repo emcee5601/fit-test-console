@@ -15,7 +15,6 @@ import {
     getFilteredRowModel,
     getSortedRowModel,
     Row,
-    RowData,
     SortingState,
     useReactTable,
 } from '@tanstack/react-table'
@@ -30,19 +29,6 @@ import "react-datepicker/dist/react-datepicker.css";
 import {useEditableColumn} from "./use-editable-column-hook.tsx";
 import {useSkipper} from "./use-skipper-hook.ts";
 
-declare module '@tanstack/react-table' {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    interface TableMeta<TData extends RowData> {
-        updateData: (rowIndex: number, columnId: string, value: string | number) => void
-    }
-
-    //allows us to define custom properties for our columns
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    interface ColumnMeta<TData extends RowData, TValue> {
-        filterVariant?: 'text' | 'range' | 'select' | 'date'
-    }
-}
-
 //This is a dynamic row height example, which is more complicated, but allows for a more realistic table.
 //See https://tanstack.com/virtual/v3/docs/examples/react/table for a simpler fixed row height example.
 export function ResultsTable({dataCollector}: {
@@ -51,7 +37,7 @@ export function ResultsTable({dataCollector}: {
     const [localTableData, setLocalTableData] = useState<SimpleResultsDBRecord[]>([])
     dataCollector.setResultsCallback(setLocalTableData)
 
-    function getExerciseResultCell(info: CellContext<SimpleResultsDBRecord, unknown>) {
+    function getExerciseResultCell(info: CellContext<SimpleResultsDBRecord, string|number>) {
         const val = info.getValue<number>();
         if( val < 1.1) {
             // probably aborted
@@ -207,7 +193,7 @@ export function ResultsTable({dataCollector}: {
                                 const updatedRow = {
                                     ...old[rowIndex]!,
                                     [columnId]: value,  // this updates the cell that was changed
-                                };
+                                } as SimpleResultsDBRecord;
                                 // TODO: roll this in a function in dataCollector
                                 dataCollector.resultsDatabase.updateTest(updatedRow); // this saves the changes to the db
                                 return updatedRow;
@@ -401,7 +387,7 @@ export function ResultsTable({dataCollector}: {
 
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function Filter({column, dates}: { column: Column<any, unknown>, dates: Date[] }) {
+function Filter<V>({column, dates}: { column: Column<SimpleResultsDBRecord, V>, dates: Date[] }) {
     const columnFilterValue = column.getFilterValue()
     const { filterVariant } = column.columnDef.meta ?? {}
 

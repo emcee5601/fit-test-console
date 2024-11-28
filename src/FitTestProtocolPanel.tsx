@@ -2,20 +2,11 @@ import React from "react";
 import {
     ColumnDef, flexRender,
     getCoreRowModel,
-    RowData,
     useReactTable
 } from "@tanstack/react-table";
 import {SamplingStage} from "./fit-test-protocol.ts";
 import {useEditableColumn} from "./use-editable-column-hook.tsx";
 import {useSkipper} from "./use-skipper-hook.ts";
-
-declare module '@tanstack/react-table' {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    interface TableMeta<TData extends RowData> {
-        updateData: (rowIndex: number, columnId: string, value: string|number) => void
-    }
-}
-
 
 export function FitTestProtocolPanel() {
     const columns = React.useMemo<ColumnDef<SamplingStage>[]>(
