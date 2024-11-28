@@ -78,6 +78,7 @@ export function ResultsTable({dataCollector}: {
             },
             {
                 accessorKey: 'Time',
+                header: 'Date',
                 cell: info => {
                     const date = info.getValue<Date>();
                     if (date) {
@@ -386,7 +387,6 @@ export function ResultsTable({dataCollector}: {
 }
 
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function Filter<V>({column, dates}: { column: Column<SimpleResultsDBRecord, V>, dates: Date[] }) {
     const columnFilterValue = column.getFilterValue()
     const { filterVariant } = column.columnDef.meta ?? {}

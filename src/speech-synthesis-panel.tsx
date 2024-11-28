@@ -2,12 +2,12 @@
  Text-to-speech functions
  */
 import {ChangeEvent, useCallback, useEffect, useRef, useState} from "react";
-import {AppSettings, SettingsDB} from "./database.ts";
+import {AppSettings, SETTINGS_DB} from "./database.ts";
 import {speech} from "./speech.ts";
 
 
 export function SpeechSynthesisPanel() {
-    const [settingsDb] = useState(() => new SettingsDB())
+    const [settingsDb] = useState(() => SETTINGS_DB)
     const [selectedVoiceName, setSelectedVoiceName] = useState<string | undefined>(undefined);
     const [speechEnabled, setSpeechEnabled] = useState<boolean>(false);
     const enableSpeechCheckboxRef = useRef<HTMLInputElement>(null);

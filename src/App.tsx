@@ -5,7 +5,7 @@ import {DataCollector, DataCollectorPanel, DataCollectorStates} from "./data-col
 import {SpeechSynthesisPanel} from "./speech-synthesis-panel.tsx";
 import {speech} from "./speech.ts"
 import {ExternalController, ExternalControlPanel, ExternalControlStates} from "./external-control.tsx";
-import {SimpleDB, SimpleResultsDB} from "./database.ts";
+import {AppSettings, SETTINGS_DB, SimpleDB, SimpleResultsDB} from "./database.ts";
 import {downloadData} from "./html-data-downloader.ts";
 import {json2csv} from "json-2-csv";
 import {FTDISerial} from "./web-usb-serial-drivers.ts";
@@ -54,6 +54,15 @@ function App() {
     const [dataCollector] = useState(() => new DataCollector(dataCollectorStates, logCallback, rawDataCallback,
         processedDataCallback, externalControlStates, resultsDatabase))
 
+    useEffect(() => {
+        SETTINGS_DB.open().then(() => {
+            console.log("app successfully opened settings db")
+            SETTINGS_DB.getSetting(AppSettings.ADVANCED_MODE, false).then((value) => {
+                console.log(`app retrieved advanced mode setting: ${value}`)
+                setEnableAdvancedControls(() => value as boolean)
+            })
+        })
+    }, []);
 
     useEffect(() => {
         console.log(`initializing raw logs db`)
@@ -61,6 +70,12 @@ function App() {
 
         return () => rawDatabase.close();
     }, [rawDatabase]);
+
+    useEffect(() => {
+        SETTINGS_DB.saveSetting(
+            AppSettings.ADVANCED_MODE, enableAdvancedControls
+        )
+    }, [enableAdvancedControls]);
 
     useEffect(() => {
         // need to propagate these down?
@@ -299,19 +314,21 @@ function App() {
                 </div>
                 <div style={{display: "inline-block"}}>
                     <input type="checkbox" id="enable-advanced-controls"
+                           checked={enableAdvancedControls}
                            onChange={e => setEnableAdvancedControls(e.target.checked)}/>
                     <label htmlFor="enable-advanced-controls">Advanced</label>
                 </div>
             </fieldset>
-            <br/>
-            {enableAdvancedControls ? <ExternalControlPanel control={externalController}/> : null}
-            <br/>
-            <section style={{display: "inline-block", width: "100%"}}>
-                <fieldset>
-                    <legend>fit test protocols</legend>
-                    <FitTestProtocolPanel></FitTestProtocolPanel>
-                </fieldset>
-            </section>
+            {enableAdvancedControls ?
+                <section style={{display: "inline-block", width: "100%"}}>
+                    <div style={{display: "inline-block", width: "100%"}}>
+                        <ExternalControlPanel control={externalController}/>
+                    </div>
+                    <fieldset>
+                        <legend>fit test protocols</legend>
+                        <FitTestProtocolPanel></FitTestProtocolPanel>
+                    </fieldset>
+                </section> : null}
             <DataCollectorPanel dataCollector={dataCollector}></DataCollectorPanel>
         </>
     )

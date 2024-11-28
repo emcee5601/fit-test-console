@@ -6,7 +6,7 @@ Collect data from PortaCount 8020a
 // data output patterns
 import {speech} from "./speech.ts";
 import {ExternalControlStates} from "./external-control.tsx";
-import {SettingsDB, SimpleResultsDB, SimpleResultsDBRecord} from "./database.ts";
+import {SETTINGS_DB, SimpleResultsDB, SimpleResultsDBRecord} from "./database.ts";
 import React, {RefObject, useEffect, useState} from "react";
 import {ResultsTable} from "./ResultsTable.tsx";
 
@@ -42,7 +42,7 @@ export class DataCollector {
 
     static nextTabIndex = 100;
     resultsDatabase: SimpleResultsDB;
-    settingsDatabase: SettingsDB;
+    settingsDatabase;
     logCallback;
     dataCallback;
     processedDataCallback;
@@ -63,7 +63,7 @@ export class DataCollector {
         this.dataCallback = dataCallback;
         this.processedDataCallback = processedDataCallback;
         this.resultsDatabase = resultsDatabase;
-        this.settingsDatabase = new SettingsDB();
+        this.settingsDatabase = SETTINGS_DB;
         this.control = externalControlStates;
         this.states = states;
         console.log("DataCollector constructor called")

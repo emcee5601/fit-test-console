@@ -118,7 +118,7 @@ abstract class AbstractDB {
     }
 }
 
-export class SettingsDB extends AbstractDB {
+class SettingsDB extends AbstractDB {
     static DB_NAME = "settings-db";
     static OBJECT_STORE_NAME = "settings-data";
 
@@ -410,3 +410,6 @@ export class SimpleResultsDB extends AbstractDB {
         });
     }
 }
+
+export const SETTINGS_DB = new SettingsDB();
+
