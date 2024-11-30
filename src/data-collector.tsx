@@ -341,11 +341,10 @@ export function DataCollectorPanel({dataCollector}: { dataCollector: DataCollect
                     }} value={instructions}></textarea>
                 </fieldset>
             </section>
-            <section id="collected-data" style={{display: "inline-block", width: "100%"}}>
+            <section id="collected-data" style={{display: "inline-block", width: "100%"}} >
                 <fieldset>
-                    <legend>Test Info</legend>
+                    <legend>Fit Test Info</legend>
                     <ResultsTable dataCollector={dataCollector}/>
-
                 </fieldset>
             </section>
             <section style={{width: "100%", display: "flex"}}>

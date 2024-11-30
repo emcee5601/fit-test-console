@@ -100,12 +100,15 @@ export function ResultsTable({dataCollector}: {
                 accessorKey: 'Participant',
                 cell: useEditableColumn,
                 enableColumnFilter: true,
+                filterFn: (row, columnId, filterValue) => {
+                    return RegExp(filterValue).test(row.getValue(columnId));
+                },
                 size: 150,
             },
             {
                 accessorKey: 'Mask',
                 cell: useEditableColumn,
-                size: 150,
+                size: 250,
             },
             {
                 accessorKey: 'Notes',
@@ -284,7 +287,7 @@ export function ResultsTable({dataCollector}: {
                 style={{
                     overflow: 'auto', //our scrollable table container
                     position: 'relative', //needed for sticky header
-                    height: '60vh', //should be a fixed height
+                    height: '80vh', //should be a fixed height
                 }}
             >
                 {/* Even though we're still using sematic table tags, we must use CSS grid and flexbox for dynamic row heights */}

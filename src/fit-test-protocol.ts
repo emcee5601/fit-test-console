@@ -57,6 +57,7 @@ export class SamplingStage {
 }
 
 export class FitTestProtocol {
+    index: number|undefined;
     name: string| undefined;
     fitFactorCalculationMethod: FitFactorCalculationMethod | undefined;
     stages: SamplingStage[] = []
@@ -78,17 +79,30 @@ export class FitTestProtocol {
 class FitTestProtocolDB extends AbstractDB {
     static readonly DB_NAME = "fit-test-protocols"
     static readonly PROTOCOLS_OBJECT_STORE = "protocol-definitions"
+    static readonly keyPath = "index";
     constructor(name = FitTestProtocolDB.DB_NAME) {
         super(name, [FitTestProtocolDB.PROTOCOLS_OBJECT_STORE], 1);
     }
 
+    private async putInternal(protocol: FitTestProtocol) {
+        // strip out the keyPath if it's not defined
+        const record = protocol
+        if(!record.index) {
+            console.log(`record has no index: ${JSON.stringify(record)}`)
+            delete record.index;
+        }
+        return super.put(FitTestProtocolDB.PROTOCOLS_OBJECT_STORE, record)
+    }
+
     saveProtocol(protocol: FitTestProtocol) {
-        this.put(FitTestProtocolDB.PROTOCOLS_OBJECT_STORE, protocol).then((result) => {
+        this.putInternal(protocol).then((result) => {
             console.log(`saveProtocol succeeded; index=${JSON.stringify(result)}, ${JSON.stringify(protocol)}`);
+        }).catch((reason) => {
+            console.error(`could not save protocol ${JSON.stringify(protocol)}; ${reason}`);
         })
     }
 
-    async getAllData(): Promise<FitTestProtocol[]> {
+    async getAllProtocols(): Promise<FitTestProtocol[]> {
         return super.getAllDataFromDataSource(FitTestProtocolDB.PROTOCOLS_OBJECT_STORE);
     }
 
@@ -96,7 +110,7 @@ class FitTestProtocolDB extends AbstractDB {
         const theDb = request.result;
         console.warn(`Database upgrade needed: ${this.dbName}`);
         // Create an objectStore for this database
-        theDb.createObjectStore(FitTestProtocolDB.PROTOCOLS_OBJECT_STORE, {autoIncrement: true, keyPath: "index"});
+        theDb.createObjectStore(FitTestProtocolDB.PROTOCOLS_OBJECT_STORE, {autoIncrement: true, keyPath: FitTestProtocolDB.keyPath});
     }
 }
 

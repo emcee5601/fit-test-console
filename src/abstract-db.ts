@@ -115,25 +115,36 @@ export default abstract class AbstractDB {
     async put<T>(objectStore: string, value: T) {
         return new Promise((resolve, reject) => {
             this.openTransaction("readwrite").then((transaction) => {
-                const request = transaction.objectStore(objectStore).put(value);
-                request.onsuccess = () => {
-                    resolve(request.result);
-                }
-                request.onerror = (event) => {
-                    const errorMessage = `${this.dbName} put(${JSON.stringify(value)}) failed; error: ${event}`
-                    console.log(errorMessage);
-                    reject(errorMessage);
+                try {
+                    const request = transaction.objectStore(objectStore).put(value);
+                    request.onsuccess = () => {
+                        resolve(request.result);
+                    }
+                    request.onerror = (event) => {
+                        const errorMessage = `${this.dbName} put(${JSON.stringify(value)}) failed; error: ${event}`
+                        console.log(errorMessage);
+                        reject(errorMessage);
+                    }
+                } catch (error) {
+                    reject(`${error} value: ${JSON.stringify(value)}`);
                 }
             })
         })
     }
 
     async open() {
+        if(this.db) {
+            // already opened
+            console.log(`${this.dbName} database already opened`);
+            return new Promise((resolve) => {
+                resolve(this.db)
+            })
+        }
         return new Promise((resolve, reject) => {
             const request = window.indexedDB.open(this.dbName, this.version);
             request.onsuccess = () => {
                 this.onOpenSuccess(request);
-                resolve(this.db as IDBDatabase)
+                resolve(this.db)
             };
             request.onerror = () => {
                 this.onOpenError(request)

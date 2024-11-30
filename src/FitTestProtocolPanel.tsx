@@ -1,4 +1,4 @@
-import React, {useEffect} from "react";
+import React, {useEffect, useState} from "react";
 import {ColumnDef, flexRender, getCoreRowModel, useReactTable} from "@tanstack/react-table";
 import {FitFactorCalculationMethod, FitTestProtocol, fitTestProtocolDb, SamplingStage} from "./fit-test-protocol.ts";
 import {useEditableColumn} from "./use-editable-column-hook.tsx";
@@ -39,22 +39,23 @@ export function FitTestProtocolPanel() {
         []
     )
 
-    const [data, setData] = React.useState<SamplingStage[]>([])
     const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
+    const [stages, setStages] = React.useState<SamplingStage[]>([])
+    const [protocol, setProtocol] = useState<FitTestProtocol>()
+    const [protocols, setProtocols] = useState<FitTestProtocol[]>([])
 
     function addStage() {
-        setData((prev) => ([ ...prev, new SamplingStage(prev.length+1) ]))
+        setStages((prev) => ([ ...prev, new SamplingStage(prev.length+1) ]))
     }
     function saveProtocol() {
-        const protocol = new FitTestProtocol();
-        protocol.fitFactorCalculationMethod = FitFactorCalculationMethod.Before
-        protocol.name = "my protocol"
-        protocol.setStages(data)
-        fitTestProtocolDb.saveProtocol( protocol)
+        if(protocol) {
+            protocol.stages = stages;
+            fitTestProtocolDb.saveProtocol(protocol)
+        }
     }
 
     const table = useReactTable({
-        data,
+        data: stages,
         columns,
         defaultColumn: {cell:useEditableColumn},
         getCoreRowModel: getCoreRowModel(),
@@ -64,7 +65,7 @@ export function FitTestProtocolPanel() {
             updateData: (rowIndex, columnId, value) => {
                 // Skip page index reset until after next rerender
                 skipAutoResetPageIndex()
-                setData(old =>
+                setStages(old =>
                     old.map((row, index) => {
                         if (index === rowIndex) {
                             return {
@@ -80,22 +81,55 @@ export function FitTestProtocolPanel() {
         debugTable: true,
     })
 
+    function loadProtocols() {
+        fitTestProtocolDb.getAllProtocols().then((protocols) => {
+            console.log(`got protocols ${JSON.stringify(protocols)}`)
+            setProtocols(protocols)
+        })
+    }
+
     useEffect(() => {
-        fitTestProtocolDb.open().then(() => "fit test protocol database opened")
+        fitTestProtocolDb.open().then(() => {
+            console.log("fit test protocol database opened")
+            loadProtocols()
+        })
     }, []);
+
+    function protocolSelectionChanged(index: number|string) {
+        // index should be a number. since it's always from protocol.index. but somehow going through a select to its event it becomes a string?
+        const protocol = protocols.find((protocol) => {
+            return protocol.index === Number(index)
+        });
+        if(protocol) {
+            setProtocol(protocol)
+            setStages(protocol.stages)
+        } else {
+            console.log(`could not find protocol with key ${index}`)
+        }
+    }
 
     return (
         <div className="p-2">
             <div className="h-2"/>
+            <select onChange={(event) => protocolSelectionChanged(event.target.value)}>
+                {protocols.map((protocol, index) => (
+                    <option key={index} value={protocol.index}>{protocol.name}</option>
+                ))}
+            </select>
             <input type={"button"} value={"Add stage"} onClick={addStage}/>
             <input type={"button"} value={"Save protocol"} onClick={saveProtocol}/>
             <table>
                 <thead>
                 {table.getHeaderGroups().map(headerGroup => (
-                    <tr key={headerGroup.id}>
+                    <tr key={headerGroup.id} style={{display: 'flex', width: '100%'}}>
                         {headerGroup.headers.map(header => {
                             return (
-                                <th key={header.id} colSpan={header.colSpan}>
+                                <th key={header.id} colSpan={header.colSpan}
+                                    style={{
+                                        display: 'flex',
+                                        width: header.column.getSize(),
+                                    }}
+                                >
                                     {header.isPlaceholder ? null : (
                                         <div>
                                             {flexRender(
@@ -113,10 +147,15 @@ export function FitTestProtocolPanel() {
                 <tbody>
                 {table.getRowModel().rows.map(row => {
                     return (
-                        <tr key={row.id}>
+                        <tr key={row.id} style={{display: 'flex', width: '100%'}}>
                             {row.getVisibleCells().map(cell => {
                                 return (
-                                    <td key={cell.id}>
+                                    <td key={cell.id}
+                                        style={{
+                                            display: 'flex',
+                                            width: cell.column.getSize(),
+                                        }}
+                                    >
                                         {flexRender(
                                             cell.column.columnDef.cell,
                                             cell.getContext()

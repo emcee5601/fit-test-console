@@ -47,11 +47,11 @@ export function useEditableColumn<T,V>({
     }, [inView, onBlur]);
 
     return (
-        <textarea ref={ref} style={{height: "auto", width: "fit-content", border: "none"}}
-                  value={value as string}
-                  onChange={e => setValue(e.target.value)}
-                  onBlur={onBlur}
-                  placeholder={`Click to add ${id}`}
-        />
+    <textarea ref={ref} style={{height: "auto", width: "100%", border: "none"}}
+              value={value as string}
+              onChange={e => setValue(e.target.value)}
+              onBlur={onBlur}
+              placeholder={`Click to add ${id}`}
+    />
     )
 }
