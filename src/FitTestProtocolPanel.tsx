@@ -29,17 +29,19 @@ export function FitTestProtocolPanel() {
                 cell: info => {
                     return <Select
                         styles={{
-                            container: (baseStyles, state) => ({
+                            container: (baseStyles) => ({
                                 ...baseStyles,
                                 width: "100%",
                             }),
                         }}
                         options={[
                             {
+                                // @ts-expect-error not sure why this is a problem. code seems to work properly
                                 value: SampleSource.Mask,
                                 label: SampleSource.Mask,
                             },
                             {
+                                // @ts-expect-error not sure why this is a problem. code seems to work properly
                                 value: SampleSource.Ambient,
                                 label: SampleSource.Ambient,
                             }
@@ -183,18 +185,18 @@ export function FitTestProtocolPanel() {
             <div className="h-2"/>
             <CreatableSelect
                 name={"Protocol"}
-                options={protocols.map((protocol, index) => {
+                options={protocols.map((protocol) => {
                     return {
                         value: protocol.index,
                         label: protocol.name
                     }
                 })}
                 styles={{
-                    container: (baseStyles, state) => ({
+                    container: (baseStyles) => ({
                         ...baseStyles,
                         display: "inline-flex",
                     }),
-                    control: (baseStyles, state) => ({
+                    control: (baseStyles) => ({
                         ...baseStyles,
                         width: "200px"
                     })

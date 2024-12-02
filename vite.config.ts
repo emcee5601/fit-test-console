@@ -25,7 +25,8 @@ export default defineConfig({
                   }
               ],
               "start_url": "/fit-test-console",
-              "display": "standalone"
+              "display": "standalone",
+              theme_color: "#dddddd"
           }
       }),
   ],

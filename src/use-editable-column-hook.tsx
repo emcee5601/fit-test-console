@@ -61,6 +61,8 @@ export function useEditableColumn<T, V>({
     )
 }
 
+
+// from https://mui.com/base-ui/react-number-input/
 const cyan = {
     50: '#E9F8FC',
     100: '#BDEBF4',
@@ -218,10 +220,10 @@ export function useEditableNumberColumn<T>({
                                                row: {index},
                                                column: {id},
                                                table
-                                           }: CellContext<T, number | undefined>) {
-    const initialValue = getValue()
+                                           }: CellContext<T, string| number | undefined>) {
+    const initialValue = getValue() as number
     // We need to keep and update the state of the cell normally
-    const [value, setValue] = React.useState<number | null | undefined>(initialValue)
+    const [value, setValue] = React.useState<number | null | undefined>(initialValue as number)
     const {ref, inView} = useInView()
 
     // When the input is blurred, we'll call our table meta's updateData function
