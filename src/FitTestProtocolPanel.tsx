@@ -1,15 +1,21 @@
 import React, {useEffect, useState} from "react";
-import {ColumnDef, flexRender, getCoreRowModel, useReactTable} from "@tanstack/react-table";
+import {CellContext, ColumnDef, flexRender, getCoreRowModel, useReactTable} from "@tanstack/react-table";
 import {FitTestProtocol, fitTestProtocolDb, SamplingStage} from "./fit-test-protocol.ts";
 import {useEditableColumn} from "./use-editable-column-hook.tsx";
 import {useSkipper} from "./use-skipper-hook.ts";
 
 export function FitTestProtocolPanel() {
-    const columns = React.useMemo<ColumnDef<SamplingStage>[]>(
+    function getReadonlyCell(info: CellContext<SamplingStage, string|number|undefined>) {
+        return <span>{info.getValue()}</span>
+    }
+
+    const columns = React.useMemo<ColumnDef<SamplingStage, string|number|undefined>[]>(
         () => [
             {
                 accessorKey: 'index',
                 header: '#',
+                cell: getReadonlyCell,
+                size: 50,
             },
             {
                 accessorKey: 'name',
@@ -26,6 +32,7 @@ export function FitTestProtocolPanel() {
             {
                 accessorKey: 'purgeInstructions',
                 header: 'Purge Instructions',
+                size: 200
             },
             {
                 accessorKey: 'sampleDuration',
@@ -34,6 +41,7 @@ export function FitTestProtocolPanel() {
             {
                 accessorKey: 'sampleInstructions',
                 header: 'Sample Instructions',
+                size: 300
             },
         ],
         []
