@@ -1,9 +1,10 @@
 import React, {useEffect, useState} from "react";
 import {CellContext, ColumnDef, flexRender, getCoreRowModel, useReactTable} from "@tanstack/react-table";
-import {FitTestProtocol, fitTestProtocolDb, SamplingStage} from "./fit-test-protocol.ts";
+import {FitTestProtocol, fitTestProtocolDb, SampleSource, SamplingStage} from "./fit-test-protocol.ts";
 import {useEditableColumn} from "./use-editable-column-hook.tsx";
 import {useSkipper} from "./use-skipper-hook.ts";
 import CreatableSelect from "react-select/creatable";
+import Select from "react-select";
 
 export function FitTestProtocolPanel() {
     function getReadonlyCell(info: CellContext<SamplingStage, string | number | undefined>) {
@@ -25,6 +26,28 @@ export function FitTestProtocolPanel() {
             {
                 accessorKey: 'source',
                 header: 'Sample Source',
+                cell: info => {
+                    return <Select
+                        styles={{
+                            container: (baseStyles, state) => ({
+                                ...baseStyles,
+                                width: "100%",
+                            }),
+                        }}
+                        options={[
+                            {
+                                value: SampleSource.Mask,
+                                label: SampleSource.Mask,
+                            },
+                            {
+                                value: SampleSource.Ambient,
+                                label: SampleSource.Ambient,
+                            }
+                        ]}
+                        value={info.getValue()}
+                        onChange={(value) => {info.table.options.meta?.updateData(info.row.index, info.column.id, value)}}
+                    />
+                }
             },
             {
                 accessorKey: 'purgeDuration',
@@ -158,8 +181,8 @@ export function FitTestProtocolPanel() {
                 name={"Protocol"}
                 options={protocols.map((protocol, index) => {
                     return {
-                        value: protocol.index, label:
-                        protocol.name
+                        value: protocol.index,
+                        label: protocol.name
                     }
                 })}
                 styles={{

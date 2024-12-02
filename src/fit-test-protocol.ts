@@ -3,7 +3,7 @@
  */
 import AbstractDB from "./abstract-db.ts";
 
-enum SampleSource {
+export enum SampleSource {
     Ambient = 'Ambient',
     Mask = 'Mask',
 }
