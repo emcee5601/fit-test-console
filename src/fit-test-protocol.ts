@@ -120,7 +120,18 @@ class FitTestProtocolDB extends AbstractDB {
     }
 
     async getAllProtocols(): Promise<FitTestProtocol[]> {
-        return super.getAllDataFromDataSource(FitTestProtocolDB.PROTOCOLS_OBJECT_STORE);
+        return new Promise<FitTestProtocol[]>((resolve, reject) => {
+        super.getAllDataFromDataSource<FitTestProtocol>(FitTestProtocolDB.PROTOCOLS_OBJECT_STORE).then((protocols) => {
+            // clean up protocols: strip any stages that are 'null'
+            const fixedProtocols = protocols.map((protocol) => {
+                protocol.stages = protocol.stages.filter((stage) => stage)
+                return protocol;
+            })
+            resolve(fixedProtocols);
+        }).catch((reason) => {
+            reject(reason);
+        });
+        })
     }
 
     override onUpgradeNeeded(request: IDBOpenDBRequest) {

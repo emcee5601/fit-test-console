@@ -244,7 +244,7 @@ function App() {
 
 
     function connectViaSimulator() {
-        const fakeReader = getReadableStreamFromDataSource(new DataFilePushSource("/public/simulator-data/test-data.txt", 0)).getReader();
+        const fakeReader = getReadableStreamFromDataSource(new DataFilePushSource("./fit-test-console/simulator-data/test-data.txt", 0)).getReader();
         monitor(fakeReader);
     }
 

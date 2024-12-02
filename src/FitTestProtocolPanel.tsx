@@ -7,6 +7,12 @@ import CreatableSelect from "react-select/creatable";
 import Select from "react-select";
 
 export function FitTestProtocolPanel() {
+    const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
+    const [protocols, setProtocols] = useState<FitTestProtocol[]>([])
+    const [protocol, setProtocol] = useState<FitTestProtocol>(new FitTestProtocol())
+    const [protocolName, setProtocolName] = useState<string>("")
+    const [protocolStages, setProtocolStages] = useState<SamplingStage[]>([])
+
     function getReadonlyCell(info: CellContext<SamplingStage, string | number | undefined>) {
         return <span>{info.getValue()}</span>
     }
@@ -47,7 +53,9 @@ export function FitTestProtocolPanel() {
                             }
                         ]}
                         value={info.getValue()}
-                        onChange={(value) => {info.table.options.meta?.updateData(info.row.index, info.column.id, value)}}
+                        onChange={(value) => {
+                            info.table.options.meta?.updateData(info.row.index, info.column.id, value)
+                        }}
                     />
                 }
             },
@@ -73,24 +81,37 @@ export function FitTestProtocolPanel() {
                 header: 'Sample Instructions',
                 size: 300
             },
+            {
+                header: "op",
+                cell: (info) => {
+                    return <input type={"button"} value={"Delete Stage"} onClick={() =>
+                        deleteStage(info.row.index)
+                    }/>;
+                }
+            }
         ],
         []
     )
 
-    const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
-    const [protocols, setProtocols] = useState<FitTestProtocol[]>([])
-    const [protocol, setProtocol] = useState<FitTestProtocol>(new FitTestProtocol())
-    const [protocolName, setProtocolName] = useState<string>("")
-    const [protocolStages, setProtocolStages] = useState<SamplingStage[]>([])
 
     function addStage() {
         // need to change the reference so useState sees the change
         protocol.stages = [...protocol.stages, new SamplingStage(protocol.stages.length + 1)];
         setProtocolStages(protocol.stages);
+        saveProtocol(); // save this, because we expect to be able to delete an added stage
+    }
+
+    function deleteStage(index: number) {
+        if (protocol) {
+            delete protocol.stages[index]
+            saveProtocol();
+            setProtocolStages(protocol.stages)
+        }
     }
 
     function saveProtocol() {
-        if (protocol) {
+        if (protocol && protocol.name) {
+            // don't save protocols without names
             fitTestProtocolDb.saveProtocol(protocol)
         }
     }
@@ -104,7 +125,7 @@ export function FitTestProtocolPanel() {
 
     function deleteProtocol() {
         if (protocol.index) {
-            const response = confirm(`Delete protocol ${protocol.name}?`)
+            const response = confirm(`Delete protocol ${protocol.name} (#${protocol.index})?`)
             if (response) {
                 fitTestProtocolDb.deleteProtocol(protocol);
                 loadProtocols();
@@ -144,7 +165,11 @@ export function FitTestProtocolPanel() {
         fitTestProtocolDb.getAllProtocols().then((protocols) => {
             console.log(`got protocols ${JSON.stringify(protocols)}`)
             setProtocols(protocols)
-            setProtocol(protocols[0]) // todo: set this to the selected one or the first one if the selected one doesn't exist (because it was deleted)
+            if(protocols.length > 0) {
+                setProtocol(protocols[0]) // todo: set this to the selected one or the first one if the selected one doesn't exist (because it was deleted)
+                setProtocolName(protocols[0].name as string)
+                setProtocolStages(protocols[0].stages)
+            }
         })
     }
 
@@ -164,7 +189,7 @@ export function FitTestProtocolPanel() {
             setProtocol(protocol)
             setProtocolName(protocol.name as string)
             setProtocolStages(protocol.stages)
-            console.log(`protocol selection changed to ${protocol.name} (${protocol.index}`)
+            console.log(`protocol selection changed to ${protocol.name} (${protocol.index})`)
         } else {
             console.log(`could not find protocol with key ${index}`)
         }
@@ -188,9 +213,10 @@ export function FitTestProtocolPanel() {
                 options={protocols.map((protocol) => {
                     return {
                         value: protocol.index,
-                        label: protocol.name
+                        label: `${protocol.name} (#${protocol.index})`
                     }
                 })}
+                value={{value: protocol?.index, label: `${protocol.name} (#${protocol.index})`}}
                 styles={{
                     container: (baseStyles) => ({
                         ...baseStyles,
