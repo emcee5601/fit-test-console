@@ -62,7 +62,7 @@ export class FitTestProtocol {
     fitFactorCalculationMethod: FitFactorCalculationMethod | undefined;
     stages: SamplingStage[] = []
 
-    constructor(name = undefined,
+    constructor(name:string|undefined = undefined,
                 fitFactorCalculationMethod = undefined) {
         this.name = name;
         this.fitFactorCalculationMethod = fitFactorCalculationMethod;

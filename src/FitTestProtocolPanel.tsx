@@ -3,13 +3,14 @@ import {CellContext, ColumnDef, flexRender, getCoreRowModel, useReactTable} from
 import {FitTestProtocol, fitTestProtocolDb, SamplingStage} from "./fit-test-protocol.ts";
 import {useEditableColumn} from "./use-editable-column-hook.tsx";
 import {useSkipper} from "./use-skipper-hook.ts";
+import CreatableSelect from "react-select/creatable";
 
 export function FitTestProtocolPanel() {
-    function getReadonlyCell(info: CellContext<SamplingStage, string|number|undefined>) {
+    function getReadonlyCell(info: CellContext<SamplingStage, string | number | undefined>) {
         return <span>{info.getValue()}</span>
     }
 
-    const columns = React.useMemo<ColumnDef<SamplingStage, string|number|undefined>[]>(
+    const columns = React.useMemo<ColumnDef<SamplingStage, string | number | undefined>[]>(
         () => [
             {
                 accessorKey: 'index',
@@ -55,28 +56,37 @@ export function FitTestProtocolPanel() {
 
     function addStage() {
         // need to change the reference so useState sees the change
-        protocol.stages = [...protocol.stages, new SamplingStage(protocol.stages.length+1)];
+        protocol.stages = [...protocol.stages, new SamplingStage(protocol.stages.length + 1)];
         setProtocolStages(protocol.stages);
     }
+
     function saveProtocol() {
-        if(protocol) {
+        if (protocol) {
             fitTestProtocolDb.saveProtocol(protocol)
         }
     }
-    function createNewProtocol() {
-        // todo: implement me
+
+    function createNewProtocol(name: string) {
+        const newProtocol = new FitTestProtocol(name)
+        console.log(`create new protocol ${name}`)
+        fitTestProtocolDb.saveProtocol(newProtocol) // need to do this because useState is async
+        loadProtocols()
     }
+
     function deleteProtocol() {
-        if(protocol.index) {
-            fitTestProtocolDb.deleteProtocol(protocol);
-            loadProtocols();
+        if (protocol.index) {
+            const response = confirm(`Delete protocol ${protocol.name}?`)
+            if (response) {
+                fitTestProtocolDb.deleteProtocol(protocol);
+                loadProtocols();
+            }
         }
     }
 
     const table = useReactTable({
         data: protocolStages,
         columns,
-        defaultColumn: {cell:useEditableColumn},
+        defaultColumn: {cell: useEditableColumn},
         getCoreRowModel: getCoreRowModel(),
         autoResetPageIndex,
         // Provide our updateData function to our table meta
@@ -86,9 +96,8 @@ export function FitTestProtocolPanel() {
                 skipAutoResetPageIndex()
                 // replace the updated stage's updated column value
                 setProtocolStages((old) => {
-                    const stages = old.map((stage, index) =>
-                    {
-                        if(index == rowIndex) {
+                    const stages = old.map((stage, index) => {
+                        if (index == rowIndex) {
                             return {...old[rowIndex]!, [columnId]: value};
                         }
                         return stage;
@@ -117,12 +126,12 @@ export function FitTestProtocolPanel() {
         })
     }, []);
 
-    function protocolSelectionChanged(index: number|string) {
+    function protocolSelectionChanged(index: number | undefined) {
         // index should be a number. since it's always from protocol.index. but somehow going through a select to its event it becomes a string?
         const protocol = protocols.find((protocol) => {
             return protocol.index === Number(index)
         });
-        if(protocol) {
+        if (protocol) {
             setProtocol(protocol)
             setProtocolName(protocol.name as string)
             setProtocolStages(protocol.stages)
@@ -135,7 +144,7 @@ export function FitTestProtocolPanel() {
     function protocolNameChanged(event: React.ChangeEvent<HTMLInputElement>) {
         const newProtocolName = event.target.value;
         setProtocolName(newProtocolName);
-        if(protocol.index) {
+        if (protocol.index) {
             // only save if we have an index, otherwise we keep creating them.
             protocol.name = newProtocolName;  // update this here since setState is delayed
             saveProtocol()
@@ -145,17 +154,30 @@ export function FitTestProtocolPanel() {
     return (
         <div className="p-2">
             <div className="h-2"/>
-            <select onChange={(event) => protocolSelectionChanged(event.target.value)}
-                    value={protocol.index}
-            >
-                {protocols.map((protocol, index) => (
-                    <option key={index} value={protocol.index}>{protocol.name}</option>
-                ))}
-            </select>
+            <CreatableSelect
+                name={"Protocol"}
+                options={protocols.map((protocol, index) => {
+                    return {
+                        value: protocol.index, label:
+                        protocol.name
+                    }
+                })}
+                styles={{
+                    container: (baseStyles, state) => ({
+                        ...baseStyles,
+                        display: "inline-flex",
+                    }),
+                    control: (baseStyles, state) => ({
+                        ...baseStyles,
+                        width: "200px"
+                    })
+                }}
+                onChange={(event) => protocolSelectionChanged(event?.value)}
+                onCreateOption={createNewProtocol}
+                isSearchable={true}/>
             <input value={protocolName} onChange={(event) => protocolNameChanged(event)}/>
             <input type={"button"} value={"Add stage"} onClick={addStage}/>
             <input type={"button"} value={"Delete protocol"} onClick={deleteProtocol}/>
-            <input type={"button"} value={"New protocol"} onClick={createNewProtocol}/>
             <table>
                 <thead>
                 {table.getHeaderGroups().map(headerGroup => (
