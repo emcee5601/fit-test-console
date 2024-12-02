@@ -11,7 +11,6 @@ export function FitTestProtocolPanel() {
         return <span>{info.getValue()}</span>
     }
 
-
     const columns = React.useMemo<ColumnDef<SamplingStage, string | number | undefined>[]>(
         () => [
             {

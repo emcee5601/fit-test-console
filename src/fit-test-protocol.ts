@@ -36,16 +36,16 @@ export class SamplingStage {
     index: number|undefined;
     name: string|undefined;
     source: SampleSource|undefined
-    purgeDuration: number|undefined;
+    purgeDuration: number;
     purgeInstructions: string|undefined;
-    sampleDuration: number|undefined;
+    sampleDuration: number;
     sampleInstructions: string|undefined;
 
     constructor(index: number|undefined = undefined,
                 name: string|undefined = undefined,
                 source: SampleSource|undefined = undefined,
-                purgeDuration: number|undefined = undefined, purgeInstructions: string|undefined = undefined,
-                sampleDuration: number|undefined = undefined, sampleInstructions: string|undefined = undefined) {
+                purgeDuration: number = 4, purgeInstructions: string|undefined = undefined,
+                sampleDuration: number = 5, sampleInstructions: string|undefined = undefined) {
         this.index = index;
         this.name = name;
         this.source = source;
