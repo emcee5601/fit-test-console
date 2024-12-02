@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from "react";
 import {ColumnDef, flexRender, getCoreRowModel, useReactTable} from "@tanstack/react-table";
-import {FitFactorCalculationMethod, FitTestProtocol, fitTestProtocolDb, SamplingStage} from "./fit-test-protocol.ts";
+import {FitTestProtocol, fitTestProtocolDb, SamplingStage} from "./fit-test-protocol.ts";
 import {useEditableColumn} from "./use-editable-column-hook.tsx";
 import {useSkipper} from "./use-skipper-hook.ts";
 
@@ -43,14 +43,15 @@ export function FitTestProtocolPanel() {
     const [protocols, setProtocols] = useState<FitTestProtocol[]>([])
     const [protocol, setProtocol] = useState<FitTestProtocol>(new FitTestProtocol())
     const [protocolName, setProtocolName] = useState<string>("")
+    const [protocolStages, setProtocolStages] = useState<SamplingStage[]>([])
 
     function addStage() {
-        protocol.stages.push(new SamplingStage(protocol.stages.length+1));
-        setProtocol(protocol);
+        // need to change the reference so useState sees the change
+        protocol.stages = [...protocol.stages, new SamplingStage(protocol.stages.length+1)];
+        setProtocolStages(protocol.stages);
     }
     function saveProtocol() {
         if(protocol) {
-            protocol.name = protocolName as string
             fitTestProtocolDb.saveProtocol(protocol)
         }
     }
@@ -65,7 +66,7 @@ export function FitTestProtocolPanel() {
     }
 
     const table = useReactTable({
-        data: protocol.stages,
+        data: protocolStages,
         columns,
         defaultColumn: {cell:useEditableColumn},
         getCoreRowModel: getCoreRowModel(),
@@ -76,7 +77,17 @@ export function FitTestProtocolPanel() {
                 // Skip page index reset until after next rerender
                 skipAutoResetPageIndex()
                 // replace the updated stage's updated column value
-                protocol.stages[rowIndex] = {...protocol.stages[rowIndex]!, [columnId]: value};
+                setProtocolStages((old) => {
+                    const stages = old.map((stage, index) =>
+                    {
+                        if(index == rowIndex) {
+                            return {...old[rowIndex]!, [columnId]: value};
+                        }
+                        return stage;
+                    });
+                    protocol.stages = stages; // update it
+                    return stages;
+                })
                 saveProtocol()
             },
         },
@@ -106,7 +117,7 @@ export function FitTestProtocolPanel() {
         if(protocol) {
             setProtocol(protocol)
             setProtocolName(protocol.name as string)
-            protocol.stages = [...protocol.stages]; // force table to see change
+            setProtocolStages(protocol.stages)
             console.log(`protocol selection changed to ${protocol.name} (${protocol.index}`)
         } else {
             console.log(`could not find protocol with key ${index}`)
@@ -114,9 +125,11 @@ export function FitTestProtocolPanel() {
     }
 
     function protocolNameChanged(event: React.ChangeEvent<HTMLInputElement>) {
-        setProtocolName(event.target.value);
+        const newProtocolName = event.target.value;
+        setProtocolName(newProtocolName);
         if(protocol.index) {
             // only save if we have an index, otherwise we keep creating them.
+            protocol.name = newProtocolName;  // update this here since setState is delayed
             saveProtocol()
         }
     }
