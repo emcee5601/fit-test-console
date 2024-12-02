@@ -132,6 +132,27 @@ export default abstract class AbstractDB {
         })
     }
 
+    async delete(objectStore: string, key: IDBValidKey) {
+        return new Promise((resolve, reject) => {
+            this.openTransaction("readwrite").then((transaction) => {
+                try {
+                    const request = transaction.objectStore(objectStore).delete(key);
+                    request.onsuccess = () => {
+                        // deletes seem to succeed even if key doesn't exist? (previously deleted?)
+                        resolve(request.result);
+                    }
+                    request.onerror = (event) => {
+                        const errorMessage = `${this.dbName} delete(${key}) failed; error: ${event}`
+                        console.log(errorMessage);
+                        reject(errorMessage);
+                    }
+                } catch(error) {
+                    reject(`${error}, key: ${key}`);
+                }
+            });
+        });
+    }
+
     async open() {
         if(this.db) {
             // already opened

@@ -85,7 +85,7 @@ class FitTestProtocolDB extends AbstractDB {
     }
 
     private async putInternal(protocol: FitTestProtocol) {
-        // strip out the keyPath if it's not defined
+        // strip out the keyPath if it's not truthy, otherwise we can get in invalid key error
         const record = protocol
         if(!record.index) {
             console.log(`record has no index: ${JSON.stringify(record)}`)
@@ -93,10 +93,27 @@ class FitTestProtocolDB extends AbstractDB {
         }
         return super.put(FitTestProtocolDB.PROTOCOLS_OBJECT_STORE, record)
     }
+    private async deleteInternal(protocol: FitTestProtocol) {
+        const record = protocol
+        if(record.index) {
+            return super.delete(FitTestProtocolDB.PROTOCOLS_OBJECT_STORE, record.index)
+        } else {
+            return new Promise((_resolve, reject) => {
+                reject(`protocol ${protocol.name} has no index, cannot delete it`)
+            })
+        }
+    }
 
     saveProtocol(protocol: FitTestProtocol) {
         this.putInternal(protocol).then((result) => {
             console.log(`saveProtocol succeeded; index=${JSON.stringify(result)}, ${JSON.stringify(protocol)}`);
+        }).catch((reason) => {
+            console.error(`could not save protocol ${JSON.stringify(protocol)}; ${reason}`);
+        })
+    }
+    deleteProtocol(protocol: FitTestProtocol) {
+        this.deleteInternal(protocol).then(() => {
+            console.log(`deleteProtocol succeeded: ${protocol.index} (${protocol.name})`);
         }).catch((reason) => {
             console.error(`could not save protocol ${JSON.stringify(protocol)}; ${reason}`);
         })

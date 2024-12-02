@@ -40,22 +40,32 @@ export function FitTestProtocolPanel() {
     )
 
     const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
-    const [stages, setStages] = React.useState<SamplingStage[]>([])
-    const [protocol, setProtocol] = useState<FitTestProtocol>()
     const [protocols, setProtocols] = useState<FitTestProtocol[]>([])
+    const [protocol, setProtocol] = useState<FitTestProtocol>(new FitTestProtocol())
+    const [protocolName, setProtocolName] = useState<string>("")
 
     function addStage() {
-        setStages((prev) => ([ ...prev, new SamplingStage(prev.length+1) ]))
+        protocol.stages.push(new SamplingStage(protocol.stages.length+1));
+        setProtocol(protocol);
     }
     function saveProtocol() {
         if(protocol) {
-            protocol.stages = stages;
+            protocol.name = protocolName as string
             fitTestProtocolDb.saveProtocol(protocol)
+        }
+    }
+    function createNewProtocol() {
+        // todo: implement me
+    }
+    function deleteProtocol() {
+        if(protocol.index) {
+            fitTestProtocolDb.deleteProtocol(protocol);
+            loadProtocols();
         }
     }
 
     const table = useReactTable({
-        data: stages,
+        data: protocol.stages,
         columns,
         defaultColumn: {cell:useEditableColumn},
         getCoreRowModel: getCoreRowModel(),
@@ -65,17 +75,9 @@ export function FitTestProtocolPanel() {
             updateData: (rowIndex, columnId, value) => {
                 // Skip page index reset until after next rerender
                 skipAutoResetPageIndex()
-                setStages(old =>
-                    old.map((row, index) => {
-                        if (index === rowIndex) {
-                            return {
-                                ...old[rowIndex]!,
-                                [columnId]: value,
-                            }
-                        }
-                        return row
-                    })
-                )
+                // replace the updated stage's updated column value
+                protocol.stages[rowIndex] = {...protocol.stages[rowIndex]!, [columnId]: value};
+                saveProtocol()
             },
         },
         debugTable: true,
@@ -85,6 +87,7 @@ export function FitTestProtocolPanel() {
         fitTestProtocolDb.getAllProtocols().then((protocols) => {
             console.log(`got protocols ${JSON.stringify(protocols)}`)
             setProtocols(protocols)
+            setProtocol(protocols[0]) // todo: set this to the selected one or the first one if the selected one doesn't exist (because it was deleted)
         })
     }
 
@@ -102,22 +105,36 @@ export function FitTestProtocolPanel() {
         });
         if(protocol) {
             setProtocol(protocol)
-            setStages(protocol.stages)
+            setProtocolName(protocol.name as string)
+            protocol.stages = [...protocol.stages]; // force table to see change
+            console.log(`protocol selection changed to ${protocol.name} (${protocol.index}`)
         } else {
             console.log(`could not find protocol with key ${index}`)
+        }
+    }
+
+    function protocolNameChanged(event: React.ChangeEvent<HTMLInputElement>) {
+        setProtocolName(event.target.value);
+        if(protocol.index) {
+            // only save if we have an index, otherwise we keep creating them.
+            saveProtocol()
         }
     }
 
     return (
         <div className="p-2">
             <div className="h-2"/>
-            <select onChange={(event) => protocolSelectionChanged(event.target.value)}>
+            <select onChange={(event) => protocolSelectionChanged(event.target.value)}
+                    value={protocol.index}
+            >
                 {protocols.map((protocol, index) => (
                     <option key={index} value={protocol.index}>{protocol.name}</option>
                 ))}
             </select>
+            <input value={protocolName} onChange={(event) => protocolNameChanged(event)}/>
             <input type={"button"} value={"Add stage"} onClick={addStage}/>
-            <input type={"button"} value={"Save protocol"} onClick={saveProtocol}/>
+            <input type={"button"} value={"Delete protocol"} onClick={deleteProtocol}/>
+            <input type={"button"} value={"New protocol"} onClick={createNewProtocol}/>
             <table>
                 <thead>
                 {table.getHeaderGroups().map(headerGroup => (
