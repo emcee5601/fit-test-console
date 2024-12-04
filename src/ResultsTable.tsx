@@ -108,6 +108,9 @@ export function ResultsTable({dataCollector}: {
             {
                 accessorKey: 'Mask',
                 cell: useEditableColumn,
+                filterFn: (row, columnId, filterValue) => {
+                    return RegExp(filterValue).test(row.getValue(columnId));
+                },
                 size: 250,
             },
             {
