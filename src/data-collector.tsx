@@ -279,6 +279,37 @@ export class DataCollector {
         this.updateCurrentRowInDatabase();
     }
 
+    /**
+     * This is typically called when the UI is updating the test record.
+     * @param record
+     */
+    updateTest(record: SimpleResultsDBRecord) {
+        if(record.ID) {
+            if(record.ID === this.currentTestData?.ID) {
+                /*
+                The record being updated by the UI is currently being populated by the currently running test.
+                Point this.currentTestData to the record the UI is updating, and make sure the test results are copied over.
+                 */
+                const oldCurrentTestData = this.currentTestData
+                this.currentTestData = record;
+                // just make sure all the number fields have values
+                Object.entries(oldCurrentTestData).forEach(([key, value]) => {
+                    if(typeof value === "number" && this.currentTestData) {
+                        if(this.currentTestData[key] !== value) {
+                            this.currentTestData[key] = value;
+                            if(this.setResults) {
+                                this.setResults((prev) => [...prev]) // force an update by changing the ref
+                            }
+                        }
+                    }
+                })
+            }
+            this.resultsDatabase.updateTest(record);
+        } else {
+            console.log(`updateTest() unexpected record with no ID: ${record}`)
+        }
+    }
+
     updateCurrentRowInDatabase() {
         if (!this.currentTestData) {
             // no current data row

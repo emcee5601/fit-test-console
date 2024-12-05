@@ -202,7 +202,7 @@ export function ResultsTable({dataCollector}: {
                                     [columnId]: value,  // this updates the cell that was changed
                                 } as SimpleResultsDBRecord;
                                 // TODO: roll this in a function in dataCollector
-                                dataCollector.resultsDatabase.updateTest(updatedRow); // this saves the changes to the db
+                                dataCollector.updateTest(updatedRow); // this saves the changes to the db
                                 return updatedRow;
                             }
                             return row
