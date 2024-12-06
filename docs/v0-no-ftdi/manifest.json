@@ -1,0 +1,13 @@
+{
+  "name": "fit-test-console",
+  "icons": [
+    {
+      "src": "icons/192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    }
+  ],
+  "start_url": "/fit-test-console/v0-no-ftdi/",
+  "display": "standalone"
+
+}
