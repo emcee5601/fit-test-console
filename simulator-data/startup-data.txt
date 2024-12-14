@@ -1,0 +1,14 @@
+PORTACOUNT PLUS PROM V1.7
+COPYRIGHT(c)1992 TSI INC
+ALL RIGHTS RESERVED
+Serial Number 17754
+FF pass level  =   100
+No. of exers   =  4
+Ambt purge     =  4 sec.
+Ambt sample    =  5 sec.
+Mask purge     = 11 sec.
+Mask sample  1 = 40 sec.
+Mask sample  2 = 40 sec.
+Mask sample  3 = 40 sec.
+Mask sample  4 = 40 sec.
+DIP switch     = 10111111
