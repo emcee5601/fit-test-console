@@ -1,0 +1,27 @@
+NEW TEST  PASS =   100
+Ambient         8888 #/cc
+Mask            9.85 #/cc
+Ambient         8888 #/cc
+FF    1          557 PASS
+Mask            1730 #/cc
+Ambient         8888 #/cc
+FF    2          2.5 FAIL
+Mask             740 #/cc
+Ambient         8888 #/cc
+FF    3          5.6 FAIL
+Mask             548 #/cc
+Ambient         8888 #/cc
+FF    4          9.2 FAIL
+Mask            9.85 #/cc
+Ambient         8888 #/cc
+FF    5          555 PASS
+Mask            1730 #/cc
+Ambient         8888 #/cc
+FF    6           66 FAIL
+Mask             740 #/cc
+Ambient         8888 #/cc
+FF    7           77 FAIL
+Mask             548 #/cc
+Ambient         8888 #/cc
+FF    8           88 FAIL
+Overall FF       5.8 FAIL

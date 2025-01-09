@@ -1,0 +1,36 @@
+{
+  "example-1": [
+    "each item in this array can be a string or object",
+    "a string is interpretted as instructions",
+    "an object must contain instructions, and optionally purge and sample durations in seconds",
+    {
+      "instructions": "blah"
+    },
+    {
+      "instructions": "breathe normally",
+      "purge-duration": 4,
+      "sample-duration": 55
+    },
+    {
+      "i": "instructions",
+      "p": 9,
+      "s": 29
+    }
+  ],
+  "w1": [
+    "Normal breathing. Breathe normally",
+    "Heavy breathing. Take deep breaths.",
+    "Jaw movement. Read a passage, sing a song, talk, or pretend to do so.",
+    "Head movement. Look up, down, left, and right. Repeat."
+  ],
+  "osha": [
+    "Normal breathing. In a normal standing position, without talking, the subject shall breathe normally",
+    "Deep breathing. In a normal standing position, the subject shall breathe slowly and deeply, taking caution so as not to hyperventilate",
+    "Turning head side to side. Standing in place, the subject shall slowly turn his/her head from side to side between the extreme positions on each side. The head shall be held at each extreme momentarily so the subject can inhale at each side.",
+    "Moving head up and down. Standing in place, the subject shall slowly move his/her head up and down. The subject shall be instructed to inhale in the up position (i.e., when looking toward the ceiling).",
+    "Talking. The subject shall talk out loud slowly and loud enough so as to be heard clearly by the test conductor. The subject can read from a prepared text such as the Rainbow Passage, count backward from 100, or recite a memorized poem or song.",
+    "Grimace. The test subject shall grimace by smiling or frowning. (This applies only to QNFT testing; it is not performed for QLFT)",
+    "Bending over. The test subject shall bend at the waist as if he/she were to touch his/her toes. Jogging in place shall be substituted for this exercise in those test environments such as shroud type QNFT or QLFT units that do not permit bending over at the waist.",
+    "Normal breathing. Same as exercise (1)."
+  ]
+}
