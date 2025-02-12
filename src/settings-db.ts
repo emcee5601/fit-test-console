@@ -21,6 +21,7 @@ export enum AppSettings {
     SELECTED_PROTOCOL = "selected-protocol",
     SHOW_SETTINGS = "show-settings",
     SHOW_LOG_PANELS = "show-log-panels",
+    KEEP_SCREEN_AWAKE = "keep-screen-awake",
 }
 
 const defaultSettings: { [key: string]: unknown } = {}

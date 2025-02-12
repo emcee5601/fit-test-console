@@ -80,6 +80,8 @@ function App() {
     const [protocolExecutor] = useState<ProtocolExecutor>(new ProtocolExecutor());
     const [protocolDefinitions] = useDBSetting<JSONContent>(AppSettings.PROTOCOL_INSTRUCTION_SETS)
     const [showLogPanels, setShowLogPanels] = useDBSetting(AppSettings.SHOW_LOG_PANELS, false)
+    const [keepScreenAwake, setKeepScreenAwake] = useDBSetting<boolean>(AppSettings.KEEP_SCREEN_AWAKE, true);
+    const wakeLock = React.useRef<WakeLockSentinel|null>(null)
 
     const [resultsDatabase] = useState(() => new SimpleResultsDB());
     const [rawDatabase] = useState(() => new SimpleDB());
@@ -372,6 +374,10 @@ function App() {
         }
     }
 
+    async function requestWakeLock() {
+        wakeLock.current = await navigator.wakeLock.request('screen');
+    }
+
     useEffect(() => {
         portaCountClient.addListener(dataCollector);
         portaCountClient.addListener(externalController);
@@ -384,6 +390,24 @@ function App() {
             portaCountClient.removeListener(externalController)
         };
     }, []);
+
+    const handleVisibilityChange = () => {
+        if (wakeLock.current !== null && document.visibilityState === 'visible') {
+          requestWakeLock();
+        }
+      }
+
+    useEffect(() => {
+        if (keepScreenAwake) {
+            requestWakeLock();
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+        } else if (wakeLock.current !== null) {
+            wakeLock.current.release().then(() => {
+                wakeLock.current = null;
+            })
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        }
+    }, [keepScreenAwake]);
 
     useEffect(() => {
         console.log(`initializing raw logs db`)
@@ -725,6 +749,9 @@ function App() {
                                 <SettingsToggleButton trueLabel={"Copy prev participant"}
                                                       value={defaultToPreviousParticipant}
                                                       setValue={setDefaultToPreviousParticipant}/>
+                                <SettingsToggleButton trueLabel={"Keep screen awake"}
+                                                      value={keepScreenAwake}
+                                                      setValue={setKeepScreenAwake}/>
                                 <SettingsToggleButton trueLabel={"Show external control"}
                                                       value={showExternalControl}
                                                       setValue={setShowExternalControl}/>
