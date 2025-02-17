@@ -320,7 +320,9 @@ export function ResultsTable({tableData, setTableData, dataCollector}: {
             .map((record) => sanitizeRecord(record));
 
         const str = LZString.compressToEncodedURIComponent(JSON.stringify(recordsToExport));
-        const url = `${location.toString()}/view-results?data=${str}`;
+        // sometimes location has a trailing '/', remove it so we don't get a '//'. This behavior is different between local and prod for some reason
+        const baseLocation = location.toString().replace(/\/$/, '')
+        const url = `${baseLocation}/view-results?data=${str}`;
         console.log(`url is: ${url}`)
         console.log(`url length is ${url.length}`);
         if (url.length > 4296) {
