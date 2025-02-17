@@ -4,7 +4,6 @@ Collect data from PortaCount 8020a
 
 // data output patterns
 import {speech} from "./speech.ts";
-import {SimpleResultsDB, SimpleResultsDBRecord} from "./database.ts";
 import {AppSettings, SETTINGS_DB} from "./settings-db.ts";
 import React, {RefObject, useEffect, useState} from "react";
 import {ResultsTable} from "./ResultsTable.tsx";
@@ -21,6 +20,7 @@ import {
 } from "./portacount-client-8020.ts";
 import {SampleSource} from "./fit-test-protocol.ts";
 import {formatFitFactor} from "./utils.ts";
+import {RESULTS_DB, SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 
 const FIVE_SECONDS_IN_MS: number = 5 * 1000;
 const TWENTY_SECONDS_IN_MS: number = 20 * 1000;
@@ -94,14 +94,14 @@ export class DataCollector implements PortaCountListener {
     static EXTERNAL_CONTROL_INTERNAL_CONTROL_PATTERN = /^G$/; // G
 
     static nextTabIndex = 100;
-    resultsDatabase: SimpleResultsDB;
+    resultsDatabase;
     settingsDatabase;
     logCallback;
     dataCallback;
     processedDataCallback;
-    sourceDataToCopy: SimpleResultsDBRecord | null = null;
     previousTestData: SimpleResultsDBRecord | null = null;
     currentTestData: SimpleResultsDBRecord | null = null;
+    nextTestData: Partial<SimpleResultsDBRecord> | null = null;
     lastExerciseNum: number = 0;
     sampleSource: string = "undefined";
     states: DataCollectorStates;
@@ -120,13 +120,12 @@ export class DataCollector implements PortaCountListener {
     constructor(states: DataCollectorStates,
                 logCallback: (message: string) => void,
                 dataCallback: (message: string) => void,
-                processedDataCallback: (message: string) => void,
-                resultsDatabase: SimpleResultsDB,
+                processedDataCallback: (message: string) => void
     ) {
         this.logCallback = logCallback;
         this.dataCallback = dataCallback;
         this.processedDataCallback = processedDataCallback;
-        this.resultsDatabase = resultsDatabase;
+        this.resultsDatabase = RESULTS_DB;
         this.settingsDatabase = SETTINGS_DB;
         this.states = states;
         console.log("DataCollector constructor called")
@@ -265,6 +264,7 @@ export class DataCollector implements PortaCountListener {
             console.log(`test complete, id ${this.currentTestData?.ID}`)
             this.previousTestData = this.currentTestData
             this.currentTestData = null; // flag done
+            this.nextTestData = null; // need to clear this; todo: fill this with prev?
         };
         this.chain(fun) // need to chain
     }
@@ -306,26 +306,28 @@ export class DataCollector implements PortaCountListener {
         this.lastExerciseNum = 0;
         const newTestData = await this.resultsDatabase.createNewTest(timestamp, this.selectedProtocol);
         this.currentTestData = newTestData;
+        let sourceDataToCopy: Partial<SimpleResultsDBRecord> = {}
 
-        if (this.states.defaultToPreviousParticipant) {
-            // copy the string fields over from prev test data if present
-            if (this.previousTestData?.Mask || this.previousTestData?.Participant || this.previousTestData?.Notes) {
-                // the previous record had participant info. update the source pointer to it.
-                this.sourceDataToCopy = this.previousTestData;
-            }
-            if (this.sourceDataToCopy) {
-                for (const key in this.sourceDataToCopy) {
-                    if (key in newTestData) {
-                        // don't copy fields that were assigned
-                        continue;
-                    }
-                    if (key.startsWith("Ex ") || key.startsWith("Final")) {
-                        // don't copy exercise results
-                        continue
-                    }
-                    if (typeof this.sourceDataToCopy[key] === "string") {
-                        this.currentTestData[key] = this.sourceDataToCopy[key];
-                    }
+        if(this.nextTestData) {
+            // todo: if copying from prev participant, pre-populate nextTestData
+            sourceDataToCopy = this.nextTestData;
+        } else if (this.states.defaultToPreviousParticipant && this.previousTestData) {
+            // we want to copy prev data, and there was previous data
+            sourceDataToCopy = this.previousTestData;
+        }
+
+        if (sourceDataToCopy) {
+            for (const key in sourceDataToCopy) {
+                if (key in newTestData) {
+                    // don't copy fields that were assigned
+                    continue;
+                }
+                if (key.startsWith("Ex ") || key.startsWith("Final")) {
+                    // don't copy exercise results
+                    continue
+                }
+                if (typeof sourceDataToCopy[key] === "string") {
+                    this.currentTestData[key] = sourceDataToCopy[key];
                 }
             }
         }
@@ -352,17 +354,38 @@ export class DataCollector implements PortaCountListener {
             } else {
                 this.currentTestData[`${exerciseNum}`] = `${Math.floor(ff)}`; // probably "Final"
             }
-
-            if (this.setResults) {
-                // update table data
-                this.setResults((prev) => [...prev]) // force an update by changing the ref
-            } else {
-                // shouldn't happen, but setResults callback starts off uninitialized
-                console.log("have current test data, but setResults callback hasn't been initialized. this shouldn't happen?")
-            }
+            this.updateResultsTable();
             this.updateCurrentRowInDatabase();
         }
         this.chain(fun)
+    }
+
+    /**
+     * propagate changes so results table can see it
+     * @private
+     */
+    private updateResultsTable() {
+        if (this.setResults) {
+            // update table data
+            this.setResults((prev) => [...prev]) // force an update by changing the ref
+        } else {
+            // shouldn't happen, but setResults callback starts off uninitialized
+            console.log("have current test data, but setResults callback hasn't been initialized. this shouldn't happen?")
+        }
+    }
+
+    /**
+     * Called when current test panel updates participant, mask, or notes field. The ID may or may not be populated.
+     * @param record
+     */
+    recordTestUpdated(record: Partial<SimpleResultsDBRecord>) {
+        if (!record.ID) {
+            // no ID means data isn't in the DB. save for later
+            this.nextTestData = record;
+            return;
+        }
+        this.updateResultsTable();
+        this.resultsDatabase.updateTest(record as SimpleResultsDBRecord);
     }
 
     /**
@@ -723,13 +746,18 @@ export interface DataCollectorStates {
     setGaugeOptions: React.Dispatch<React.SetStateAction<EChartsOption>>
 }
 
-export function DataCollectorPanel({dataCollector, showLogs}: { dataCollector: DataCollector, showLogs: boolean }) {
+export function DataCollectorPanel({dataCollector, showLogs, showHistoricalTests}: {
+    dataCollector: DataCollector,
+    showLogs: boolean,
+    showHistoricalTests: boolean,
+}) {
     const [rawConsoleData, setRawConsoleData] = useState<string>("")
     const rawConsoleDataTextAreaRef = React.useRef<HTMLTextAreaElement>(null)
     const [logData, setLogData] = useState<string>("")
     const logDataTextAreaRef = React.useRef<HTMLTextAreaElement>(null)
     const [processedData, setProcessedData] = useState<string>("")
     const processedDataTextAreaRef = React.useRef<HTMLTextAreaElement>(null)
+    const [results, setResults] = useState<SimpleResultsDBRecord[]>([])
 
     useEffect(() => {
         setRawConsoleData(dataCollector.states.rawConsoleData);
@@ -743,12 +771,14 @@ export function DataCollectorPanel({dataCollector, showLogs}: { dataCollector: D
 
     return (
         <>
+            {showHistoricalTests &&
             <section id="collected-data" style={{display: "inline-block", width: "100%"}}>
                 <fieldset>
                     <legend>Fit Test Info</legend>
-                    <ResultsTable dataCollector={dataCollector}/>
+                    <ResultsTable dataCollector={dataCollector} tableData={results} setTableData={setResults}/>
                 </fieldset>
             </section>
+            }
             {showLogs ? <section style={{width: "100%", display: "flex"}}>
                 <fieldset style={{flexGrow: 1}}>
                     <legend>Raw Data</legend>

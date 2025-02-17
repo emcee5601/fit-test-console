@@ -35,7 +35,7 @@ export function ProtocolSelector({onChange}: { onChange: (value: string) => void
     return (<div style={{display:"inline-block", paddingInlineEnd:"0.5em"}}>
             Protocol:&nbsp;
             <select onChange={(event) => updateProtocol(event.target.value)}
-                    value={protocol} defaultValue={protocolNames[0]}>
+                    value={protocol}>
                 {protocolNames.map((protocolName) => <option key={protocolName}
                                                              value={protocolName}>{protocolName}</option>)}
             </select>

@@ -28,14 +28,14 @@ export function CustomProtocolPanel({protocolExecutor}: { protocolExecutor: Prot
         return () => {protocolExecutor.removeListener(listener)}
     }, [protocolExecutor]);
     return (
-        <section>
-            <div style={{display: "inline-block", height: "100%"}}>
+        <section id="custom-control-panel">
+            <div style={{display: "block", paddingInline:"2rem"}}>
                 <input type="button" value="Start" id="start-protocol-button" onClick={() => protocolExecutor.executeProtocol()}/>
                 <input type="button" value="Stop" id="stop-protocol-button" onClick={() => protocolExecutor.cancel()}/>
             </div>
-            <div style={{display: "inline-block", height: "100%"}}>
-                <span style={{display: "inline-block", width: "100%"}}>Source: {sampleSource}</span>
-                <span style={{display: "inline-block", width: "100%"}}>State: {samplingState}</span>
+            <div style={{display: "inline-block", width: "fit-content"}}>
+                <span style={{display: "block"}}>Source: {sampleSource}</span>
+                <span style={{display: "block"}}>State: {samplingState}</span>
                 <span style={{
                     display: "inline-block",
                     width: "100%"

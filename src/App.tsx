@@ -5,11 +5,16 @@ import {DataCollector, DataCollectorPanel, DataCollectorStates} from "./data-col
 import {EnableSpeechSwitch, SpeechVoiceSelector} from "./speech-voice-selector.tsx";
 import {speech} from "./speech.ts"
 import {ExternalController, ExternalControlPanel, ExternalControlStates} from "./external-control.tsx";
-import {SimpleDB, SimpleResultsDB} from "./database.ts";
+import {SimpleDB} from "./database.ts";
 import {downloadData} from "./html-data-downloader.ts";
-import {UsbSerialDrivers} from "./web-usb-serial-drivers.ts";
-import {convertFitFactorToFiltrationEfficiency, formatFitFactor, getConnectionStatusCssClass, getFitFactorCssClass} from "./utils.ts";
-import {SettingsSelect, SettingsToggleButton} from "./Settings.tsx";
+import {UsbSerialDrivers, UsbSerialPort} from "./web-usb-serial-drivers.ts";
+import {
+    convertFitFactorToFiltrationEfficiency,
+    formatFitFactor,
+    getConnectionStatusCssClass,
+    getFitFactorCssClass
+} from "./utils.ts";
+import {SettingsSelect, ToggleButton} from "./Settings.tsx";
 
 // import ReactECharts from "echarts-for-react";
 import ReactEChartsCore from 'echarts-for-react/lib/core';
@@ -39,17 +44,11 @@ import {JSONContent} from "vanilla-jsoneditor";
 import {ProtocolDefinition, ShortStageDefinition, StageDefinition} from "./simple-protocol.ts";
 import {PortaCountClient8020, PortaCountListener} from "./portacount-client-8020.ts";
 import {PortaCountState} from "./portacount-state.tsx";
-import {useNavigate, useSearchParams} from "react-router";
-import LZString from "lz-string";
+import {ConnectionStatus} from "./connection-status.ts";
+import {RESULTS_DB, SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 
 echarts.use([DatasetComponent, LineChart, GaugeChart, GridComponent, SingleAxisComponent, TooltipComponent, AxisPointerComponent, TimelineComponent,
     MarkAreaComponent, LegendComponent, DataZoomComponent, VisualMapComponent, CanvasRenderer]);
-
-export enum ConnectionStatus {
-    DISCONNECTED = "Disconnected",
-    WAITING = "Waiting for Portacount",
-    RECEIVING = "Receiving data",
-}
 
 function App() {
     const simulationSpeedsBytesPerSecond: number[] = [300, 1200, 14400, 28800, 56760];
@@ -81,9 +80,12 @@ function App() {
     const [protocolDefinitions] = useDBSetting<JSONContent>(AppSettings.PROTOCOL_INSTRUCTION_SETS)
     const [showLogPanels, setShowLogPanels] = useDBSetting(AppSettings.SHOW_LOG_PANELS, false)
     const [keepScreenAwake, setKeepScreenAwake] = useDBSetting<boolean>(AppSettings.KEEP_SCREEN_AWAKE, true);
-    const wakeLock = React.useRef<WakeLockSentinel|null>(null)
+    const wakeLock = React.useRef<WakeLockSentinel | null>(null)
+    const [showHistoricalTests, setShowHistoricalTests] = useDBSetting(AppSettings.SHOW_HISTORICAL_TESTS, true)
+    const [serialPortInfo, setSerialPortInfo] = useState<SerialPortInfo>()
+    const [showDangerZoneSettings, setShowDangerZoneSettings] = useState<boolean>(false); // don't persist this setting
+    const [showCurrentTest, setShowCurrentTest] = useDBSetting(AppSettings.SHOW_CURRENT_TEST_PANEL, false)
 
-    const [resultsDatabase] = useState(() => new SimpleResultsDB());
     const [rawDatabase] = useState(() => new SimpleDB());
     const initialState: ExternalControlStates = {
         dataTransmissionMode: dataTransmissionMode,
@@ -356,34 +358,18 @@ function App() {
 
     const [dataCollectorStates] = useState(initialDataCollectorState);
     const [dataCollector] = useState(() => new DataCollector(dataCollectorStates, logCallback, rawDataCallback,
-        processedDataCallback, resultsDatabase))
+        processedDataCallback))
     const [portaCountClient] = useState(new PortaCountClient8020())
-    const [searchParams] = useSearchParams()
-    const navigate = useNavigate();
+    const [protocolStages, setProtocolStages] = useState<StageDefinition[]>([])
 
-    function processUrlData() {
-        const dataParam = searchParams.get("data");
-        if(!dataParam) {
-            return;
-        }
-        const urlData = LZString.decompressFromUTF16(dataParam)
-        if(urlData) {
-            navigate(location.pathname, {replace: true}) // remove data from the url
-            console.log(`got url data: ${urlData}`);
-            appendRaw(urlData)
-        }
-    }
-
-    async function requestWakeLock() {
-        wakeLock.current = await navigator.wakeLock.request('screen');
-    }
+    const latestResults: Partial<SimpleResultsDBRecord> = dataCollector.currentTestData || dataCollector.previousTestData || {}
+    const [latestResultsParticipant, setLatestResultsParticipant] = useState(latestResults.Participant)
+    const [latestResultsMask, setLatestResultsMask] = useState(latestResults.Mask)
+    const [latestResultsNotes, setLatestResultsNotes] = useState(latestResults.Notes)
 
     useEffect(() => {
         portaCountClient.addListener(dataCollector);
         portaCountClient.addListener(externalController);
-
-        // handle data sent via url
-        processUrlData();
 
         return () => {
             portaCountClient.removeListener(dataCollector)
@@ -391,11 +377,15 @@ function App() {
         };
     }, []);
 
+    async function requestWakeLock() {
+        wakeLock.current = await navigator.wakeLock.request('screen');
+    }
+
     const handleVisibilityChange = () => {
         if (wakeLock.current !== null && document.visibilityState === 'visible') {
-          requestWakeLock();
+            requestWakeLock();
         }
-      }
+    }
 
     useEffect(() => {
         if (keepScreenAwake) {
@@ -526,10 +516,12 @@ function App() {
     }
 
     function downloadButtonClickHandler() {
-        downloadAllRawDataAsJSON() // there's only 1 option at the moment
         switch (dataToDownload) {
             case "all-raw-data":
-                // downloadRawData(rawConsoleData, "raw-fit-test-data");
+                downloadAllRawDataAsJSON()
+                break;
+            case "all-results-as-json":
+                downloadAllResultsAsJSON();
                 break;
             default:
                 console.log(`unsupported data to download: ${dataToDownload}`);
@@ -543,36 +535,36 @@ function App() {
         })
     }
 
+    function downloadAllResultsAsJSON() {
+        RESULTS_DB.getAllData().then(data => {
+            downloadData(JSON.stringify(data), "fit-test-all-results", "json");
+        })
+    }
+
+
+    function serialPortConnectionHandler(port: UsbSerialPort | SerialPort) {
+        logit(`got serial port ${port.toLocaleString()}, using baud rate ${baudRate}`)
+        setSerialPortInfo(port.getInfo())
+        port.open({baudRate: Number(baudRate)}).then(() => {
+            logit(`opened ${port.getInfo()}`)
+            if (port.readable) {
+                monitor(port.readable.getReader());
+            }
+            if (port.writable) {
+                externalController.setWriter(port.writable.getWriter());
+            }
+        })
+    }
+
     function connectViaWebUsbSerial() {
         const serial = new UsbSerialDrivers()
-        serial.requestPort().then((port) => {
-            port.open({baudRate: Number(baudRate)}).then(() => {
-                if (port.readable) {
-                    monitor(port.readable.getReader());
-                }
-                if (port.writable) {
-                    externalController.setWriter(port.writable.getWriter());
-                }
-            })
-        })
-
+        serial.requestPort().then(serialPortConnectionHandler)
     }
 
     function connectViaWebSerial() {
         if ("serial" in navigator) {
-            logit("serial supported!")
-            navigator.serial.requestPort().then((port) => {
-                logit(`got serial port ${port.toLocaleString()}, using baud rate ${baudRate}`)
-                port.open({baudRate: Number(baudRate)}).then((event) => {
-                    logit(`opened ${event}`)
-                    if (port.readable) {
-                        monitor(port.readable.getReader());
-                    }
-                    if (port.writable) {
-                        externalController.setWriter(port.writable.getWriter());
-                    }
-                })
-            })
+            logit("webserial supported!")
+            navigator.serial.requestPort().then(serialPortConnectionHandler)
         } else {
             logit("no serial support. As of this writing, web serial is only supported on desktop chrome.")
         }
@@ -619,8 +611,7 @@ function App() {
             portaCountClient.addListener(listener)
             await portaCountClient.monitor(reader);
             portaCountClient.removeListener(listener);
-        }
-        finally {
+        } finally {
             setConnectionStatus(ConnectionStatus.DISCONNECTED);
         }
     }
@@ -641,6 +632,9 @@ function App() {
     function setSelectedProtocol(selectedProtocol: string) {
         dataCollector.setProtocol(selectedProtocol);
         const protocol = (protocolDefinitions.json as ProtocolDefinition)[selectedProtocol];
+        if (!protocol) {
+            return;
+        }
         const stages = protocol.map((item) => {
             let stageDefinition: StageDefinition;
             if (typeof item === "string") {
@@ -665,75 +659,79 @@ function App() {
             return value !== undefined
         });
         protocolExecutor.setStages(stages)
+        setProtocolStages(stages)
+    }
+
+    function updateHeight(event: React.FormEvent<HTMLTextAreaElement>) {
+        const textArea = event.target as HTMLTextAreaElement
+        textArea.style.height = "auto";
+        textArea.style.height = textArea.scrollHeight + "px";
+        // console.log(`updateHeight, set to ${event.target.style.height}, should be ${event.target.scrollHeight}`)
+    }
+
+    function updateCurrentTest() {
+        dataCollector.recordTestUpdated(latestResults)
+    }
+
+    function updateCurrentParticipant(value: string) {
+        setLatestResultsParticipant(value);
+        latestResults.Participant = value;
+        updateCurrentTest();
+    }
+
+    function updateCurrentMask(value: string) {
+        setLatestResultsMask(value);
+        latestResults.Mask = value;
+        updateCurrentTest();
+    }
+
+    function updateCurrentNotes(value: string) {
+        setLatestResultsNotes(value);
+        latestResults.Notes = value;
+        updateCurrentTest();
+    }
+
+    function clearCurrentTest() {
+        // latestResult is a const. just clear all its internals
+        for (const key of Object.keys(latestResults)) {
+            delete latestResults[key];
+        }
+        setLatestResultsParticipant("");
+        setLatestResultsMask("");
+        setLatestResultsNotes("");
     }
 
     return (
         <>
-            <section id="data-source-baud-rate" style={{display: 'flex'}}>
+            {showSettings && <div id="settings-overlay" onKeyUpCapture={(event) => {
+                if (event.code === "Escape") {
+                    setShowSettings(false)
+                }
+            }}>
                 <fieldset>
-                    {`mftc v${__APP_VERSION__} ${import.meta.env.MODE}`}
-                </fieldset>
-                <fieldset style={{flexGrow: "1", textAlign: "left"}}>
-                    <div style={{display: "inline-block"}}>
-                        <label htmlFor="data-source-selector">Data Source: </label>
-                        <select id="data-source-selector" defaultValue={dataSource} onChange={dataSourceChanged}
-                                disabled={connectionStatus !== ConnectionStatus.DISCONNECTED}>
-                            <option value="web-serial">WebSerial</option>
-                            <option value="web-usb-serial">Web USB Serial</option>
-                            <option value="simulator">Simulator</option>
-                            <option value="database">Database</option>
-                        </select>
-                    </div>
-                    {dataSource === "simulator" ?
-                        <div style={{display: "inline-block"}}>
-                            <label htmlFor="simulation-speed-select">Speed: </label>
-                            <select id="simulation-speed-select"
-                                    value={simulationSpeedBytesPerSecond}
-                                    onChange={(event) => setSimulationSpeedBytesPerSecond(Number(event.target.value))}>
-                                {simulationSpeedsBytesPerSecond.map((bytesPerSecond: number) => <option key={bytesPerSecond}
-                                                                                                        value={bytesPerSecond}>{bytesPerSecond} bps</option>)}
-                            </select>
-                        </div> : null}
-                    <input className="button" type="button" value="Connect" id="connect-button"
-                           hidden={connectionStatus !== ConnectionStatus.DISCONNECTED}
-                           onClick={connectButtonClickHandler}/>
-                    <div className={getConnectionStatusCssClass(connectionStatus)}>
-                        {connectionStatus}
-                    </div>
-                    <ProtocolSelector
-                        onChange={(selectedProtocol) => setSelectedProtocol(selectedProtocol)}/>&nbsp;&nbsp;
-
-                    <select id="download-file-format-selector" defaultValue={dataToDownload}
-                            onChange={downloadFileFormatChanged}>
-                        <option value="all-raw-data">All Raw data as json</option>
-                    </select>
-                    <input className="button" type="button" value="Download!" id="download-button"
-                           onClick={downloadButtonClickHandler}/>
-                    <SettingsToggleButton trueLabel={"Show Settings"} value={showSettings} setValue={setShowSettings}/>
-                </fieldset>
-            </section>
-            {showSettings ?
-                <section id="settings">
-                    <section id="basic-settings" style={{display: 'flex'}}>
-                        <fieldset style={{width: "100%", textAlign: "left"}}>
+                    <legend>Settings</legend>
+                    <section id="settings">
+                        <ToggleButton trueLabel={"Show Settings"} value={showSettings}
+                                      setValue={setShowSettings}/>
+                        <fieldset style={{display: "inline-block"}}>
+                            <legend>Basic</legend>
                             <EnableSpeechSwitch/>
-                            <SettingsToggleButton trueLabel={"Say particle count"}
-                                                  value={sayParticleCount}
-                                                  setValue={setSayParticleCount}/>
-                            <SettingsToggleButton trueLabel={"Estimate fit factor"}
-                                                  value={autoEstimateFitFactor}
-                                                  setValue={setAutoEstimateFitFactor}/>
-                            <SettingsToggleButton trueLabel={"Say estimated fit factor"}
-                                                  value={sayEstimatedFitFactor}
-                                                  setValue={setSayEstimatedFitFactor}/>
-                            <SettingsToggleButton trueLabel={"Advanced settings"}
-                                                  value={showAdvancedControls}
-                                                  setValue={setShowAdvancedControls}/>
+                            <ToggleButton trueLabel={"Say particle count"}
+                                          value={sayParticleCount}
+                                          setValue={setSayParticleCount}/>
+                            <ToggleButton trueLabel={"Estimate fit factor"}
+                                          value={autoEstimateFitFactor}
+                                          setValue={setAutoEstimateFitFactor}/>
+                            <ToggleButton trueLabel={"Say estimated fit factor"}
+                                          value={sayEstimatedFitFactor}
+                                          setValue={setSayEstimatedFitFactor}/>
+                            <ToggleButton trueLabel={"Advanced settings"}
+                                          value={showAdvancedControls}
+                                          setValue={setShowAdvancedControls}/>
                         </fieldset>
-                    </section>
-                    {showAdvancedControls ?
-                        <section id="advanced-settings" style={{display: "flex", width: "100%"}}>
-                            <fieldset style={{width: "100%", textAlign: "left"}}>
+                        {showAdvancedControls && <section id={"advanced-controls"}>
+                            <fieldset>
+                                <legend>Advanced</legend>
                                 <SettingsSelect label={"Baud Rate"} value={baudRate} setValue={setBaudRate}
                                                 options={[
                                                     {"300": "300"},
@@ -743,90 +741,208 @@ function App() {
                                                     {"9600": "9600"}
                                                 ]}/>
                                 <SpeechVoiceSelector/>
-                                <SettingsToggleButton trueLabel={"Verbose speech"}
-                                                      value={verboseSpeech}
-                                                      setValue={setVerboseSpeech}/>
-                                <SettingsToggleButton trueLabel={"Copy prev participant"}
-                                                      value={defaultToPreviousParticipant}
-                                                      setValue={setDefaultToPreviousParticipant}/>
-                                <SettingsToggleButton trueLabel={"Keep screen awake"}
-                                                      value={keepScreenAwake}
-                                                      setValue={setKeepScreenAwake}/>
-                                <SettingsToggleButton trueLabel={"Show external control"}
-                                                      value={showExternalControl}
-                                                      setValue={setShowExternalControl}/>
-                                <SettingsToggleButton trueLabel={"Show protocol editor"}
-                                                      value={showSimpleProtocolEditor}
-                                                      setValue={setShowSimpleProtocolEditor}/>
-                                <SettingsToggleButton trueLabel={"Show raw data"} value={showLogPanels} setValue={setShowLogPanels}/>
+                                <ToggleButton trueLabel={"Verbose speech"}
+                                              value={verboseSpeech}
+                                              setValue={setVerboseSpeech}/>
+                                <ToggleButton trueLabel={"Copy prev participant"}
+                                              value={defaultToPreviousParticipant}
+                                              setValue={setDefaultToPreviousParticipant}/>
+                                <ToggleButton trueLabel={"Show external control"}
+                                              value={showExternalControl}
+                                              setValue={setShowExternalControl}/>
+                                <ToggleButton trueLabel={"Show protocol editor"}
+                                              value={showSimpleProtocolEditor}
+                                              setValue={setShowSimpleProtocolEditor}/>
+                                <ToggleButton trueLabel={"Keep screen awake"}
+                                              value={keepScreenAwake}
+                                              setValue={setKeepScreenAwake}/>
+                                <ToggleButton trueLabel={"Show Current Test Panel"} value={showCurrentTest}
+                                              setValue={setShowCurrentTest}/>
+                                <ToggleButton trueLabel={"Show raw data"} value={showLogPanels}
+                                              setValue={setShowLogPanels}/>
+                                <ToggleButton trueLabel={"Show historical tests"} value={showHistoricalTests}
+                                              setValue={setShowHistoricalTests}/>
+                                <ToggleButton trueLabel={"Show Danger Zone"} value={showDangerZoneSettings}
+                                              setValue={setShowDangerZoneSettings}/>
                             </fieldset>
-                        </section> : null}
-                </section> : null}
-            {showAdvancedControls ? <div style={{float: "left"}}>
-                <PortaCountState client={portaCountClient}/>
-            </div> : null}
-            {showExternalControl ? <div style={{display: "flex", width: "100%"}}>
-                <CustomProtocolPanel protocolExecutor={protocolExecutor}></CustomProtocolPanel>
-                <ExternalControlPanel control={externalController}/>
-            </div> : null}
-            {showSimpleProtocolEditor ? <section style={{display: "flex", width: "100%"}}>
-                <fieldset style={{width: "100%"}}>
-                    <legend>fit test protocols</legend>
-                    <SimpleFitTestProtocolPanel></SimpleFitTestProtocolPanel>
+                            {showDangerZoneSettings && <fieldset>
+                                <legend>Danger Zone</legend>
+                                <input type={"button"} value={"Clear Local Storage"}
+                                       onClick={() => localStorage.clear()}/>
+                            </fieldset>}
+                        </section>}
+                    </section>
                 </fieldset>
-            </section> : null}
-            {autoEstimateFitFactor ?
-                <section style={{display: "inline-flex", width: "100%"}}>
-                    <fieldset style={{display: "inline-block", float: "left"}}>
-                        <legend>Estimated Fit Factor</legend>
-                        <div style={{width: "100%"}}>
-                            <fieldset style={{display: "inline-block"}}>
-                                <legend>Ambient</legend>
-                                <span>{Number(ambientConcentration).toFixed(0)}</span>
-                            </fieldset>
-                            <fieldset style={{display: "inline-block"}}>
-                                <legend>Mask</legend>
-                                <span>{maskConcentration < 0 ? "?" : Number(maskConcentration).toFixed(maskConcentration < 10 ? 1 : 0)}</span>
-                            </fieldset>
-                        </div>
-                        <div className={getFitFactorCssClass(estimatedFitFactor)}
-                             style={{
-                                 boxSizing: "border-box",
-                                 width: '100%',
-                                 height: 'max-content',
-                                 alignContent: 'center',
-                                 fontSize: "1.7rem"
-                             }}>
-                            <span>{Number(estimatedFitFactor).toFixed(estimatedFitFactor < 10 ? 1 : 0)}</span>
-                            <br/>
-                            <span
-                                style={{fontSize: "smaller"}}>({convertFitFactorToFiltrationEfficiency(estimatedFitFactor)}%)</span>
-                        </div>
-                        <ReactEChartsCore echarts={echarts} option={estimatedFitFactorGaugeOptions}/>
+            </div>}
+                <section id="data-source-baud-rate" style={{display: 'flex'}}>
+                    <fieldset>
+                        {`mftc v${__APP_VERSION__} ${import.meta.env.MODE}`}
                     </fieldset>
-                    <div style={{display: "inline-block", flexGrow: 1}}>
-                        <ReactEChartsCore echarts={echarts} style={{height: "70vh"}}
-                                          option={chartOptions}
-                            // notMerge={false}
-                            // lazyUpdate={true}
-                        />
+                    <fieldset style={{flexGrow: "1", textAlign: "left"}}>
+                        <div style={{display: "inline-block"}}>
+                            <label htmlFor="data-source-selector">Data Source: </label>
+                            <select id="data-source-selector" defaultValue={dataSource} onChange={dataSourceChanged}
+                                    disabled={connectionStatus !== ConnectionStatus.DISCONNECTED}>
+                                <option value="web-serial">WebSerial</option>
+                                <option value="web-usb-serial">Web USB Serial</option>
+                                <option value="simulator">Simulator</option>
+                                <option value="database">Database</option>
+                            </select>
+                        </div>
+                        {dataSource === "simulator" &&
+                            <div style={{display: "inline-block"}}>
+                                <label htmlFor="simulation-speed-select">Speed: </label>
+                                <select id="simulation-speed-select"
+                                        value={simulationSpeedBytesPerSecond}
+                                        onChange={(event) => setSimulationSpeedBytesPerSecond(Number(event.target.value))}>
+                                    {simulationSpeedsBytesPerSecond.map((bytesPerSecond: number) => <option
+                                        key={bytesPerSecond}
+                                        value={bytesPerSecond}>{bytesPerSecond} bps</option>)}
+                                </select>
+                            </div>}
+                        <input className="button" type="button" value="Connect" id="connect-button"
+                               disabled={connectionStatus !== ConnectionStatus.DISCONNECTED}
+                               onClick={connectButtonClickHandler}/>
+                        <div id="connection-status" className={getConnectionStatusCssClass(connectionStatus)}>
+                            {connectionStatus} ({serialPortInfo?.usbVendorId} - {serialPortInfo?.usbProductId})
+                        </div>
+                        <ProtocolSelector
+                            onChange={(selectedProtocol) => setSelectedProtocol(selectedProtocol)}/>&nbsp;&nbsp;
+
+                        <select id="download-file-format-selector" defaultValue={dataToDownload}
+                                onChange={downloadFileFormatChanged}>
+                            <option value="all-raw-data">All Raw data as JSON</option>
+                            <option value="all-results-as-json">All results as JSON</option>
+                        </select>
+                        <input className="button" type="button" value="Download!" id="download-button"
+                               onClick={downloadButtonClickHandler}/>
+                        <div style={{display: "inline-block", verticalAlign: "middle"}}>
+                            <ToggleButton trueLabel={"Show Settings"} value={showSettings}
+                                          setValue={setShowSettings}/>
+                        </div>
+                    </fieldset>
+                </section>
+
+            {
+                showExternalControl && <div style={{display: "flex", width: "100%"}}>
+                    <PortaCountState client={portaCountClient}/>
+                    <CustomProtocolPanel protocolExecutor={protocolExecutor}></CustomProtocolPanel>
+                    <ExternalControlPanel control={externalController}/>
+                </div>
+            }
+            {
+                showSimpleProtocolEditor && <section style={{display: "flex", width: "100%"}}>
+                    <fieldset style={{width: "100%"}}>
+                        <legend>fit test protocols</legend>
+                        <SimpleFitTestProtocolPanel></SimpleFitTestProtocolPanel>
+                    </fieldset>
+                </section>
+            }
+                <section id="current-test-instructions-ff" style={{display: "inline-flex", width: "100%"}}>
+                    {showCurrentTest && <fieldset id="current-test-results">
+                        <legend>Current test</legend>
+                        <input type="button" value="Clear" onClick={clearCurrentTest}/>
+                        <table>
+                            <tbody>
+                            <tr>
+                                <td>Participant</td>
+                                <td><textarea className="table-cell-input" placeholder={"Click to add Participant"}
+                                              value={latestResultsParticipant}
+                                              onChange={(event) => updateCurrentParticipant(event.target.value)}
+                                              onInput={updateHeight}></textarea></td>
+                            </tr>
+                            <tr>
+                                <td>Mask</td>
+                                <td><textarea className="table-cell-input" placeholder={"Click to add Mask"}
+                                              value={latestResultsMask}
+                                              onChange={(event) => updateCurrentMask(event.target.value)}
+                                              onInput={updateHeight}></textarea></td>
+                            </tr>
+                            <tr>
+                                <td>Notes</td>
+                                <td><textarea className="table-cell-input" placeholder={"Click to add Notes"}
+                                              value={latestResultsNotes}
+                                              onChange={(event) => updateCurrentNotes(event.target.value)}
+                                              onInput={updateHeight}></textarea></td>
+                            </tr>
+                            {protocolStages.map((_stage, index) => {
+                                const idx = index + 1
+                                return (<tr key={index}>
+                                    <td>Ex {idx}</td>
+                                    <td>{latestResults[`Ex ${idx}`]}</td>
+                                </tr>)
+                            })}
+
+                            <tr>
+                                <td>Final</td>
+                                <td>{latestResults["Final"]}</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </fieldset>}
+                    <div id="instructions-ff" style={{flexGrow: 1}}>
+                        <section style={{display: "inline-flex", width: "100%"}}>
+                            <fieldset style={{display: "inline-block", flexGrow: 1}}>
+                                <legend>Instructions</legend>
+                                <textarea id="instructions" readOnly={true} style={{
+                                    width: "100%",
+                                    minHeight: "3rem",
+                                    height: "fit-content",
+                                    fontSize: "xxx-large",
+                                    overflow: "auto",
+                                    resize: "vertical",
+                                    border: "none"
+                                }} value={instructions}></textarea>
+                            </fieldset>
+                        </section>
+                        {autoEstimateFitFactor && <div id="estimated-ff-and-chart-panel"
+                                                       style={{
+                                                           display: "inline-flex",
+                                                           width: "100%",
+                                                           float: "left",
+                                                           height: "fit-content"
+                                                       }}>
+                            <fieldset id="estimated-ff-panel"
+                                      style={{display: "inline-block", float: "left", height: "max-content"}}>
+                                <legend>Estimated Fit Factor</legend>
+                                <div style={{width: "100%", display: "inline-flex"}}>
+                                    <fieldset style={{display: "inline-block", float: "inline-start"}}>
+                                        <legend>Ambient</legend>
+                                        <span>{Number(ambientConcentration).toFixed(0)}</span>
+                                    </fieldset>
+                                    <fieldset style={{display: "inline-block", float: "inline-start"}}>
+                                        <legend>Mask</legend>
+                                        <span>{maskConcentration < 0 ? "?" : Number(maskConcentration).toFixed(maskConcentration < 10 ? 1 : 0)}</span>
+                                    </fieldset>
+                                </div>
+                                <div className={getFitFactorCssClass(estimatedFitFactor)}
+                                     style={{
+                                         boxSizing: "border-box",
+                                         width: '100%',
+                                         height: 'max-content',
+                                         alignContent: 'center',
+                                         fontSize: "1.7rem",
+                                     }}>
+                                    <span>{Number(estimatedFitFactor).toFixed(estimatedFitFactor < 10 ? 1 : 0)}</span>
+                                    <br/>
+                                    <span
+                                        style={{fontSize: "smaller"}}>({convertFitFactorToFiltrationEfficiency(estimatedFitFactor)}%)</span>
+                                </div>
+                                <ReactEChartsCore echarts={echarts} option={estimatedFitFactorGaugeOptions}
+                                                  style={{aspectRatio: 1, height: "auto", marginTop: "1rem"}}/>
+                            </fieldset>
+                            <div style={{display: "inline-block", flexGrow: 1}}>
+                                <ReactEChartsCore echarts={echarts} style={{height: "100%"}}
+                                                  option={chartOptions}
+                                    // notMerge={false}
+                                    // lazyUpdate={true}
+                                />
+                            </div>
+                        </div>}
                     </div>
-                </section> : null}
-            <section style={{display: "inline-flex", width: "100%"}}>
-                <fieldset style={{display: "inline-block", flexGrow: 1}}>
-                    <legend>Instructions</legend>
-                    <textarea id="instructions" readOnly={true} style={{
-                        width: "100%",
-                        minHeight: "3rem",
-                        height: "fit-content",
-                        fontSize: "xxx-large",
-                        overflow: "auto",
-                        resize: "vertical",
-                        border: "none"
-                    }} value={instructions}></textarea>
-                </fieldset>
-            </section>
-            <DataCollectorPanel dataCollector={dataCollector} showLogs={showLogPanels}></DataCollectorPanel>
+                </section>
+                <DataCollectorPanel dataCollector={dataCollector} showLogs={showLogPanels}
+                                    showHistoricalTests={showHistoricalTests}></DataCollectorPanel>
         </>
     )
 }

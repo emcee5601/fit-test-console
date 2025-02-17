@@ -25,7 +25,6 @@ a:hover {
 body {
   margin: 0;
   display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
 }
@@ -76,22 +75,13 @@ table th {
   background-color: white;
   border-top: 1px solid black;
   border-left: 1px solid black;
-  border-bottom: 5px solid black;
-  text-indent: 0.2rem;
-}
-table th:last-child {
   border-right: 1px solid black;
+  border-bottom: 5px solid black;
 }
-
 
 table td {
-  border-left: 1px solid black;
-  border-bottom: 1px solid black;
-  text-indent: 0.2rem;
+  border: 1px solid black;
   text-align: left;
-}
-table td:last-child {
-  border-right: 1px solid black;
 }
 
 div.editable-table-cell {
@@ -99,17 +89,21 @@ div.editable-table-cell {
   outline: none;
 }
 
+textarea.table-cell-input {
+  border: none;
+  display: block;
+  overflow-y: hidden;
+}
 td.results {
   text-align: end;
 }
 
 .result {
   width: 100%;
-  /*padding: 0.5rem;*/
+  padding-inline: 0.3em;
 }
 .efficiency {
   font-size: smaller;
-  padding: 0.3em;
 }
 
 .pass {

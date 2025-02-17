@@ -1,7 +1,7 @@
 /**
  * Table to store the results of fit tests.
  */
-import React, {useEffect, useState} from 'react'
+import React, {Dispatch, SetStateAction, useEffect, useState} from 'react'
 
 import './index.css'
 
@@ -19,9 +19,9 @@ import {
     useReactTable,
 } from '@tanstack/react-table'
 import LZString from 'lz-string'
+import './ResultsTable.css'
 
 import {useVirtualizer} from '@tanstack/react-virtual'
-import {SimpleResultsDBRecord} from "./database.ts";
 import {AppSettings, useDBSetting} from "./settings-db.ts";
 import {download, generateCsv, mkConfig} from "export-to-csv";
 import {DataCollector} from "./data-collector.tsx";
@@ -31,14 +31,30 @@ import "react-datepicker/dist/react-datepicker.css";
 import {useEditableColumn} from "./use-editable-column-hook.tsx";
 import {useSkipper} from "./use-skipper-hook.ts";
 import {convertFitFactorToFiltrationEfficiency, getFitFactorCssClass} from "./utils.ts";
+import {QRCodeSVG} from "qrcode.react";
+import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
+import {sanitizeRecord} from "./results-transfer-util.ts";
 
 //This is a dynamic row height example, which is more complicated, but allows for a more realistic table.
 //See https://tanstack.com/virtual/v3/docs/examples/react/table for a simpler fixed row height example.
-export function ResultsTable({dataCollector}: {
-    dataCollector: DataCollector,
+export function ResultsTable({tableData, setTableData, dataCollector}: {
+    tableData: SimpleResultsDBRecord[],
+    setTableData: Dispatch<SetStateAction<SimpleResultsDBRecord[]>>,
+    dataCollector?: DataCollector,
 }) {
-    const [localTableData, setLocalTableData] = useState<SimpleResultsDBRecord[]>([])
-    dataCollector.setResultsCallback(setLocalTableData)
+    if (dataCollector) {
+        dataCollector.setResultsCallback(setTableData)
+    }
+
+    const dateTimeFormat = new Intl.DateTimeFormat(undefined, {
+        hour12: false,
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        year: "numeric"
+    })
 
     function getExerciseResultCell(info: CellContext<SimpleResultsDBRecord, string | number>) {
         const fitFactor = info.getValue<number>();
@@ -54,6 +70,7 @@ export function ResultsTable({dataCollector}: {
     function createExerciseResultColumn(exerciseNum: number) {
         return createExerciseResultColumnBase(`Ex ${exerciseNum}`)
     }
+
     function createExerciseResultColumnBase(exercise: string) {
         return {
             accessorKey: exercise,
@@ -67,7 +84,7 @@ export function ResultsTable({dataCollector}: {
     }
 
     function createExerciseResultColumns(numExercises: number) {
-        return Array.from(Array(numExercises).keys()).map((num) => createExerciseResultColumn(num+1))
+        return Array.from(Array(numExercises).keys()).map((num) => createExerciseResultColumn(num + 1))
     }
 
     function compareNumericString(rowA: Row<SimpleResultsDBRecord>, rowB: Row<SimpleResultsDBRecord>, id: string) {
@@ -98,7 +115,7 @@ export function ResultsTable({dataCollector}: {
                 cell: info => {
                     const date = info.getValue<Date>();
                     if (date) {
-                        return date.toLocaleString()
+                        return dateTimeFormat.format(new Date(date))// date.toLocaleString()
                     } else {
                         return null;
                     }
@@ -110,14 +127,14 @@ export function ResultsTable({dataCollector}: {
                 meta: {
                     filterVariant: 'date',
                 },
-                size: 200,
+                size: 125,
             },
             {
                 accessorKey: 'Participant',
                 cell: useEditableColumn,
                 enableColumnFilter: true,
                 filterFn: (row, columnId, filterValue) => {
-                    return RegExp(filterValue).test(row.getValue(columnId));
+                    return RegExp(filterValue, "i").test(row.getValue(columnId));
                 },
                 size: 150,
             },
@@ -125,17 +142,20 @@ export function ResultsTable({dataCollector}: {
                 accessorKey: 'Mask',
                 cell: useEditableColumn,
                 filterFn: (row, columnId, filterValue) => {
-                    return RegExp(filterValue).test(row.getValue(columnId));
+                    return RegExp(filterValue, "i").test(row.getValue(columnId));
                 },
                 size: 250,
             },
             {
                 accessorKey: 'Notes',
                 cell: useEditableColumn,
+                filterFn: (row, columnId, filterValue) => {
+                    return RegExp(filterValue, "i").test(row.getValue(columnId));
+                },
                 size: 150,
             },
-            ...createExerciseResultColumns(8),
             createExerciseResultColumnBase("Final"),
+            ...createExerciseResultColumns(8),
             {
                 accessorKey: 'ProtocolName',
                 header: 'Protocol',
@@ -146,6 +166,7 @@ export function ResultsTable({dataCollector}: {
         []
     )
 
+    const [qrcodeUrl, setQrcodeUrl] = useState<string>("")
     const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
     const [sorting, setSorting] = useDBSetting<SortingState>(AppSettings.RESULTS_TABLE_SORT, [{
@@ -155,7 +176,7 @@ export function ResultsTable({dataCollector}: {
     )
 
     const table = useReactTable({
-        data: localTableData,
+        data: tableData,
         columns,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
@@ -170,9 +191,13 @@ export function ResultsTable({dataCollector}: {
         // Provide our updateData function to our table meta
         meta: {
             updateData: (rowIndex, columnId, value) => {
+                if (!dataCollector) {
+                    // short circuit if no data collector
+                    return;
+                }
                 // Skip page index reset until after next rerender
                 skipAutoResetPageIndex()
-                setLocalTableData(old => { // this updates the local data used by the table
+                setTableData(old => { // this updates the local data used by the table
                     const res = old.map((row, index) => {
                             if (index === rowIndex) {
                                 const updatedRow = {
@@ -193,7 +218,7 @@ export function ResultsTable({dataCollector}: {
     })
 
     const {rows} = table.getRowModel()
-    const dates: Date[] = [new Date(), ...new Set<Date>(localTableData.map((row) => new Date(row.Time)))]
+    const dates: Date[] = [new Date(), ...new Set<Date>(tableData.map((row) => new Date(row.Time)))]
 
     //The virtualizer needs to know the scrollable container element
     const tableContainerRef = React.useRef<HTMLDivElement>(null)
@@ -213,11 +238,32 @@ export function ResultsTable({dataCollector}: {
 
 
     useEffect(() => {
-        console.log(`initializing results db`)
-        dataCollector.resultsDatabase.open().then(() => dataCollector.resultsDatabase.getAllData().then(data => {
-            setLocalTableData(data);
-        }));
-    }, [dataCollector.resultsDatabase]);
+        if (dataCollector) {
+            console.log(`initializing results db`)
+            dataCollector.resultsDatabase.open().then(() => dataCollector.resultsDatabase.getAllData().then(data => {
+                setTableData(data);
+            }));
+        } else {
+            console.log("no data collector, we must be in test result view mode")
+        }
+    }, [dataCollector?.resultsDatabase]);
+
+    useEffect(() => {
+        if (qrcodeUrl) {
+            console.log("adding key listener")
+            const keyListener = (keyEvent: KeyboardEvent) => {
+                console.log(`key listener got event: ${JSON.stringify(keyEvent)}`)
+                if (keyEvent.code === "Escape") {
+                    setQrcodeUrl("");
+                }
+            };
+            window.addEventListener("keydown", keyListener)
+            return () => {
+                window.removeEventListener("keypress", keyListener)
+                console.log("removed key listener")
+            }
+        }
+    }, [qrcodeUrl]);
 
     function generateCsvPayload() {
         const csvConfig = mkConfig({
@@ -267,21 +313,54 @@ export function ResultsTable({dataCollector}: {
         // The table is filtered, so look at the filtered table data for which record IDs to include. Then grab these from localTableData
         const rows = table.getSortedRowModel().rows
         const rowData = rows.map((row) => row.original)
-        const recordIdsToInclude:number[] = rowData.map(rd => rd.ID)
+        const recordIdsToInclude: number[] = rowData.map(rd => rd.ID)
 
-        const recordsToExport:SimpleResultsDBRecord[] = localTableData.filter((row) => recordIdsToInclude.includes(row.ID));
+        const recordsToExport: SimpleResultsDBRecord[] = tableData
+            .filter((row) => recordIdsToInclude.includes(row.ID))
+            .map((record) => sanitizeRecord(record));
 
-        const str = LZString.compressToUTF16(JSON.stringify(recordsToExport));
-        const url = location.toString() + `?data=${str}`;
+        const str = LZString.compressToEncodedURIComponent(JSON.stringify(recordsToExport));
+        const url = `${location.toString()}/view-results?data=${str}`;
         console.log(`url is: ${url}`)
-        // location.replace(url)
+        console.log(`url length is ${url.length}`);
+        if (url.length > 4296) {
+            console.log("url is too long")
+        } else {
+            setQrcodeUrl(url);
+        }
+    }
 
-        // todo: generate qr code
+    /**
+     * Returns a string summarising the filters in effect.
+     */
+    function getFilterSummary(): string {
+        let dateFilter = "";
+        let participantFilter = "";
+        columnFilters.forEach((columnFilter) => {
+            if ("Time" === columnFilter.id) {
+                dateFilter = columnFilter.value as string;
+            }
+            if ("Participant" === columnFilter.id) {
+                participantFilter = columnFilter.value as string;
+            }
+        })
+        table.getFilteredRowModel()
+        return [participantFilter && `for ${participantFilter}`, dateFilter && `on ${dateFilter}`].join(" ")
     }
 
     //All important CSS styles are included as inline styles for this example. This is not recommended for your code.
     return (
         <div>
+            {qrcodeUrl &&
+                <div className={"full-screen-overlay"}>
+                    <div onClick={() => setQrcodeUrl("")} id="results-qrcode">
+                        <span style={{display: "block"}}>Fit test results {getFilterSummary()}</span>
+                        <QRCodeSVG value={qrcodeUrl}
+                                   size={512}
+                                   marginSize={2}
+                                   title={"Fit Test Results"}/>
+                    </div>
+                </div>}
             <input type={"button"} value={"Export as CSV"} onClick={() => handleExportAsCsv()}/>
             <input type={"button"} value={"Email"} onClick={() => handleMailto()}/>
             <input type={"button"} value={"QR Code"} onClick={() => generateQRCode()}/>

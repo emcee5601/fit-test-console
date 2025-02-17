@@ -35,10 +35,10 @@ export function PortaCountState({client}: {client:PortaCountClient8020}) {
         return () => {client.removeListener(listener)};
     }, []);
     return (
-        <div>
-            <span style={{float: "left"}}>Activity: {activity}</span><br/>
-            <span style={{float: "left"}}>Control Mode: {controlSource}</span><br/>
-            <span style={{float: "left"}}>Sample Source: {sampleSource}</span><br/>
-            <span style={{float: "left"}}>Data Transmission: {dataTransmissionState}</span><br/>
+        <div style={{display: "block", width:"fit-content", paddingInline:"1rem"}}>
+            <span style={{display:"block", float: "left"}}>Activity: {activity}</span><br/>
+            <span style={{display:"block", float: "left"}}>Control Mode: {controlSource}</span><br/>
+            <span style={{display:"block", float: "left"}}>Sample Source: {sampleSource}</span><br/>
+            <span style={{display:"block", float: "left", width: "fit-content"}}>Data Transmission: {dataTransmissionState}</span><br/>
         </div>)
 }

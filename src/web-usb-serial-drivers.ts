@@ -15,6 +15,15 @@ export class UsbSerialPort {
         this.driver = driver
     }
 
+    // make this look like SerialPort
+    getInfo(): SerialPortInfo {
+        return {
+            usbVendorId: this.device.vendorId,
+            usbProductId: this.device.productId,
+        }
+    };
+
+
     async open(opts: { baudRate: number }) {
         return new Promise((resolve, reject) => {
             this.driver.open(this.device, opts).then((serial) => {

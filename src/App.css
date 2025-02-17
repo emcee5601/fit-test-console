@@ -1,7 +1,7 @@
 #root {
     max-width: 1600px;
     margin: 0 auto;
-    padding: 2rem;
+    padding: 0.2rem;
     text-align: center;
 }
 
@@ -49,7 +49,7 @@
 }
 
 .datePickerInput {
-    width: 100px
+    width: 85px
 }
 
 .button {
@@ -72,5 +72,19 @@
 }
 
 .status-receiving {
-    color: green; 
+    color: green;
+}
+
+#settings-overlay {
+    position: fixed;
+    display: block;
+    width: fit-content;
+    height: fit-content;
+    top:50%;
+    left:50%;
+    transform: translate(-50%,-50%);
+    z-index: 10;
+    background: lightgrey;
+    box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.3);
+    padding: 1rem;
 }

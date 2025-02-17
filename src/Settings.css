@@ -4,7 +4,7 @@
     display: inline-block;
     width: 3rem;
     height: 1.5rem;
-    margin-inline-end: 1rem;
+    float:right;
 }
 
 /* Hide default HTML checkbox */
@@ -22,7 +22,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: lightgray;
+    background-color: darkgray;
     transition: .4s;
 }
 
@@ -60,4 +60,5 @@ input:checked + .slider:before {
 
 .setting-name {
     padding-inline-end: 0.3rem;
+    float: left;
 }

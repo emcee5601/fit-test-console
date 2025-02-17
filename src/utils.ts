@@ -1,5 +1,5 @@
 import {isNull, isUndefined} from "json-2-csv/lib/utils";
-import {ConnectionStatus} from "./App.tsx"
+import {ConnectionStatus} from "./connection-status.ts";
 
 export function convertFitFactorToFiltrationEfficiency(fitFactor:number) {
     const efficiency = 100 * (1.0 - 1.0 / fitFactor);

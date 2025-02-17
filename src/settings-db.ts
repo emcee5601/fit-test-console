@@ -22,6 +22,8 @@ export enum AppSettings {
     SHOW_SETTINGS = "show-settings",
     SHOW_LOG_PANELS = "show-log-panels",
     KEEP_SCREEN_AWAKE = "keep-screen-awake",
+    SHOW_HISTORICAL_TESTS = "show-historical-tests",
+    SHOW_CURRENT_TEST_PANEL = "show-current-test-panel",
 }
 
 const defaultSettings: { [key: string]: unknown } = {}

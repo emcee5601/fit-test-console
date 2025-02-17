@@ -4,7 +4,7 @@
 import {useCallback, useEffect} from "react";
 import {AppSettings, useDBSetting} from "./settings-db.ts";
 import {speech} from "./speech.ts";
-import {SettingsToggleButton} from "./Settings.tsx";
+import {ToggleButton} from "./Settings.tsx";
 
 export function EnableSpeechSwitch() {
     const [speechEnabled, setSpeechEnabled] = useDBSetting<boolean>(AppSettings.SPEECH_ENABLED, false);
@@ -13,7 +13,7 @@ export function EnableSpeechSwitch() {
     }, [speechEnabled]);
 
     return (
-        <SettingsToggleButton trueLabel={"Enable speech"} value={speechEnabled} setValue={setSpeechEnabled}/>
+        <ToggleButton trueLabel={"Enable speech"} value={speechEnabled} setValue={setSpeechEnabled}/>
     )
 }
 
