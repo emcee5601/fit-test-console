@@ -260,18 +260,19 @@ export function ResultsTable({tableData, setTableData, dataCollector}: {
                     const protocolInstructionSet = protocolInstructionSetsJson[protocolName];
                     numExercises[protocolName] = protocolInstructionSet.length;
                 }
-                const protocols: string[] = []
+                const protocolsShownInTable: string[] = []
                 filteredRowModel.rows.forEach((row) => {
                     const protocolName = row.getValue("ProtocolName") as string;
-                    if (!(protocols.includes(protocolName))) {
-                        protocols.push(protocolName);
+                    if (!(protocolsShownInTable.includes(protocolName))) {
+                        protocolsShownInTable.push(protocolName);
                     }
                 });
 
                 // todo: if no records are on display, default to the currently selected protocol in the protocol dropdown
 
-                let maxExercises = 0;
-                protocols.forEach((protocol) => {
+                // default to 4. before the protocol column was added, num exercises was hardcoded to 4
+                let maxExercises = protocolsShownInTable.length == 0 ? 0 : 4;
+                protocolsShownInTable.forEach((protocol) => {
                     if (protocol in numExercises && numExercises[protocol] > maxExercises) {
                         maxExercises = numExercises[protocol];
                     }
