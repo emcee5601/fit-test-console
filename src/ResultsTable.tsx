@@ -22,7 +22,7 @@ import LZString from 'lz-string'
 import './ResultsTable.css'
 
 import {useVirtualizer} from '@tanstack/react-virtual'
-import {AppSettings, useDBSetting} from "./settings-db.ts";
+import {AppSettings, SETTINGS_DB, useDBSetting} from "./settings-db.ts";
 import {download, generateCsv, mkConfig} from "export-to-csv";
 import {DataCollector} from "./data-collector.tsx";
 import {createMailtoLink} from "./html-data-downloader.ts";
@@ -34,6 +34,7 @@ import {convertFitFactorToFiltrationEfficiency, getFitFactorCssClass} from "./ut
 import {QRCodeSVG} from "qrcode.react";
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 import {sanitizeRecord} from "./results-transfer-util.ts";
+import {JSONContent} from "vanilla-jsoneditor";
 
 //This is a dynamic row height example, which is more complicated, but allows for a more realistic table.
 //See https://tanstack.com/virtual/v3/docs/examples/react/table for a simpler fixed row height example.
@@ -101,6 +102,16 @@ export function ResultsTable({tableData, setTableData, dataCollector}: {
         return 0;
     }
 
+    function compareDateString(rowA: Row<SimpleResultsDBRecord>, rowB: Row<SimpleResultsDBRecord>, id: string) {
+        const a = new Date(rowA.getValue(id)).getTime();
+        const b = new Date(rowB.getValue(id)).getTime();
+        if (a > b) return 1;
+        if (a < b) return -1;
+        return 0;
+    }
+
+    const [numExerciseColumns, setNumExerciseColumns] = useState(4)
+
     const columns = React.useMemo<ColumnDef<SimpleResultsDBRecord, string | number>[]>(
         () => [
             {
@@ -124,6 +135,7 @@ export function ResultsTable({tableData, setTableData, dataCollector}: {
                 filterFn: (row, columnId, filterValue) => {
                     return (row.getValue(columnId) as string).startsWith(filterValue);
                 },
+                sortingFn: compareDateString,
                 meta: {
                     filterVariant: 'date',
                 },
@@ -155,7 +167,7 @@ export function ResultsTable({tableData, setTableData, dataCollector}: {
                 size: 150,
             },
             createExerciseResultColumnBase("Final"),
-            ...createExerciseResultColumns(8),
+            ...createExerciseResultColumns(numExerciseColumns),
             {
                 accessorKey: 'ProtocolName',
                 header: 'Protocol',
@@ -163,7 +175,7 @@ export function ResultsTable({tableData, setTableData, dataCollector}: {
                 size: 75,
             },
         ],
-        []
+        [numExerciseColumns]
     )
 
     const [qrcodeUrl, setQrcodeUrl] = useState<string>("")
@@ -236,6 +248,39 @@ export function ResultsTable({tableData, setTableData, dataCollector}: {
         overscan: 5,
     })
 
+    useEffect(() => {
+        const filteredRowModel = table.getFilteredRowModel();
+        const numExercises: { [key: string]: number } = {}
+        // load protocols dynamically
+        // todo: do this more efficiently (use helpers to get protocol definitions, cache them)
+        SETTINGS_DB.open().then(() => {
+            SETTINGS_DB.getSetting<JSONContent>(AppSettings.PROTOCOL_INSTRUCTION_SETS).then((protocolInstructionSets: JSONContent) => {
+                const protocolInstructionSetsJson = protocolInstructionSets.json as { [key: string]: [] };
+                for (const protocolName of Object.keys(protocolInstructionSetsJson)) {
+                    const protocolInstructionSet = protocolInstructionSetsJson[protocolName];
+                    numExercises[protocolName] = protocolInstructionSet.length;
+                }
+                const protocols: string[] = []
+                filteredRowModel.rows.forEach((row) => {
+                    const protocolName = row.getValue("ProtocolName") as string;
+                    if (!(protocols.includes(protocolName))) {
+                        protocols.push(protocolName);
+                    }
+                });
+
+                // todo: if no records are on display, default to the currently selected protocol in the protocol dropdown
+
+                let maxExercises = 0;
+                protocols.forEach((protocol) => {
+                    if (protocol in numExercises && numExercises[protocol] > maxExercises) {
+                        maxExercises = numExercises[protocol];
+                    }
+                })
+                setNumExerciseColumns(maxExercises);
+            })
+        });
+
+    }, [columnFilters]);
 
     useEffect(() => {
         if (dataCollector) {
@@ -346,7 +391,6 @@ export function ResultsTable({tableData, setTableData, dataCollector}: {
                 participantFilter = columnFilter.value as string;
             }
         })
-        table.getFilteredRowModel()
         return [participantFilter && `for ${participantFilter}`, dateFilter && `on ${dateFilter}`].join(" ")
     }
 
