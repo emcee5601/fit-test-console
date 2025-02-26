@@ -368,6 +368,7 @@ export function ResultsTable({tableData, setTableData, dataCollector}: {
         const str = LZString.compressToEncodedURIComponent(JSON.stringify(recordsToExport));
         // sometimes location has a trailing '/', remove it so we don't get a '//'. This behavior is different between local and prod for some reason
         const baseLocation = location.toString().replace(/\/$/, '')
+        // const baseLocation = "https://emcee5601.github.io/fit-test-console"
         const url = `${baseLocation}/view-results?data=${str}`;
         console.log(`url is: ${url}`)
         console.log(`url length is ${url.length}`);
