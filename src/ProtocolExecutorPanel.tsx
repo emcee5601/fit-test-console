@@ -6,6 +6,7 @@ import {useInterval} from "./useInterval.ts";
 import {formatFitFactor} from "./utils.ts";
 import {AppSettings, useSetting} from "./app-settings.ts";
 import {ControlSource} from "./control-source.ts";
+import {PortaCountListener} from "./portacount-client-8020.ts";
 
 /**
  * Controls for running a custom protocol.
@@ -14,12 +15,17 @@ import {ControlSource} from "./control-source.ts";
 export function ProtocolExecutorPanel() {
     const appContext = useContext(AppContext)
     const protocolExecutor = appContext.protocolExecutor;
+    const portaCountClient = appContext.portaCountClient;
     const [segment, setSegment] = useState<Segment | undefined>()
     const [segmentElapsedTime, setSegmentElapsedTime] = useState(0)
     const [segmentStartTime, setSegmentStartTime] = useState(Date.now())
     // todo: save running state this to db so we can continue if the app reloads or navigating between tabs
     const [protocolRunning, setProtocolRunning] = useState<boolean>(false)
     const [selectedProtocol] = useSetting(AppSettings.SELECTED_PROTOCOL)
+    function shouldEnableStartButton(controlSource: ControlSource): boolean {
+        return controlSource === ControlSource.External && !protocolExecutor.isTestInProgress
+    }
+    const [enableStartButton, setEnableStartButton] = useState(shouldEnableStartButton(portaCountClient.state.controlSource))
 
     function updateSegment(segment: Segment) {
         setSegment(segment);
@@ -39,6 +45,11 @@ export function ProtocolExecutorPanel() {
     }
 
     useEffect(() => {
+        const portaCountListener: PortaCountListener = {
+            controlSourceChanged(source: ControlSource) {
+                setEnableStartButton(shouldEnableStartButton(source))
+            }
+        }
         const listener: ProtocolListener = {
             segmentChanged(segment: Segment) {
                 updateSegment(segment)
@@ -53,14 +64,16 @@ export function ProtocolExecutorPanel() {
                 setProtocolRunning(false)
                 setSegment(undefined)
                 // todo: display the final result
-            }
+            },
         };
         maybeContinueProtocolExecution();
         protocolExecutor.addListener(listener)
+        portaCountClient.addListener(portaCountListener)
         return () => {
             protocolExecutor.removeListener(listener);
+            portaCountClient.removeListener(portaCountListener)
         }
-    }, [protocolExecutor]);
+    }, []);
 
     function tick() {
         if (segment && segment.state && segment.state !== SegmentState.IDLE) {
@@ -74,7 +87,6 @@ export function ProtocolExecutorPanel() {
     const currentSegmentConcentration = segment ? calculateSegmentConcentration(segment) : undefined;
     const estimatedFitFactor = lastKnownAmbient && currentSegmentConcentration ? formatFitFactor(lastKnownAmbient / currentSegmentConcentration) : undefined
     const numExercises = appContext.settings.protocolStages.reduce((num, stage) => num + (stage.sample_duration !== 0 ? 1 : 0), 0)
-    const enableStartButton: boolean = appContext.portaCountClient.state.controlSource === ControlSource.External && !protocolExecutor.isTestInProgress
     return (
         <section id="custom-control-panel">
             <fieldset>
