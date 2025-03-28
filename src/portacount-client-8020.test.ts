@@ -23,13 +23,13 @@ describe('PortaCountClient8020', () => {
                 })
                 test('emits event with default timestamp when input line contains no timestamp', async () => {
                     client.processLine("Conc.            353 #/cc")
-                    expect(event?.getTimestamp()).toBeTruthy();
+                    expect(event?.timestamp).toBeTruthy();
                 })
                 test('emits event with explicit timestamp from input line', async () => {
                     client.processLine("2022-02-22T22:22:22.222Z Conc.            353 #/cc\n")
-                    expect(event?.getTimestamp()).toBeTruthy();
+                    expect(event?.timestamp).toBeTruthy();
                     // @ts-expect-error shouldn't get here if event is falsy
-                    expect(new Date(event.getTimestamp()).toISOString()).toEqual("2022-02-22T22:22:22.222Z");
+                    expect(new Date(event.timestamp).toISOString()).toEqual("2022-02-22T22:22:22.222Z");
                 })
             })
             describe('external control', () => {
@@ -39,13 +39,13 @@ describe('PortaCountClient8020', () => {
                 })
                 test('emits event with default timestamp when input line contains no timestamp', async () => {
                     client.processLine("006408.45")
-                    expect(event?.getTimestamp()).toBeTruthy();
+                    expect(event?.timestamp).toBeTruthy();
                 })
                 test('emits event with explicit timestamp from input line', async () => {
                     client.processLine("2022-02-22T22:22:22.222Z 006408.45\n")
-                    expect(event?.getTimestamp()).toBeTruthy();
+                    expect(event?.timestamp).toBeTruthy();
                     // @ts-expect-error shouldn't get here if event is falsy
-                    expect(new Date(event.getTimestamp()).toISOString()).toEqual("2022-02-22T22:22:22.222Z");
+                    expect(new Date(event.timestamp).toISOString()).toEqual("2022-02-22T22:22:22.222Z");
                 })
             })
         })

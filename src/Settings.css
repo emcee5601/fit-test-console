@@ -37,6 +37,14 @@
     transition: .4s;
 }
 
+input:disabled {
+    cursor: not-allowed;
+}
+.disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
 input:checked + .slider {
     background-color: #2196F3;
 }

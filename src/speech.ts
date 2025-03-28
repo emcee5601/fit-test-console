@@ -1,7 +1,7 @@
 /**
  *
  */
-export const speech = new class {
+export const SPEECH = new class {
     private readonly synth: SpeechSynthesis = window.speechSynthesis;
     private speechEnabled: boolean = false;
     private allVoices: SpeechSynthesisVoice[] = [];

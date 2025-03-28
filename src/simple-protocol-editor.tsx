@@ -6,44 +6,17 @@ import {
     JsonEditor,
     JSONEditorPropsOptional,
     Mode,
-    TextContent,
     toJSONContent,
     toTextContent
 } from 'vanilla-jsoneditor';
 import {useEffect, useRef} from 'react';
 import "./simple-protocol-editor.css";
-import {useDBSetting, AppSettings} from "./settings-db.ts";
-
-export function ProtocolSelector({onChange}: { onChange: (value: string) => void }) {
-    const [protocols] = useDBSetting<JSONContent>(AppSettings.PROTOCOL_INSTRUCTION_SETS)
-    const protocolNames = Object.keys(protocols.json as object);
-    const [protocol, setProtocol] = useDBSetting<string>(AppSettings.SELECTED_PROTOCOL, protocolNames[0])
-
-    function updateProtocol(protocolName: string) {
-        setProtocol(protocolName); // update this component's state
-        onChange(protocolName); // update the data collector's state
-    }
-
-    useEffect(() => {
-        if (!protocol) {
-            updateProtocol(protocolNames[0])
-        } else {
-            // protocol list changed, but we have a selected protocol from settings
-            updateProtocol(protocol);
-        }
-    }, [protocols]);
-    return (<div style={{display:"inline-block", paddingInlineEnd:"0.5em"}}>
-            Protocol:&nbsp;
-            <select onChange={(event) => updateProtocol(event.target.value)}
-                    value={protocol}>
-                {protocolNames.map((protocolName) => <option key={protocolName}
-                                                             value={protocolName}>{protocolName}</option>)}
-            </select>
-    </div>)
-}
+import {AppSettings, useSetting} from "./app-settings.ts";
+import stringifyDeterministically from "json-stringify-deterministic";
 
 export function SimpleFitTestProtocolPanel(props: JSONEditorPropsOptional) {
-    const [protocolInstructionSets, setProtocolInstructionSets] = useDBSetting<JSONContent>(AppSettings.PROTOCOL_INSTRUCTION_SETS)
+    // TODO: extract default
+    const [protocolInstructionSets, setProtocolInstructionSets] = useSetting<JSONContent>(AppSettings.PROTOCOL_INSTRUCTION_SETS)
 
     // map of string to list of strings. This represents sets of instructions keyed by the name of the sets.
     /*
@@ -79,7 +52,8 @@ export function SimpleFitTestProtocolPanel(props: JSONEditorPropsOptional) {
                                 properties: {
                                     "instructions": {type: "string"},
                                     "purge_duration": {type: "integer", minimum: 4, maximum: 10},
-                                    "sample_duration": {type: "integer", minimum: 4, maximum: 60},
+                                    "ambient_duration": {type: "integer", minimum: 0, maximum: 60},
+                                    "sample_duration": {type: "integer", minimum: 0, maximum: 60},
                                 },
                                 required: ["instructions"],
                                 additionalProperties: false
@@ -91,7 +65,8 @@ export function SimpleFitTestProtocolPanel(props: JSONEditorPropsOptional) {
                                 properties: {
                                     "i": {type: "string"},
                                     "p": {type: "integer", minimum: 4, maximum: 10},
-                                    "s": {type: "integer", minimum: 4, maximum: 60},
+                                    "a": {type: "integer", minimum: 0, maximum: 60},
+                                    "s": {type: "integer", minimum: 0, maximum: 60},
                                 },
                                 required: ["i"],
                                 additionalProperties: false
@@ -109,12 +84,16 @@ export function SimpleFitTestProtocolPanel(props: JSONEditorPropsOptional) {
         mode: props.mode || Mode.text,
         validator: props.validator || validator,
         content: toTextContent(protocolInstructionSets, 2),
-        onChange: (content: Content, _previousContent, status) => {
+        onChange: (content: Content,previousContent, status) => {
             if (!status.contentErrors) {
                 // only save if there were no errors
-                const textContent = content as TextContent;
-                // setProtocolInstructionSets(textContent)
-                setProtocolInstructionSets(toJSONContent(textContent))
+                const jsonContent = toJSONContent(content);
+                if(stringifyDeterministically(jsonContent.json) === stringifyDeterministically(toJSONContent(previousContent).json)) {
+                    // only whitespace difference, ignore. otherwise updating the UI would remove the new whitespace
+                    console.log("no non-whitespace change")
+                    return;
+                }
+                setProtocolInstructionSets(jsonContent)
             }
         }
     } // defaults

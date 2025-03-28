@@ -2,35 +2,43 @@
  Text-to-speech functions
  */
 import {useCallback, useEffect} from "react";
-import {AppSettings, useDBSetting} from "./settings-db.ts";
-import {speech} from "./speech.ts";
-import {ToggleButton} from "./Settings.tsx";
+import {SPEECH} from "./speech.ts";
+import {AppSettings, useSetting} from "./app-settings.ts";
+import {BooleanToggleButton} from "./ToggleButton.tsx";
 
 export function EnableSpeechSwitch() {
-    const [speechEnabled, setSpeechEnabled] = useDBSetting<boolean>(AppSettings.SPEECH_ENABLED, false);
+    const [speechEnabled, setSpeechEnabled] = useSetting<boolean>(AppSettings.SPEECH_ENABLED);
     useEffect(() => {
-        speech.setSpeechEnabled(speechEnabled);
+        SPEECH.setSpeechEnabled(speechEnabled);
     }, [speechEnabled]);
 
     return (
-        <ToggleButton trueLabel={"Enable speech"} value={speechEnabled} setValue={setSpeechEnabled}/>
+        <BooleanToggleButton trueLabel={"Enable speech"} value={speechEnabled} setValue={setSpeechEnabled}/>
     )
 }
 
 
 export function SpeechVoiceSelector() {
-    const [selectedVoiceName, setSelectedVoiceName] = useDBSetting<string>(AppSettings.SPEECH_VOICE, findDefaultVoice()?.name || "default");
+    const [selectedVoiceName, setSelectedVoiceName] = useSetting<string>(AppSettings.SPEECH_VOICE);
 
     const updateSelectedVoice = useCallback((voiceName: string) => {
         const foundVoice = findVoiceByName(voiceName);
         console.log(`looking for voice '${voiceName}'; found voice ${foundVoice?.name}`)
         if (foundVoice) {
-            speech.setSelectedVoice(foundVoice);
+            SPEECH.setSelectedVoice(foundVoice);
             setSelectedVoiceName(voiceName)
-            speech.sayItLater(`This is ${foundVoice.name} speaking.`)
+            SPEECH.sayItLater(`This is ${foundVoice.name} speaking.`)
         }
     }, [setSelectedVoiceName])
 
+    useEffect(() => {
+        // on first load, set a default voice if found
+        // todo: don't override voice loaded from db
+        const defaultVoice = findDefaultVoice()
+        if(defaultVoice) {
+            setSelectedVoiceName(defaultVoice.name);
+        }
+    }, []);
     useEffect(() => {
         updateSelectedVoice(selectedVoiceName)
     }, [selectedVoiceName, updateSelectedVoice])
@@ -46,7 +54,7 @@ export function SpeechVoiceSelector() {
     }
 
     function findVoiceByName(name: string) {
-        return speech.getAllVoices().find((voice) => voice.name === name) || null;
+        return SPEECH.getAllVoices().find((voice) => voice.name === name) || null;
     }
 
 
@@ -59,7 +67,7 @@ export function SpeechVoiceSelector() {
                         onChange={e => setSelectedVoiceName(e.target.value)}
                         style={{textOverflow: "ellipsis", width: "15em"}}>
                     {
-                        speech.getAllVoices().map((voice) => {
+                        SPEECH.getAllVoices().map((voice) => {
                             return <option key={voice.name}
                                         value={voice.name}>{`${voice.name} (${voice.lang}) ${voice.default ? " DEFAULT" : ""}`}</option>
                         })

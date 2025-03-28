@@ -9,7 +9,7 @@ export interface SimpleDBRecord {
     data: string;
 }
 
-export class SimpleDB extends AbstractDB {
+class SimpleDB extends AbstractDB {
     static DEFAULT_DB_NAME = "raw-serial-line-data-db";
     static SERIAL_LINE_OBJECT_STORE = "serial-line-data";
 
@@ -106,3 +106,5 @@ export class SimpleDB extends AbstractDB {
         }
     }
 }
+
+export const RAW_DB = new SimpleDB()

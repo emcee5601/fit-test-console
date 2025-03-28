@@ -1,18 +1,19 @@
 // @ts-expect-error no types defined
 import ftdi from 'ftdi-js'
-import {getReadableStreamFromDataSource, PushSource} from "./datasource-helper.ts";
+import {logSource, PushSource} from "./datasource-helper.ts";
 import ProlificUsbSerial from "pl2303"
-
 
 export class UsbSerialPort {
     readonly device: USBDevice;
-    private driver: UsbSerialDriver;
-    readable: ReadableStream | undefined;
-    writable: WritableStream | undefined;
+    private readonly driver: UsbSerialDriver;
+    readonly readable: ReadableStream<Uint8Array> | null;
+    readonly writable: WritableStream<Uint8Array> | null;
 
     constructor(device: USBDevice, driver: UsbSerialDriver) {
         this.device = device;
-        this.driver = driver
+        this.driver = driver;
+        this.readable = driver.getReadableStreamFromDataSource()
+        this.writable = driver.getWritableStreamFromDataSink()
     }
 
     // make this look like SerialPort
@@ -23,15 +24,12 @@ export class UsbSerialPort {
         }
     };
 
-
-    async open(opts: { baudRate: number }) {
+    async open(opts: { baudRate: number }):Promise<void> {
         return new Promise((resolve, reject) => {
-            this.driver.open(this.device, opts).then((serial) => {
-                this.driver.addEventListener();
+            this.driver.open(this.device, opts).then(() => {
+                this.driver.addEventListener(); // todo: implement this properly
 
-                this.readable = getReadableStreamFromDataSource(serial); // this starts reading immediately  :(
-                this.writable = this.driver.getWritableStreamFromDataSink();
-                resolve(serial);
+                resolve();
                 console.log(`${this.driver.name} opened`)
             }).catch(reject)
         })
@@ -91,7 +89,35 @@ abstract class UsbSerialDriver implements PushSource {
         this.options = options;
     }
 
-    getWritableStreamFromDataSink() {
+    getReadableStreamFromDataSource() {
+        const driver = this as UsbSerialDriver;
+        return new ReadableStream({
+            start(controller) {
+                readRepeatedly().catch((e) => controller.error(e));
+
+                async function readRepeatedly() :Promise<Uint8Array> {
+                    return driver.dataRequest().then((result:Uint8Array) => {
+                        if (result.length === 0) {
+                            logSource(`No data from source: closing`);
+                            controller.close();
+                            return new Uint8Array();
+                        }
+
+                        // logSource(`Enqueue data: ${result.data}`);
+                        controller.enqueue(result);
+                        return readRepeatedly();
+                    });
+                }
+            },
+
+            cancel() {
+                logSource(`cancel() called on underlying source`);
+                driver.close();
+            },
+        });
+    }
+
+    getWritableStreamFromDataSink():WritableStream<Uint8Array> {
         const queuingStrategy = new CountQueuingStrategy({highWaterMark: 1});
         const decoder = new TextDecoder();
         const driver = this as UsbSerialDriver;

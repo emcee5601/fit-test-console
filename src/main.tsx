@@ -5,6 +5,11 @@ import App from './App.tsx'
 import {registerSW} from "virtual:pwa-register";
 import {BrowserRouter, Route, Routes} from "react-router";
 import {ResultViewer} from "./ResultViewer.tsx";
+import {SettingsPanel} from "./SettingsPanel.tsx";
+import {MainLayout} from "./MainLayout.tsx";
+import {SimpleFitTestProtocolPanel} from "./simple-protocol-editor.tsx";
+import {DataCollectorPanel} from "./DataCollectorPanel.tsx";
+import {EstimatedFitFactorPanel} from "./EstimatedFitFactorPanel.tsx";
 
 // add this to prompt for a refresh
 const updateSW = registerSW({
@@ -17,10 +22,16 @@ const updateSW = registerSW({
 
 createRoot(document.getElementById('root')!).render(
     <StrictMode>
-        <BrowserRouter>
+        <BrowserRouter basename="/fit-test-console">
             <Routes>
-                <Route path="/fit-test-console" element={<App/>} />
-                <Route path="/fit-test-console/view-results" element={<ResultViewer/>} />
+                <Route path="/" element={<MainLayout/>}>
+                    <Route index element={<App/>}/>
+                    <Route path="view-results" element={<ResultViewer/>}/>
+                    <Route path="settings" element={<SettingsPanel/>}/>
+                    <Route path="protocols" element={<SimpleFitTestProtocolPanel/>}/>
+                    <Route path="raw-data" element={<DataCollectorPanel/>}/>
+                    <Route path={"estimate"} element={<EstimatedFitFactorPanel/>}/>
+                </Route>
             </Routes>
         </BrowserRouter>
     </StrictMode>,

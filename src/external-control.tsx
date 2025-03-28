@@ -3,21 +3,15 @@ External control for the PortaCount 8020a
 The technical addendum describes the interface. Starts on page 13.
  https://tsi.com/getmedia/0d5db6cd-c54d-4644-8c31-40cc8c9d8a9f/PortaCount_Model_8020_Technical_Addendum_US?ext=.pdf
  */
-import React, {useEffect, useRef, useState} from "react";
-import {speech} from "./speech.ts";
-import {ControlSource, DataTransmissionState, PortaCountListener} from "./portacount-client-8020.ts";
-import {SampleSource} from "./fit-test-protocol.ts";
 
-export interface ExternalControlStates {
-    dataTransmissionMode: string;
-    readonly setDataTransmissionMode: React.Dispatch<React.SetStateAction<string>>;
-    valvePosition: string;
-    readonly setValvePosition: React.Dispatch<React.SetStateAction<string>>;
-    controlMode: string;
-    readonly setControlMode: React.Dispatch<React.SetStateAction<string>>;
-}
+import {SPEECH} from "./speech.ts";
 
-export class ExternalController implements PortaCountListener {
+import {ControlSource} from "./control-source.ts";
+import {SampleSource} from "./simple-protocol.ts";
+import {PortaCountClient8020, PortaCountListener} from "./portacount-client-8020.ts";
+import {APP_SETTINGS_CONTEXT, AppSettings} from "./app-settings.ts";
+
+export class ExternalController {
     static INVOKE_EXTERNAL_CONTROL = "J";
     static RELEASE_FROM_EXTERNAL_CONTROL = "G";
     static TEST_TO_SEE_N95_COMPANION_IS_ATTACHED = "Q";
@@ -26,6 +20,7 @@ export class ExternalController implements PortaCountListener {
     static DISABLE_CONTINUOUS_DATA_TRANSMISSION = "ZD";
     static ENABLE_CONTINUOUS_DATA_TRANSMISSION = "ZE";
     static REQUEST_RUNTIME_STATUS_OF_BATTERY_AND_SIGNAL_PULSE = "R";
+    static REQUEST_VOLTAGE_INFO = "C"; // this seems to be undocumented
     static REQUEST_SETTINGS = "S";
     static TURN_POWER_OFF = "Y";
     static SET_MASK_SAMPLE_TIME = "PTMxxvv";  // xx = exercise num [1..12], vv = time in seconds [10..99]
@@ -42,198 +37,121 @@ export class ExternalController implements PortaCountListener {
     static CLEAR_DISPLAY_ON_PORTACOUNT_PLUS = "K";
     static SOUND_BEEPER_INSIDE_THE_PORTACOUNT_PLUS = "Bxx";
 
+    private writer: WritableStreamDefaultWriter<Uint8Array> | null = null;
+    private encoder = new TextEncoder();
+    private verifiedToBeExternallyControllable: boolean = false;
+    private portaCountClient: PortaCountClient8020;
 
-    writer: WritableStreamDefaultWriter<Uint8Array> | null = null;
-    encoder = new TextEncoder();
-    states: ExternalControlStates;
-
-    constructor(externalControlStates: ExternalControlStates) {
-        this.states = externalControlStates;
+    constructor(portaCountClient: PortaCountClient8020) {
+        this.portaCountClient = portaCountClient;
     }
-
-    // PortaCountListener interface
-    sampleSourceChanged(source: SampleSource): void {
-        this.states.setValvePosition(`Sampling from ${source}`)
-    }
-    dataTransmissionStateChanged(dataTransmissionState: DataTransmissionState) {
-        this.states.setDataTransmissionMode(dataTransmissionState)
-    }
-    controlSourceChanged(source: ControlSource) {
-        this.states.setControlMode(`${source} Control`);
-    }
-
 
     setWriter(writer: WritableStreamDefaultWriter<Uint8Array>) {
         this.writer = writer;
     }
 
+    // todo: add retry mode. we know the expected response for each command. wait for the response within some timeout, then retry once.
+    // this should account for sometimes extraneous characters being prefixed on the expected response values
     sendCommand(command: string) {
         const terminalCommand = `${command}\r`;
         const chunk = this.encoder.encode(terminalCommand);
         if (this.writer) {
+            console.log(`sending ${command}`)
             this.writer.write(chunk);
         } else {
             console.log("writer not available")
         }
     }
-}
 
-
-export function ExternalControlPanel({control}: { control: ExternalController }) {
-    const controlModeButtonRef = useRef<HTMLInputElement>(null)
-    const forceInternalControlButtonRef = useRef<HTMLInputElement>(null)
-    const dataTransmissionModeButtonRef = useRef<HTMLInputElement>(null)
-    const valvePositionButtonRef = useRef<HTMLInputElement>(null)
-    const beepButtonRef = useRef<HTMLInputElement>(null);
-    const requestSettingsButtonRef = useRef<HTMLInputElement>(null);
-    const powerOffButtonRef = useRef<HTMLInputElement>(null);
-    const sendCommandButtonRef = useRef<HTMLInputElement>(null);
-    const [commandInput, setCommandInput] = useState<string>("")
-
-    const controlButtonRefs: React.RefObject<HTMLInputElement>[] = [valvePositionButtonRef, dataTransmissionModeButtonRef,
-        beepButtonRef, requestSettingsButtonRef, powerOffButtonRef];
-
-    // todo: try to receive commands via an array with useState. use it like a queue. append during the set, consume in useUeffect
-
-    useEffect(() => {
-        console.log(`controlMode changed to ${control.states.controlMode}`)
-        if (controlModeButtonRef.current) {
-            controlModeButtonRef.current.style.backgroundColor = control.states.controlMode === "Internal Control" ? "yellow" : "green"
-        }
-        if (control.states.controlMode === "External Control") {
-            enableButtons();
+    set controlSource(controlSource: ControlSource) {
+        if(controlSource === ControlSource.Internal) {
+            this.releaseManualControl();
         } else {
-            disableButtons();
-        }
-    }, [control.states.controlMode]);
-    useEffect(() => {
-        if (valvePositionButtonRef.current) {
-            valvePositionButtonRef.current.style.backgroundColor = control.states.valvePosition === "Sampling from Ambient" ? "yellow" : "green"
-        }
-    }, [control.states.valvePosition]);
-    useEffect(() => {
-        if (dataTransmissionModeButtonRef.current) {
-            dataTransmissionModeButtonRef.current.style.backgroundColor = control.states.dataTransmissionMode === "Paused" ? "yellow" : "green"
-        }
-    }, [control.states.dataTransmissionMode]);
-
-
-    /**
-     * Disable buttons when in internal control mode
-     */
-    function disableButtons() {
-        setButtonStates(false, ...controlButtonRefs);
-    }
-
-    function enableButtons() {
-        setButtonStates(true, ...controlButtonRefs);
-    }
-
-    function setButtonStates(enabled: boolean, ...buttonRefs: React.RefObject<HTMLInputElement>[]) {
-        for (const buttonRef of buttonRefs) {
-            if (buttonRef.current) {
-                buttonRef.current.disabled = !enabled;
+            // external
+            this.assumeManualControl()
+            if(!this.verifiedToBeExternallyControllable) {
+                this.verifyExternalControllability()
             }
         }
     }
 
-    function toggleControlMode() {
-        if (control.states.controlMode === "Internal Control") {
-            assumeManualControl();
+    set sampleSource(sampleSource: SampleSource) {
+        if(sampleSource === SampleSource.AMBIENT) {
+            this.sampleAmbient();
         } else {
-            releaseManualControl();
+            // mask
+            this.sampleMask();
         }
     }
 
-    function toggleValvePosition() {
-        if (control.states.valvePosition === "Sampling from Ambient") {
-            sampleMask();
-        } else {
-            sampleAmbient();
-        }
+    assumeManualControl() {
+        this.sendCommand(ExternalController.INVOKE_EXTERNAL_CONTROL);
     }
 
-    function dataTransmitModeButtonClicked() {
-        if (control.states.dataTransmissionMode === "Paused") {
-            enableDataTransmission();
-        } else {
-            disableDataTransmission()
-        }
-    }
-
-    function assumeManualControl() {
-        control.sendCommand(ExternalController.INVOKE_EXTERNAL_CONTROL);
-    }
-
-    function releaseManualControl() {
-        control.sendCommand(ExternalController.RELEASE_FROM_EXTERNAL_CONTROL);
+    releaseManualControl() {
+        this.sendCommand(ExternalController.RELEASE_FROM_EXTERNAL_CONTROL);
         // TODO: detect when we're already in internal control mode so the UI doesn't get stuck thinking it's in external
     }
 
-    function enableDataTransmission() {
-        control.sendCommand(ExternalController.ENABLE_CONTINUOUS_DATA_TRANSMISSION);
+    enableDataTransmission() {
+        this.sendCommand(ExternalController.ENABLE_CONTINUOUS_DATA_TRANSMISSION);
     }
 
-    function disableDataTransmission() {
-        control.sendCommand(ExternalController.DISABLE_CONTINUOUS_DATA_TRANSMISSION);
+    disableDataTransmission() {
+        this.sendCommand(ExternalController.DISABLE_CONTINUOUS_DATA_TRANSMISSION);
     }
 
-    function sampleAmbient() {
-        control.sendCommand(ExternalController.SWITCH_VALVE_ON);
+    sampleAmbient() {
+        this.sendCommand(ExternalController.SWITCH_VALVE_ON);
     }
 
-    function sampleMask() {
-        control.sendCommand(ExternalController.SWITCH_VALVE_OFF);
+    sampleMask() {
+        this.sendCommand(ExternalController.SWITCH_VALVE_OFF);
     }
 
-    function requestSettings() {
-        control.sendCommand(ExternalController.REQUEST_SETTINGS);
+    requestSettings() {
+        this.sendCommand(ExternalController.REQUEST_SETTINGS);
+    }
+    requestRuntimeStatus() {
+        this.sendCommand(ExternalController.REQUEST_RUNTIME_STATUS_OF_BATTERY_AND_SIGNAL_PULSE);
     }
 
-    function powerOff() {
-        control.sendCommand(ExternalController.TURN_POWER_OFF);
-        speech.sayItLater("Power off");
+    powerOff() {
+        this.sendCommand(ExternalController.TURN_POWER_OFF);
+        SPEECH.sayItLater("Power off");
     }
 
-    function beep() {
+    beep() {
         const tenthsOfSeconds = 2
-        control.sendCommand(`B${String(tenthsOfSeconds).padStart(2, "0")}`);
+        this.sendCommand(`B${String(tenthsOfSeconds).padStart(2, "0")}`);
     }
 
-    function sendCommand() {
-        control.sendCommand(commandInput);
-        setCommandInput("")
+    /**
+     * We verify that we can externally control the PortaCount by issuing a few commands and see if we continue to receive counts.
+     * If there's something wrong, after a couple of commands, the PortaCount will stop responding.
+     * @private
+     */
+    private verifyExternalControllability() {
+        let lastLineReceivedTime = 0
+        const verificationListener:PortaCountListener = {
+            lineReceived() {
+                lastLineReceivedTime = Date.now();
+            }
+        };
+        this.portaCountClient.addListener(verificationListener)
+        this.beep()
+        this.beep()
+        setTimeout(() => {
+            this.portaCountClient.removeListener(verificationListener)
+            if( Date.now() - lastLineReceivedTime > 3000) {
+                // too much time since last received line, probably can't externally control
+                console.log("Could not verify that we can externally control the device, disable external control mode")
+                APP_SETTINGS_CONTEXT.saveSetting(AppSettings.SHOW_EXTERNAL_CONTROL, false); // disable
+            } else {
+                this.verifiedToBeExternallyControllable = true;
+            }
+        }, 5000) // 5 seconds
     }
-
-
-    return (
-        <>
-            <fieldset id="portacount-controls-fieldset" style={{display: "inline-block", float: "inline-start"}}>
-                <legend>PortaCount control</legend>
-                <input type="text" id={"command-input"} value={commandInput} placeholder="command to send"
-                       onChange={(e) => setCommandInput(e.target.value)}/>
-                <input type="button" ref={sendCommandButtonRef} value={"Send Command"} id={"send-command-button"}
-                       onClick={sendCommand}/>
-                <input type="button" ref={forceInternalControlButtonRef} value="Force internal control"
-                       id="force-internal-control-button"
-                       onClick={releaseManualControl}/>
-                <input type="button" ref={controlModeButtonRef}
-                       value={control.states.controlMode}
-                       id={"control-mode-button"}
-                       onClick={toggleControlMode}/>
-                <input type="button" ref={valvePositionButtonRef} value={control.states.valvePosition}
-                       id={"valve-position-button"}
-                       onClick={toggleValvePosition}/>
-                <input type="button" ref={dataTransmissionModeButtonRef} value={control.states.dataTransmissionMode}
-                       id={"data-transmit-mode-button"}
-                       onClick={dataTransmitModeButtonClicked}/>
-                <input type="button" ref={requestSettingsButtonRef} value={"Request Settings"}
-                       id={"request-settings-button"}
-                       onClick={requestSettings}/>
-                <input type="button" ref={beepButtonRef} value={"Beep!"} id={"beep-button"} onClick={beep}/>
-                <input type="button" ref={powerOffButtonRef} value={"Power Off"} id={"power-off-button"}
-                       onClick={powerOff}/>
-            </fieldset>
-        </>
-    )
 }
+
+

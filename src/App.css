@@ -54,13 +54,11 @@
 
 .button {
     margin-inline-start: 0.3rem;
-    margin-inline-end: 1rem;
+    /*margin-inline-end: 1rem;*/
 }
 
 .connection-status {
     display: inline-block;
-    margin-inline-start: 0.5rem;
-    margin-inline-end: 1rem;
 }
 
 .status-disconnected {

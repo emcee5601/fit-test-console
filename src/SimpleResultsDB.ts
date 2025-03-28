@@ -2,7 +2,23 @@ import AbstractDB from "./abstract-db.ts";
 
 export interface SimpleResultsDBRecord {
     ID: number,
-    [key: string]: string | number;
+    Time: string,
+    Participant?: string,
+    Mask?: string,
+    Notes?: string,
+    "Ex 1"?: number,
+    "Ex 2"?: number,
+    "Ex 3"?: number,
+    "Ex 4"?: number,
+    "Ex 5"?: number,
+    "Ex 6"?: number,
+    "Ex 7"?: number,
+    "Ex 8"?: number,
+    Final?: number,
+    ProtocolName?: string,
+    TestController?: string,
+    DataSource?: string,
+    [key: string]: string | number | undefined,
 }
 
 class SimpleResultsDB extends AbstractDB {
@@ -79,7 +95,7 @@ class SimpleResultsDB extends AbstractDB {
      * Inserts an empty record into the database. This generates a new ID for the record.
      * Return the json representation of the data that was inserted. Includes the generated primary key.
      */
-    async createNewTest(timestamp: string, protocolName: string): Promise<SimpleResultsDBRecord> {
+    async createNewTest(timestamp: string, protocolName: string, testController: string, dataSource: string): Promise<SimpleResultsDBRecord> {
         const transaction = this.openTransactionClassic("readwrite");
         if (!transaction) {
             console.log("database not ready");
@@ -88,7 +104,9 @@ class SimpleResultsDB extends AbstractDB {
 
         const record = {
             Time: timestamp,
-            ProtocolName: protocolName
+            ProtocolName: protocolName,
+            TestController: testController,
+            DataSource: dataSource
         };
         const request = transaction?.objectStore(SimpleResultsDB.TEST_RESULTS_OBJECT_STORE).add(record);
         return new Promise((resolve, reject) => {
@@ -100,7 +118,7 @@ class SimpleResultsDB extends AbstractDB {
             request.onsuccess = (event) => {
                 console.log(`createNewTest request complete: ${event}, new key is ${request.result}`);
                 // TODO: fetch the whole record and return that instead of constructing this by hand?
-                resolve({ID: Number(request.result), ...record});
+                resolve({ ...record, ID: Number(request.result)});
             }
         });
     }

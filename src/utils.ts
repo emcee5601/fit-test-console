@@ -1,5 +1,7 @@
 import {isNull, isUndefined} from "json-2-csv/lib/utils";
-import {ConnectionStatus} from "./connection-status.ts";
+
+import {ConnectionStatus} from "./portacount-client-8020.ts";
+import {RefObject} from "react";
 
 export function convertFitFactorToFiltrationEfficiency(fitFactor:number) {
     const efficiency = 100 * (1.0 - 1.0 / fitFactor);
@@ -64,3 +66,10 @@ export function formatFitFactor(value: number):string {
         return value.toFixed(0);
     }
 }
+
+export function scrollToBottom(textAreaRef: RefObject<HTMLTextAreaElement>) {
+    if (textAreaRef.current) {
+        textAreaRef.current.scrollTop = textAreaRef.current.scrollHeight;
+    }
+}
+

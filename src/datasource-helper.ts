@@ -50,8 +50,8 @@ export async function* getLines(reader: ReadableStreamDefaultReader<Uint8Array>)
 
 
 
-export function getReadableStreamFromDataSource(pushSource: PushSource) {
-    return new ReadableStream({
+export function getReadableStreamFromDataSource(pushSource: PushSource):ReadableStream<Uint8Array> {
+    return new ReadableStream<Uint8Array>({
         start(controller) {
             readRepeatedly().catch((e) => controller.error(e));
 

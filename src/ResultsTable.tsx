@@ -1,13 +1,12 @@
 /**
  * Table to store the results of fit tests.
  */
-import React, {Dispatch, SetStateAction, useEffect, useState} from 'react'
+import React, {Dispatch, SetStateAction, useContext, useEffect, useState} from 'react'
 
 import './index.css'
 
 import {
     CellContext,
-    Column,
     ColumnDef,
     ColumnFiltersState,
     flexRender,
@@ -22,11 +21,8 @@ import LZString from 'lz-string'
 import './ResultsTable.css'
 
 import {useVirtualizer} from '@tanstack/react-virtual'
-import {AppSettings, SETTINGS_DB, useDBSetting} from "./settings-db.ts";
 import {download, generateCsv, mkConfig} from "export-to-csv";
-import {DataCollector} from "./data-collector.tsx";
 import {createMailtoLink} from "./html-data-downloader.ts";
-import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import {useEditableColumn} from "./use-editable-column-hook.tsx";
 import {useSkipper} from "./use-skipper-hook.ts";
@@ -34,18 +30,27 @@ import {convertFitFactorToFiltrationEfficiency, getFitFactorCssClass} from "./ut
 import {QRCodeSVG} from "qrcode.react";
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 import {sanitizeRecord} from "./results-transfer-util.ts";
-import {JSONContent} from "vanilla-jsoneditor";
+import {useHref} from "react-router";
+import {AppSettings, useSetting} from "./app-settings.ts";
+import {AppContext} from "./app-context.ts";
+import {DataCollector} from "./data-collector.ts";
+import {ResultsTableColumnFilter} from "./ResultsTableColumnFilter.tsx";
 
 //This is a dynamic row height example, which is more complicated, but allows for a more realistic table.
 //See https://tanstack.com/virtual/v3/docs/examples/react/table for a simpler fixed row height example.
-export function ResultsTable({tableData, setTableData, dataCollector}: {
+export function ResultsTable({
+                                 tableData, setTableData,
+                                 searchableColumns = ["Time", "Participant", "Mask", "Notes"],
+                                 hideColumns = []
+                             }: {
     tableData: SimpleResultsDBRecord[],
     setTableData: Dispatch<SetStateAction<SimpleResultsDBRecord[]>>,
-    dataCollector?: DataCollector,
+    searchableColumns?: string[],
+    hideColumns?: string[],
 }) {
-    if (dataCollector) {
-        dataCollector.setResultsCallback(setTableData)
-    }
+    const appContext = useContext(AppContext)
+    const dataCollector: DataCollector = appContext.dataCollector
+    dataCollector.setResultsCallback(setTableData)
 
     const dateTimeFormat = new Intl.DateTimeFormat(undefined, {
         hour12: false,
@@ -131,7 +136,7 @@ export function ResultsTable({tableData, setTableData, dataCollector}: {
                         return null;
                     }
                 },
-                enableColumnFilter: true,
+                enableColumnFilter: searchableColumns.includes('Time'),
                 filterFn: (row, columnId, filterValue) => {
                     return (row.getValue(columnId) as string).startsWith(filterValue);
                 },
@@ -144,7 +149,7 @@ export function ResultsTable({tableData, setTableData, dataCollector}: {
             {
                 accessorKey: 'Participant',
                 cell: useEditableColumn,
-                enableColumnFilter: true,
+                enableColumnFilter: searchableColumns.includes('Participant'),
                 filterFn: (row, columnId, filterValue) => {
                     return RegExp(filterValue, "i").test(row.getValue(columnId));
                 },
@@ -153,6 +158,7 @@ export function ResultsTable({tableData, setTableData, dataCollector}: {
             {
                 accessorKey: 'Mask',
                 cell: useEditableColumn,
+                enableColumnFilter: searchableColumns.includes('Mask'),
                 filterFn: (row, columnId, filterValue) => {
                     return RegExp(filterValue, "i").test(row.getValue(columnId));
                 },
@@ -161,6 +167,7 @@ export function ResultsTable({tableData, setTableData, dataCollector}: {
             {
                 accessorKey: 'Notes',
                 cell: useEditableColumn,
+                enableColumnFilter: searchableColumns.includes('Notes'),
                 filterFn: (row, columnId, filterValue) => {
                     return RegExp(filterValue, "i").test(row.getValue(columnId));
                 },
@@ -170,6 +177,7 @@ export function ResultsTable({tableData, setTableData, dataCollector}: {
             ...createExerciseResultColumns(numExerciseColumns),
             {
                 accessorKey: 'ProtocolName',
+                accessorFn: (record) => {return `${record.ProtocolName} - ${record.TestController}`},
                 header: 'Protocol',
                 enableColumnFilter: false,
                 size: 75,
@@ -181,21 +189,26 @@ export function ResultsTable({tableData, setTableData, dataCollector}: {
     const [qrcodeUrl, setQrcodeUrl] = useState<string>("")
     const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-    const [sorting, setSorting] = useDBSetting<SortingState>(AppSettings.RESULTS_TABLE_SORT, [{
-            id: 'ID',
-            desc: true,
-        }]
-    )
+    const [columnVisibility] = useState(hideColumns.reduce((result:{[key:string]:boolean}, column:string) => {
+        result[column] = false;
+        return result
+    }, {}))
+    const [sorting, setSorting] = useSetting<SortingState>(AppSettings.RESULTS_TABLE_SORT)
+    const appBasePath = useHref("/")
 
+    console.log(`columnVisibility: ${JSON.stringify(columnVisibility)}`)
     const table = useReactTable({
         data: tableData,
         columns,
+        enableColumnResizing: true,
+        columnResizeMode: 'onChange',
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         state: {
             sorting,
             columnFilters,
+            columnVisibility
         },
         onColumnFiltersChange: setColumnFilters,
         onSortingChange: setSorting,
@@ -229,10 +242,44 @@ export function ResultsTable({tableData, setTableData, dataCollector}: {
         debugTable: true,
     })
 
+    /**
+     * Look at the data currently displayed and adjust the number of exercise columns to fit. eg. if we only have 4
+     * exercises (w1 protocol), there's no need to show ex 5-8 that are only in the osha protocol when we are not
+     * showing any osha protocol results.
+     */
+    function dynamicallyAdjustNumExeriseColumns() {
+        const filteredRowModel = table.getFilteredRowModel();
+        const numExercises: { [key: string]: number } = {}
+        // load protocols dynamically
+        const protocolInstructionSets = appContext.settings.protocolDefinitions;
+        for (const protocolName of Object.keys(protocolInstructionSets)) {
+            const protocolInstructionSet = protocolInstructionSets[protocolName];
+            numExercises[protocolName] = protocolInstructionSet.length;
+        }
+        const protocolsShownInTable: string[] = []
+        filteredRowModel.rows.forEach((row) => {
+            const protocolName = row.getValue("ProtocolName") as string;
+            if (!(protocolsShownInTable.includes(protocolName))) {
+                protocolsShownInTable.push(protocolName);
+            }
+        });
+
+        // todo: if no records are on display, default to the currently selected protocol in the protocol dropdown
+
+        // default to 4. before the protocol column was added, num exercises was hardcoded to 4
+        let maxExercises = protocolsShownInTable.length == 0 ? 0 : 4;
+        protocolsShownInTable.forEach((protocol) => {
+            if (protocol in numExercises && numExercises[protocol] > maxExercises) {
+                maxExercises = numExercises[protocol];
+            }
+        })
+        setNumExerciseColumns(maxExercises);
+    }
+
     const {rows} = table.getRowModel()
     const dates: Date[] = [new Date(), ...new Set<Date>(tableData.map((row) => new Date(row.Time)))]
-
     //The virtualizer needs to know the scrollable container element
+
     const tableContainerRef = React.useRef<HTMLDivElement>(null)
 
     const rowVirtualizer = useVirtualizer({
@@ -249,50 +296,8 @@ export function ResultsTable({tableData, setTableData, dataCollector}: {
     })
 
     useEffect(() => {
-        const filteredRowModel = table.getFilteredRowModel();
-        const numExercises: { [key: string]: number } = {}
-        // load protocols dynamically
-        // todo: do this more efficiently (use helpers to get protocol definitions, cache them)
-        SETTINGS_DB.open().then(() => {
-            SETTINGS_DB.getSetting<JSONContent>(AppSettings.PROTOCOL_INSTRUCTION_SETS).then((protocolInstructionSets: JSONContent) => {
-                const protocolInstructionSetsJson = protocolInstructionSets.json as { [key: string]: [] };
-                for (const protocolName of Object.keys(protocolInstructionSetsJson)) {
-                    const protocolInstructionSet = protocolInstructionSetsJson[protocolName];
-                    numExercises[protocolName] = protocolInstructionSet.length;
-                }
-                const protocolsShownInTable: string[] = []
-                filteredRowModel.rows.forEach((row) => {
-                    const protocolName = row.getValue("ProtocolName") as string;
-                    if (!(protocolsShownInTable.includes(protocolName))) {
-                        protocolsShownInTable.push(protocolName);
-                    }
-                });
-
-                // todo: if no records are on display, default to the currently selected protocol in the protocol dropdown
-
-                // default to 4. before the protocol column was added, num exercises was hardcoded to 4
-                let maxExercises = protocolsShownInTable.length == 0 ? 0 : 4;
-                protocolsShownInTable.forEach((protocol) => {
-                    if (protocol in numExercises && numExercises[protocol] > maxExercises) {
-                        maxExercises = numExercises[protocol];
-                    }
-                })
-                setNumExerciseColumns(maxExercises);
-            })
-        });
-
-    }, [columnFilters]);
-
-    useEffect(() => {
-        if (dataCollector) {
-            console.log(`initializing results db`)
-            dataCollector.resultsDatabase.open().then(() => dataCollector.resultsDatabase.getAllData().then(data => {
-                setTableData(data);
-            }));
-        } else {
-            console.log("no data collector, we must be in test result view mode")
-        }
-    }, [dataCollector?.resultsDatabase]);
+        dynamicallyAdjustNumExeriseColumns();
+    }, [columnFilters, tableData]);
 
     useEffect(() => {
         if (qrcodeUrl) {
@@ -367,8 +372,10 @@ export function ResultsTable({tableData, setTableData, dataCollector}: {
 
         const str = LZString.compressToEncodedURIComponent(JSON.stringify(recordsToExport));
         // sometimes location has a trailing '/', remove it so we don't get a '//'. This behavior is different between local and prod for some reason
-        const baseLocation = location.toString().replace(/\/$/, '')
-        // const baseLocation = "https://emcee5601.github.io/fit-test-console"
+
+        const origin = location.origin
+        // const origin = "https://emcee5601.github.io"
+        const baseLocation = origin + appBasePath.replace(/\/$/, '')
         const url = `${baseLocation}/view-results?data=${str}`;
         console.log(`url is: ${url}`)
         console.log(`url length is ${url.length}`);
@@ -398,27 +405,28 @@ export function ResultsTable({tableData, setTableData, dataCollector}: {
 
     //All important CSS styles are included as inline styles for this example. This is not recommended for your code.
     return (
-        <div>
-            {qrcodeUrl &&
-                <div className={"full-screen-overlay"}>
-                    <div onClick={() => setQrcodeUrl("")} id="results-qrcode">
-                        <span style={{display: "block"}}>Fit test results {getFilterSummary()}</span>
-                        <QRCodeSVG value={qrcodeUrl}
-                                   size={512}
-                                   marginSize={2}
-                                   title={"Fit Test Results"}/>
-                    </div>
-                </div>}
-            <input type={"button"} value={"Export as CSV"} onClick={() => handleExportAsCsv()}/>
-            <input type={"button"} value={"Email"} onClick={() => handleMailto()}/>
-            <input type={"button"} value={"QR Code"} onClick={() => generateQRCode()}/>
+        <div style={{height: "100%", display: "flex", flexDirection: "column"}}>
+            <div>
+                {qrcodeUrl &&
+                    <div className={"full-screen-overlay"}>
+                        <div onClick={() => setQrcodeUrl("")} id="results-qrcode">
+                            <span style={{display: "block"}}>Fit test results {getFilterSummary()}</span>
+                            <QRCodeSVG value={qrcodeUrl}
+                                       size={512}
+                                       marginSize={2}
+                                       title={"Fit Test Results"}/>
+                        </div>
+                    </div>}
+                <input type={"button"} value={"Export as CSV"} onClick={() => handleExportAsCsv()}/>
+                <input type={"button"} value={"Email"} onClick={() => handleMailto()}/>
+                <input type={"button"} value={"QR Code"} onClick={() => generateQRCode()}/>
+            </div>
             <div
                 className="container"
                 ref={tableContainerRef}
                 style={{
                     overflow: 'auto', //our scrollable table container
-                    position: 'relative', //needed for sticky header
-                    height: '80vh', //should be a fixed height
+                    flexGrow: 1
                 }}
             >
                 {/* Even though we're still using sematic table tags, we must use CSS grid and flexbox for dynamic row heights */}
@@ -428,7 +436,7 @@ export function ResultsTable({tableData, setTableData, dataCollector}: {
                             display: 'grid',
                             position: 'sticky',
                             top: 0,
-                            zIndex: 1,
+                            zIndex: 1, // table rows are zIndex 0 by default?
                         }}
                     >
                     {table.getHeaderGroups().map(headerGroup => (
@@ -440,32 +448,44 @@ export function ResultsTable({tableData, setTableData, dataCollector}: {
                                 return (
                                     <th
                                         key={header.id}
-                                        style={{
-                                            width: header.getSize(),
-                                        }}
+                                        colSpan={header.colSpan}
+                                        style={{position: 'relative', width: header.getSize()}}
                                     >
-                                        <div
-                                            {...{
-                                                className: header.column.getCanSort()
-                                                    ? 'cursor-pointer select-none'
-                                                    : '',
-                                                onClick: header.column.getToggleSortingHandler(),
-                                            }}
-                                        >
-                                            {flexRender(
-                                                header.column.columnDef.header,
-                                                header.getContext()
-                                            )}
-                                            {{
-                                                asc: ' 🔼',
-                                                desc: ' 🔽',
-                                            }[header.column.getIsSorted() as string] ?? null}
-                                        </div>
-                                        {header.column.getCanFilter() ? (
-                                            <div>
-                                                <Filter column={header.column} dates={dates}/>
-                                            </div>
-                                        ) : null}
+                                        {header.isPlaceholder
+                                            ? null
+                                            : <div>
+                                                <div
+                                                    {...{
+                                                        className: header.column.getCanSort()
+                                                            ? 'cursor-pointer select-none'
+                                                            : '',
+                                                        onClick: header.column.getToggleSortingHandler(),
+                                                    }}
+                                                >
+                                                    {flexRender(
+                                                        header.column.columnDef.header,
+                                                        header.getContext()
+                                                    )}
+                                                    {{
+                                                        asc: ' 🔼',
+                                                        desc: ' 🔽',
+                                                    }[header.column.getIsSorted() as string] ?? null}
+                                                </div>
+                                                {header.column.getCanFilter() && (
+                                                    <div>
+                                                        <ResultsTableColumnFilter column={header.column} dates={dates}/>
+                                                    </div>
+                                                )}
+                                            </div>}
+                                        {header.column.getCanResize() && (
+                                            <div
+                                                onMouseDown={header.getResizeHandler()}
+                                                onTouchStart={header.getResizeHandler()}
+                                                className={`resizer ${
+                                                    header.column.getIsResizing() ? 'isResizing' : ''
+                                                }`}
+                                            ></div>
+                                        )}
 
                                     </th>
                                 )
@@ -521,101 +541,3 @@ export function ResultsTable({tableData, setTableData, dataCollector}: {
 }
 
 
-function Filter<V>({column, dates}: { column: Column<SimpleResultsDBRecord, V>, dates: Date[] }) {
-    const columnFilterValue = column.getFilterValue()
-    const {filterVariant} = column.columnDef.meta ?? {}
-
-    switch (filterVariant) {
-        case 'range':
-            return <div>
-                <div className="flex space-x-2">
-                    {/* See faceted column filters example for min max values functionality */}
-                    <DebouncedInput
-                        type="number"
-                        value={(columnFilterValue as [number, number])?.[0] ?? ''}
-                        onChange={value =>
-                            column.setFilterValue((old: [number, number]) => [value, old?.[1]])
-                        }
-                        placeholder={`Min`}
-                        className="w-24 border shadow rounded"
-                    />
-                    <DebouncedInput
-                        type="number"
-                        value={(columnFilterValue as [number, number])?.[1] ?? ''}
-                        onChange={value =>
-                            column.setFilterValue((old: [number, number]) => [old?.[0], value])
-                        }
-                        placeholder={`Max`}
-                        className="w-24 border shadow rounded"
-                    />
-                </div>
-                <div className="h-1"/>
-            </div>
-        case 'select':
-            return <select
-                onChange={e => column.setFilterValue(e.target.value)}
-                value={columnFilterValue?.toString()}
-            >
-                {/* See faceted column filters example for dynamic select options */}
-                <option value="">All</option>
-                <option value="complicated">complicated</option>
-                <option value="relationship">relationship</option>
-                <option value="single">single</option>
-            </select>
-        case 'date': {
-            const curFilter = column.getFilterValue() as string;
-            const selectedDate = curFilter ? new Date(curFilter) : null;
-            return <DatePicker minDate={new Date("2024-01-01")} maxDate={new Date()}
-                               isClearable={true}
-                               placeholderText={"Search..."}
-                               selected={selectedDate}
-                               includeDates={dates}
-                               showIcon={true}
-                               showDisabledMonthNavigation={true}
-                               className={'datePickerInput'}
-                               todayButton={<input type={"button"} value={"Today"}/>}
-                               onChange={(value) => column.setFilterValue(value?.toLocaleDateString())}
-            ></DatePicker>
-        }
-        default:
-            return <DebouncedInput
-                className="filterInput"
-                onChange={value => column.setFilterValue(value)}
-                placeholder={`Search...`}
-                type="text"
-                value={(columnFilterValue ?? '') as string}
-            />
-    }
-}
-
-// A typical debounced input react component
-function DebouncedInput({
-                            value: initialValue,
-                            onChange,
-                            debounce = 500,
-                            ...props
-                        }: {
-    value: string | number
-    onChange: (value: string | number) => void
-    debounce?: number
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'>) {
-    const [value, setValue] = React.useState(initialValue)
-
-    React.useEffect(() => {
-        setValue(initialValue)
-    }, [initialValue])
-
-    React.useEffect(() => {
-        const timeout = setTimeout(() => {
-            onChange(value)
-        }, debounce)
-
-        return () => clearTimeout(timeout)
-        // adding onChange and debounce here cause constant re-renders. The linter says to useCallback on them, then to memoize the deps of the callback, but suppressing is simpler for now since we don't actually want to do anything when those change
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [value])
-
-    return (
-        <input {...props} value={value} onChange={e => setValue(e.target.value)}/>
-    )
-}
