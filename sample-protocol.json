@@ -1,20 +1,31 @@
 {
-  "example-1": [
-    "each item in this array can be a string or object",
-    "a string is interpretted as instructions",
-    "an object must contain instructions, and optionally purge and sample durations in seconds",
+  "custom-protocol-example": [
     {
-      "instructions": "blah"
+      "instructions": "A protocol definition is a name-array pair. In this example, the name of the protocol is 'custom-protocol-example'. The definition is this array of json objects. Each item in this array is called a 'Stage'. The editor will make sure invalid definitions cannot be saved."
     },
     {
-      "instructions": "breathe normally",
-      "purge-duration": 4,
-      "sample-duration": 55
+      "instructions": "There are 3 supported fields in a Stage. Only 'instructions' is required. Default values will be applied to the optional fields. See the code for the latest values.",
+      "ambient_duration": 5,
+      "sample_duration": 30
     },
     {
-      "i": "instructions",
-      "p": 9,
-      "s": 29
+      "i": "Short field names are supported for convenience, but long field names are more readable. (i)nstructions, (a)mbient_duration, (s)ample_duration (aka mask).",
+      "a": 5,
+      "s": 30
+    },
+    "Each item in the array can be a plain string as in this example. In such cases, it will be interpreted as an 'instructions' and default durations will be applied",
+    "Instructions up to the first period are read by speech synthesis if configured. Everything else is displayed, but not read.",
+    "Each Stage is internally converted into up to 2 pairs of Segments: ambient_purge + ambient_sample and mask_purge + mask_sample. A Segment with non-zero duration will have a corresponding purge Segment. The purge durations are currently hard-coded. See the code for the latest value.",
+    "At the time of this writing, fit factor is calcuated using the last ambient Segment before the current mask Segment. These are usually from the same Stage, but not necessarily.",
+    {
+      "i": "To suppress ambient or mask sampling, specify a duration of 0 (zero). When the duration is 0, the corresponding purge time is also 0.",
+      "a": 0,
+      "s": 0
+    },
+    {
+      "i": "A trailing ambient-only Stage can be defined. This will be necessary for calculating fit factors using before-and-after ambient values but is not support at the time of this writing.",
+      "a": 5,
+      "s": 0
     }
   ],
   "w1": [
