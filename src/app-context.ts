@@ -96,7 +96,8 @@ async function autoConnect() {
     // todo: need a way to pick good ports. for now, only keep ports with vendor info. it's possible to connect to a
     //  bad port, say a built-in bluetooth port, and auto-connect will try to connect to it
     // todo: update selected data source when auto-connecting
-    const webSerialPorts: SerialPort[] = (await navigator.serial.getPorts()).filter((port => port.getInfo().usbVendorId));
+    // make sure to check for existence of navigator.serial, which doesn't exist on android
+    const webSerialPorts: SerialPort[] = navigator.serial?(await navigator.serial.getPorts()).filter((port => port.getInfo().usbVendorId)) : [];
     const usbSerialPorts = await UsbSerialDrivers.getPorts()
     console.log(`autoConnect: available web serial ${JSON.stringify(webSerialPorts)}, available web usb serial ports: ${JSON.stringify(usbSerialPorts)}`);
     // prefer webSerialPorts
