@@ -140,7 +140,7 @@ export class DataCollector {
             return;
         }
         const selectedProtocol = this.settings.selectedProtocol;
-        const protocolInstructionSet: [InstructionOrStage] = this.settings.protocolDefinitions[selectedProtocol]
+        const protocolInstructionSet: InstructionOrStage[] = this.settings.protocolDefinitions[selectedProtocol]
         const instructionsOrStageInfo = protocolInstructionSet[exerciseNum - 1];
         const instructions = typeof instructionsOrStageInfo === "object"
             ? ("instructions" in instructionsOrStageInfo
@@ -219,13 +219,6 @@ export class DataCollector {
         }
 
         console.log(`new test added: ${JSON.stringify(this.currentTestData)}`)
-        if (this.setResults) {
-            // this triggers an update
-            this.setResults((prev) => [...prev, newTestData]);
-        } else {
-            // shouldn't happen, but setResults callback starts off uninitialized
-            console.log("have current test data, but setResults callback hasn't been initialized. this shouldn't happen?")
-        }
         this.dispatch(new CurrentTestUpdatedEvent(newTestData))
     }
 
@@ -241,24 +234,9 @@ export class DataCollector {
             } else {
                 this.currentTestData[`${exerciseNum}`] = `${Math.floor(ff)}`; // probably "Final"
             }
-            this.updateResultsTable();
             this.updateCurrentRowInDatabase();
         }
         this.chain(fun)
-    }
-
-    /**
-     * propagate changes so results table can see it
-     * @private
-     */
-    private updateResultsTable() {
-        if (this.setResults) {
-            // update table data
-            this.setResults((prev) => [...prev]) // force an update by changing the ref
-        } else {
-            // shouldn't happen, but setResults callback starts off uninitialized
-            console.log("have current test data, but setResults callback hasn't been initialized. this shouldn't happen?")
-        }
     }
 
     /**
@@ -308,11 +286,6 @@ export class DataCollector {
         this.dispatch(new CurrentTestUpdatedEvent(this.currentTestData))
     }
 
-
-    // todo: use DataCollectorStates instead
-    setResultsCallback(callback: React.Dispatch<React.SetStateAction<SimpleResultsDBRecord[]>>) {
-        this.setResults = callback
-    }
 
     setProtocol(protocol: string) {
         console.log(`setProtocol ${protocol}`)

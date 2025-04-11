@@ -24,7 +24,7 @@ export function PortaCountDataTransmissionWidget() {
     }, []);
 
     return (
-        <fieldset className="info-box">
+        <fieldset className="info-box-compact">
             <legend>Data</legend>
             {dataTransmissionState}
         </fieldset>

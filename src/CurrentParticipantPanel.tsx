@@ -2,11 +2,13 @@ import React, {useCallback, useContext, useEffect, useState} from "react";
 import {RESULTS_DB, SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 import {AppContext} from "./app-context.ts";
 import {DebouncedTextArea} from "./DebouncedTextArea.tsx";
-import {AppSettings, AppSettingType, SettingsListener, useSetting} from "./app-settings.ts";
+import {AppSettings, AppSettingType, SettingsListener} from "./app-settings.ts";
 import {deepCopy} from "json-2-csv/lib/utils";
 import {ResultsTable} from "./ResultsTable.tsx";
 import CreatableSelect from "react-select/creatable";
-import {useInterval} from "./useInterval.ts";
+import {LabeledSection} from "./LabeledSection.tsx";
+import {useSetting} from "./use-setting.ts";
+import {useTimingSignal} from "src/timing-signal.ts";
 
 export function CurrentParticipantPanel() {
     const appContext = useContext(AppContext)
@@ -19,16 +21,13 @@ export function CurrentParticipantPanel() {
 
     const [testTemplate, setTestTemplate] = useSetting<Partial<SimpleResultsDBRecord>>(AppSettings.TEST_TEMPLATE)
     const [currentParticipantResults, setCurrentParticipantResults] = useState([] as SimpleResultsDBRecord[])
-    const [maskList, setMaskList] = useState<string[]>([]) // todo: usememo here, and force an update when new masks are created
-    const [currentParticipantElapsedTime, setCurrentParticipantElapsedTime] = useState<string>("0:00")
-
-    function hasCurrentParticipant() {
-        return testTemplate.Participant;
-    }
+    const [maskList, setMaskList] = useState<string[]>([]) // todo: usememo here, and force an update when new masks
+                                                           // are created
+    const [selectedProtocol] = useSetting<string>(AppSettings.SELECTED_PROTOCOL)
 
     function updateCurrentParticipant(value: string) {
         console.debug(`updating current participant -> ${value}`)
-        if(testTemplate.Participant !== value) {
+        if (testTemplate.Participant !== value) {
             // participant name changed, update start time
             testTemplate.Time = new Date().toISOString(); // todo: does this need to be localtime?
         }
@@ -52,7 +51,6 @@ export function CurrentParticipantPanel() {
         testTemplate.Mask = ""
         testTemplate.Notes = ""
         testTemplate.Time = new Date().toISOString(); // todo: does this need to be localtime?
-        setCurrentParticipantElapsedTime("0:00")
         updateTestTemplate();
     }
 
@@ -74,7 +72,6 @@ export function CurrentParticipantPanel() {
         console.debug(`updateTestTemplate -> ${JSON.stringify(testTemplate)}`);
         setTestTemplate(deepCopy(testTemplate)) // copy to force React to see the update
         updateCurrentParticipantTests(testTemplate.Participant)
-        calculateCurrentParticipantElapsedTime()
     }
 
 
@@ -95,7 +92,7 @@ export function CurrentParticipantPanel() {
             subscriptions: () => [AppSettings.TEST_TEMPLATE],
             settingsChanged(setting: AppSettings, value: AppSettingType) {
                 // assume we're getting the correct
-                console.log(`setting ${setting} changed to ${value} with stages ${JSON.stringify(appContext.settings.protocolStages)}`)
+                console.log(`setting ${setting} changed to ${JSON.stringify(value)} with stages ${JSON.stringify(appContext.settings.protocolStages)}`)
                 updateCurrentParticipantTests((value as SimpleResultsDBRecord).Participant)
             }
         }
@@ -106,11 +103,17 @@ export function CurrentParticipantPanel() {
             appContext.settings.removeListener(settingsListener)
         }
     }, []);
+    useTimingSignal(updateState)
 
     useEffect(() => {
         console.debug(`testTemplate updated (via useEffect): ${JSON.stringify(testTemplate)}`)
         updateState()
     }, [testTemplate]);
+
+    useEffect(() => {
+        console.debug(`selectedProtocolChanged, num exercises is ${appContext.settings.numExercises}`)
+        updateState()
+    }, [selectedProtocol]);
 
 
     /**
@@ -119,6 +122,9 @@ export function CurrentParticipantPanel() {
      */
     function updateCurrentParticipantTests(participant: string | undefined) {
         const today = new Date();
+        if (!participant) {
+            participant = ""
+        }
         // convert time back to local time
         const todayYyyymmdd = new Date(today.getTime() - today.getTimezoneOffset() * 60 * 1000).toISOString().substring(0, 10)
         // const todayYyyymmdd = new Date().toISOString().substring(0, 10)
@@ -128,7 +134,8 @@ export function CurrentParticipantPanel() {
                     // make sure both dates are formatted the same way
                     const recordDate = new Date(record.Time);
                     const recordTime = new Date(recordDate.getTime() - recordDate.getTimezoneOffset() * 60 * 1000).toISOString().substring(0, 10);
-                    // console.debug(`yyyymmdd is ${todayYyyymmdd}, record time is ${recordTime}; looking for '${participant}', found '${record.Participant}'`)
+                    // console.debug(`yyyymmdd is ${todayYyyymmdd}, record time is ${recordTime}; looking for
+                    // '${participant}', found '${record.Participant}'`)
                     return record.Participant === participant
                         && recordTime.startsWith(todayYyyymmdd)
                 }
@@ -137,43 +144,32 @@ export function CurrentParticipantPanel() {
         })
     }
 
-
-    function calculateCurrentParticipantElapsedTime() {
-        if( !hasCurrentParticipant()) {
-            // this shouldn't happen because useInterval would be called with null delay
-            setCurrentParticipantElapsedTime("0:00")
-        } else if( testTemplate.Time) {
-            const startTime = new Date(testTemplate.Time)
-            const elapsedMs = new Date().getTime() - startTime.getTime()
-            const elapsedSec = Math.round(elapsedMs / 1000);
-            const elapsedTime = `${Math.round(elapsedSec / 60)}:${String(Math.round(elapsedSec % 60)).padStart(2,"0")}`
-            console.debug(`elapsed time: ${elapsedTime}`)
-            setCurrentParticipantElapsedTime(elapsedTime)
-        } else {
-            setCurrentParticipantElapsedTime("0:00")
-        }
-    }
-
-    useInterval(calculateCurrentParticipantElapsedTime, hasCurrentParticipant()?1000: null)
-
     return (
         <div id="current-test-results">
-            <fieldset>
-                <legend>Template</legend>
-                <div style={{display: "flex", flexDirection: "row"}}>
-                    <input type={"button"} value={"Next Participant"} onClick={nextParticipant}/>
-                    <input type={"button"} value={"Next Mask"} onClick={nextMask}/>
-                    <span>{currentParticipantElapsedTime}</span>
-                </div>
-                <div style={{display: "inline-flex", textAlign: "start", float: "inline-start"}}>
-                    <fieldset style={{minWidth:"max-content"}}>
+            <LabeledSection>
+                <legend>Current Participant
+                    <input id={"next-participant-button"} type={"button"} value={"Next participant"}
+                           onClick={nextParticipant}/>
+                    <input id={"next-mask-button"} type={"button"} value={"Next mask"} onClick={nextMask}/></legend>
+                <div style={{
+                    display: "flex",
+                    textAlign: "start",
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    justifySelf: "center"
+                }}>
+                    {/*{showRemainingEventTime && <EventTimeWidget/>}*/}
+                    {/*{showElapsedParticipantTime && <CurrentParticipantTimeWidget/>}*/}
+
+                    <fieldset className={"info-box-compact"}>
                         <legend>Participant</legend>
                         <DebouncedTextArea className="table-cell-input" placeholder={"Click to add Participant"}
                                            value={testTemplate.Participant as string}
                                            onChange={(value) => updateCurrentParticipant(value)}
-                                           onInput={updateHeight}/>
+                                           onInput={updateHeight}
+                        />
                     </fieldset>
-                    <fieldset>
+                    <fieldset className={"info-box-compact"} style={{width: "25ch"}}>
                         <legend>Mask</legend>
                         <CreatableSelect
                             name={"Mask"}
@@ -199,9 +195,8 @@ export function CurrentParticipantPanel() {
                             isSearchable={true}
                             placeholder={"Click to add Mask"}
                         />
-
                     </fieldset>
-                    <fieldset>
+                    <fieldset className={"info-box-compact"} style={{width: "25ch"}}>
                         <legend>Notes</legend>
                         <DebouncedTextArea className="table-cell-input" placeholder={"Click to add Notes"}
                                            value={testTemplate.Notes as string}
@@ -209,9 +204,17 @@ export function CurrentParticipantPanel() {
                                            onInput={updateHeight}/>
                     </fieldset>
                 </div>
-            </fieldset>
-            <ResultsTable tableData={currentParticipantResults} setTableData={setCurrentParticipantResults}
-                          searchableColumns={[]} hideColumns={["Participant", "Time"]}/>
+            </LabeledSection>
+            <LabeledSection>
+                <legend>Results{(testTemplate.Participant ? ` for ${testTemplate.Participant}` : "")}</legend>
+                <div style={{justifySelf: "center", maxWidth: "100%"}}>
+                    <ResultsTable tableData={currentParticipantResults} setTableData={setCurrentParticipantResults}
+                                  searchableColumns={[]} hideColumns={["Participant", "Time"]}
+                                  minExercisesToShow={appContext.settings.numExercises}
+                                  columnSortingSettingKey={AppSettings.PARTICIPANT_RESULTS_TABLE_SORT}
+                    />
+                </div>
+            </LabeledSection>
         </div>
 
     )

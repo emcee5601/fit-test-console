@@ -1,5 +1,5 @@
 import {useContext, useState} from "react";
-import {ExternalController} from "./external-control.tsx";
+import {ExternalController} from "./external-control.ts";
 import {AppContext} from "./app-context.ts";
 import CreatableSelect from "react-select/creatable";
 
@@ -29,44 +29,40 @@ export function PortaCountCommandWidget() {
     }
 
     return (
-        <fieldset id="portacount-controls-fieldset" className={"info-box"}>
-            <legend>PortaCount Control</legend>
-
-            <div style={{display: "inline-flex", width: "100%"}}>
-                <CreatableSelect
-                    name={"Mask"}
-                    options={Object.entries(commands).map(([label, value]) => {
-                        return {
-                            value: value,
-                            label: label
-                        }
-                    })}
-                    value={commandInput ? {value: commandInput, label: commandInput} : null}
-                    styles={{
-                        menu: (baseStyles) => ({
-                            ...baseStyles,
-                            zIndex: 2,
-                            width: "max-content",
-                            textAlign: "left",
-                        }),
-                        singleValue: (baseStyles) => ({
-                            ...baseStyles,
-                            whiteSpace: "normal", // disable truncating with ellipses
-                            width: "9rem", // todo: figure out how to calculate this based on menu width
-                        }),
-                        input: (baseStyles) => ({
-                            ...baseStyles,
-                            width: "9rem", // todo: figure out how to make this the same as singleValue's width
-                        })
-                    }}
-                    onChange={(event) => setCommandInput(event?.value as string)}
-                    allowCreateWhileLoading={true}
-                    isSearchable={true}
-                    placeholder={"Type command..."}
-                />
-                <input type="button" value={"Send"} id={"send-command-button"}
-                       onClick={sendCommand}/>
-            </div>
-        </fieldset>
+        <div style={{display: "inline-flex", height:"fit-content"}}>
+            <CreatableSelect
+                name={"Mask"}
+                options={Object.entries(commands).map(([label, value]) => {
+                    return {
+                        value: value,
+                        label: label
+                    }
+                })}
+                value={commandInput ? {value: commandInput, label: commandInput} : null}
+                styles={{
+                    menu: (baseStyles) => ({
+                        ...baseStyles,
+                        zIndex: 2,
+                        width: "max-content",
+                        textAlign: "left",
+                    }),
+                    singleValue: (baseStyles) => ({
+                        ...baseStyles,
+                        whiteSpace: "normal", // disable truncating with ellipses
+                        width: "9rem", // todo: figure out how to calculate this based on menu width
+                    }),
+                    input: (baseStyles) => ({
+                        ...baseStyles,
+                        width: "9rem", // todo: figure out how to make this the same as singleValue's width
+                    })
+                }}
+                onChange={(event) => setCommandInput(event?.value as string)}
+                allowCreateWhileLoading={true}
+                isSearchable={true}
+                placeholder={"Type command..."}
+            />
+            <input type="button" value={"Send"} id={"send-command-button"}
+                   onClick={sendCommand}/>
+        </div>
     )
 }

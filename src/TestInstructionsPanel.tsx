@@ -22,7 +22,7 @@ export function TestInstructionsPanel() {
     }, []);
 
     return (
-        <fieldset style={{display: "inline-block", flexGrow: 1}} className={"info-box"}>
+        <fieldset style={{display: "inline-block", flexGrow: 1}} className={"info-box-compact"}>
             <legend>Test Instructions</legend>
             <textarea id="instructions" readOnly={true} style={{
                 width: "100%",

@@ -14,7 +14,7 @@ import {EstimatedFitFactorPanel} from "./EstimatedFitFactorPanel.tsx";
 // add this to prompt for a refresh
 const updateSW = registerSW({
     onNeedRefresh() {
-        if (confirm("New content available. Reload?")) {
+        if (confirm("A new version is available. Update to the latest version?")) {
             updateSW(true);
         }
     },

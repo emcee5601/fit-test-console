@@ -1,18 +1,35 @@
 /**
- *
+ * 
  */
 export const SPEECH = new class {
-    private readonly synth: SpeechSynthesis = window.speechSynthesis;
+    private _synth?: SpeechSynthesis;
     private speechEnabled: boolean = false;
-    private allVoices: SpeechSynthesisVoice[] = [];
+    private _allVoices: SpeechSynthesisVoice[] = [];
     private selectedVoice: SpeechSynthesisVoice | null = null;
     private speechRate: number = 1;
 
     constructor() {
-        this.updateVoiceList(this.synth.getVoices());
-        this.synth.onvoiceschanged = () => {
-            this.updateVoiceList(this.synth.getVoices());
+    }
+
+
+    private ensureSynthInitialized() {
+        if(!this._synth) {
+            this._synth = this.initSynth();
+        }
+    }
+
+    private initSynth() {
+        const synth = window.speechSynthesis; // this could just be speechSynthesis without the window reference?
+        this.updateVoiceList(synth.getVoices());
+        synth.onvoiceschanged = () => {
+            this.updateVoiceList(synth.getVoices());
         };
+        return synth
+    }
+
+    get synth(): SpeechSynthesis {
+        this.ensureSynthInitialized();
+        return this._synth!;
     }
 
     /**
@@ -20,10 +37,11 @@ export const SPEECH = new class {
      * @param voices
      */
     private updateVoiceList(voices: SpeechSynthesisVoice[]) {
-        this.allVoices = voices.filter((voice) => {
+        this._allVoices = voices.filter((voice) => {
             // console.log(`voice ${voice.name} has lang ${voice.lang}`);
             return voice.lang.startsWith("en")
         }).sort((a, b) => `${a.lang} ${a.name}`.localeCompare(`${b.lang} ${b.name}`));
+        // todo: emit an event so the widget can pick up the voice list changed. or maybe force the selected voice to change?
     }
 
     public setSelectedVoice(voice: SpeechSynthesisVoice) {
@@ -32,8 +50,9 @@ export const SPEECH = new class {
     public getSelectedVoice() {
         return this.selectedVoice
     }
-    public getAllVoices() {
-        return this.allVoices;
+    get allVoices() {
+        this.ensureSynthInitialized();
+        return this._allVoices;
     }
 
     public setSpeechEnabled(enabled: boolean) {

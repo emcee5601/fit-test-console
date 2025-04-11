@@ -21,7 +21,7 @@ export default abstract class AbstractDB {
             const transaction = this.openTransactionClassic("readonly");
             const allRecords: T[] = [];
             if (!transaction) {
-                console.log(`${this.dbName} database not ready`);
+                console.debug(`${this.dbName} database not ready`);
                 reject(`${this.dbName} database not ready`);
                 return;
             }
@@ -29,7 +29,7 @@ export default abstract class AbstractDB {
             const request = transaction.objectStore(dataStoreName).openCursor(null, "next");
 
             request.onerror = (event) => {
-                console.log(`getAllDataFromDataSource openCursor request error ${event}`);
+                console.error(`getAllDataFromDataSource openCursor request error ${event}`);
                 reject(`error ${event}`);
             }
             request.onsuccess = (event) => {
@@ -43,7 +43,7 @@ export default abstract class AbstractDB {
 
                 } else {
                     // no more results
-                    console.log(`${this.dbName} cursor done ${event}. got ${allRecords.length} records`);
+                    console.debug(`${this.dbName} cursor done ${event}. got ${allRecords.length} records`);
                     resolve(allRecords);
                 }
             }
@@ -52,7 +52,7 @@ export default abstract class AbstractDB {
 
     private onOpenSuccess(request: IDBOpenDBRequest) {
         this.db = request.result;
-        console.log(`${this.dbName} Database Opened`, this.db);
+        console.debug(`${this.dbName} Database Opened`, this.db);
     }
 
     private onOpenError(request: IDBOpenDBRequest) {
@@ -66,11 +66,11 @@ export default abstract class AbstractDB {
         }
         try {
             const transaction = this.db.transaction(objectStoreNames, mode);
-            transaction.oncomplete = (event) => {
-                console.log(`${this.dbName} transaction complete: ${event}`);
+            transaction.oncomplete = () => {
+                // console.debug(`${this.dbName} transaction complete: ${JSON.stringify(event)}`);
             }
             transaction.onerror = (event) => {
-                console.log(`${this.dbName} transaction error ${event}`);
+                console.warn(`${this.dbName} transaction error ${event}`);
             }
             return transaction;
         }catch(error) {
@@ -87,16 +87,16 @@ export default abstract class AbstractDB {
     private async openTransaction(mode: IDBTransactionMode, objectStoreNames: string[] = this.defaultDataStores) {
         return new Promise<IDBTransaction>((resolve, reject) => {
             if (!this.db) {
-                console.log(`${this.dbName} database not ready`);
+                console.debug(`${this.dbName} database not ready`);
                 reject(`${this.dbName} database not ready`)
                 return
             }
             const transaction = this.db.transaction(objectStoreNames, mode);
-            transaction.oncomplete = (event) => {
-                console.log(`${this.dbName} transaction complete: ${JSON.stringify(event)}`);
+            transaction.oncomplete = () => {
+                // console.debug(`${this.dbName} transaction complete: ${JSON.stringify(event)}`);
             }
             transaction.onerror = (event) => {
-                console.log(`${this.dbName} transaction error ${event}`);
+                console.error(`${this.dbName} transaction error ${JSON.stringify(event)}`);
             }
             resolve(transaction);
         })
@@ -111,7 +111,7 @@ export default abstract class AbstractDB {
                 }
                 request.onerror = (event) => {
                     const errorMessage = `${this.dbName} get(${key}) failed; error: ${event}`;
-                    console.log(errorMessage);
+                    console.error(errorMessage);
                     reject(errorMessage);
                 }
             });
@@ -128,7 +128,7 @@ export default abstract class AbstractDB {
                     }
                     request.onerror = (event) => {
                         const errorMessage = `${this.dbName} put(${JSON.stringify(value)}) failed; error: ${event}`
-                        console.log(errorMessage);
+                        console.error(errorMessage);
                         reject(errorMessage);
                     }
                 } catch (error) {
@@ -149,7 +149,7 @@ export default abstract class AbstractDB {
                     }
                     request.onerror = (event) => {
                         const errorMessage = `${this.dbName} delete(${key}) failed; error: ${event}`
-                        console.log(errorMessage);
+                        console.error(errorMessage);
                         reject(errorMessage);
                     }
                 } catch(error) {
@@ -188,6 +188,6 @@ export default abstract class AbstractDB {
 
     close() {
         this.db?.close();
-        console.log(`${this.dbName} closed`);
+        console.debug(`${this.dbName} closed`);
     }
 }

@@ -17,40 +17,40 @@ import {
     SortingState,
     useReactTable,
 } from '@tanstack/react-table'
-import LZString from 'lz-string'
 import './ResultsTable.css'
 
 import {useVirtualizer} from '@tanstack/react-virtual'
-import {download, generateCsv, mkConfig} from "export-to-csv";
-import {createMailtoLink} from "./html-data-downloader.ts";
 import "react-datepicker/dist/react-datepicker.css";
 import {useEditableColumn} from "./use-editable-column-hook.tsx";
 import {useSkipper} from "./use-skipper-hook.ts";
 import {convertFitFactorToFiltrationEfficiency, getFitFactorCssClass} from "./utils.ts";
-import {QRCodeSVG} from "qrcode.react";
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
-import {sanitizeRecord} from "./results-transfer-util.ts";
-import {useHref} from "react-router";
-import {AppSettings, useSetting} from "./app-settings.ts";
+import {AppSettings, calculateNumberOfExercises} from "./app-settings.ts";
 import {AppContext} from "./app-context.ts";
-import {DataCollector} from "./data-collector.ts";
+import {DataCollector, DataCollectorListener} from "./data-collector.ts";
 import {ResultsTableColumnFilter} from "./ResultsTableColumnFilter.tsx";
+import {ReactTableCsvExportWidget} from "./ReactTableCsvExportWidget.tsx";
+import {ReactTableQrCodeExportWidget} from "./ReactTableQrCodeExportWidget.tsx";
+import {useSetting} from "./use-setting.ts";
 
 //This is a dynamic row height example, which is more complicated, but allows for a more realistic table.
 //See https://tanstack.com/virtual/v3/docs/examples/react/table for a simpler fixed row height example.
 export function ResultsTable({
-                                 tableData, setTableData,
-                                 searchableColumns = ["Time", "Participant", "Mask", "Notes"],
-                                 hideColumns = []
-                             }: {
+    tableData, setTableData,
+    searchableColumns = ["Time", "Participant", "Mask", "Notes", "ProtocolName"],
+    hideColumns = [],
+    minExercisesToShow = 0,
+    columnSortingSettingKey = AppSettings.RESULTS_TABLE_SORT
+}: {
     tableData: SimpleResultsDBRecord[],
     setTableData: Dispatch<SetStateAction<SimpleResultsDBRecord[]>>,
     searchableColumns?: string[],
     hideColumns?: string[],
+    minExercisesToShow?: number,
+    columnSortingSettingKey?: AppSettings.RESULTS_TABLE_SORT | AppSettings.PARTICIPANT_RESULTS_TABLE_SORT
 }) {
     const appContext = useContext(AppContext)
     const dataCollector: DataCollector = appContext.dataCollector
-    dataCollector.setResultsCallback(setTableData)
 
     const dateTimeFormat = new Intl.DateTimeFormat(undefined, {
         hour12: false,
@@ -90,7 +90,12 @@ export function ResultsTable({
     }
 
     function createExerciseResultColumns(numExercises: number) {
-        return Array.from(Array(numExercises).keys()).map((num) => createExerciseResultColumn(num + 1))
+        try {
+            return Array.from(Array(numExercises).keys()).map((num) => createExerciseResultColumn(num + 1))
+        } catch (error) {
+            console.error(error)
+            return []
+        }
     }
 
     function compareNumericString(rowA: Row<SimpleResultsDBRecord>, rowB: Row<SimpleResultsDBRecord>, id: string) {
@@ -115,7 +120,21 @@ export function ResultsTable({
         return 0;
     }
 
-    const [numExerciseColumns, setNumExerciseColumns] = useState(4)
+    const [numExerciseColumns, setNumExerciseColumns] = useState(1) // make sure this is not zero
+
+    function safeRegExpFilter(row: Row<SimpleResultsDBRecord>, columnId: string, filterValue: string): boolean {
+        const cellValue:string = row.getValue(columnId);
+        if((filterValue??"").trim() === (cellValue??"").trim()) {
+            // matches empty strings, and empty values
+            return true;
+        }
+        try {
+            return RegExp(filterValue, "i").test(cellValue);
+        } catch {
+            // bad regexp, try simple substring match
+            return cellValue.includes(filterValue);
+        }
+    }
 
     const columns = React.useMemo<ColumnDef<SimpleResultsDBRecord, string | number>[]>(
         () => [
@@ -150,53 +169,48 @@ export function ResultsTable({
                 accessorKey: 'Participant',
                 cell: useEditableColumn,
                 enableColumnFilter: searchableColumns.includes('Participant'),
-                filterFn: (row, columnId, filterValue) => {
-                    return RegExp(filterValue, "i").test(row.getValue(columnId));
-                },
+                filterFn: safeRegExpFilter,
                 size: 150,
             },
             {
                 accessorKey: 'Mask',
                 cell: useEditableColumn,
                 enableColumnFilter: searchableColumns.includes('Mask'),
-                filterFn: (row, columnId, filterValue) => {
-                    return RegExp(filterValue, "i").test(row.getValue(columnId));
-                },
+                filterFn: safeRegExpFilter,
                 size: 250,
             },
             {
                 accessorKey: 'Notes',
                 cell: useEditableColumn,
                 enableColumnFilter: searchableColumns.includes('Notes'),
-                filterFn: (row, columnId, filterValue) => {
-                    return RegExp(filterValue, "i").test(row.getValue(columnId));
-                },
+                filterFn: safeRegExpFilter,
                 size: 150,
             },
             createExerciseResultColumnBase("Final"),
             ...createExerciseResultColumns(numExerciseColumns),
             {
                 accessorKey: 'ProtocolName',
-                accessorFn: (record) => {return `${record.ProtocolName} - ${record.TestController}`},
+                enableColumnFilter: searchableColumns.includes('ProtocolName'),
+                filterFn: safeRegExpFilter,
+                accessorFn: (record) => {
+                    return `${record.ProtocolName} - ${record.TestController}`
+                },
                 header: 'Protocol',
-                enableColumnFilter: false,
                 size: 75,
             },
         ],
         [numExerciseColumns]
     )
 
-    const [qrcodeUrl, setQrcodeUrl] = useState<string>("")
     const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-    const [columnVisibility] = useState(hideColumns.reduce((result:{[key:string]:boolean}, column:string) => {
+    const [columnVisibility] = useState(hideColumns.reduce((result: { [key: string]: boolean }, column: string) => {
         result[column] = false;
         return result
     }, {}))
-    const [sorting, setSorting] = useSetting<SortingState>(AppSettings.RESULTS_TABLE_SORT)
-    const appBasePath = useHref("/")
+    const [sorting, setSorting] = useSetting<SortingState>(columnSortingSettingKey)
 
-    console.log(`columnVisibility: ${JSON.stringify(columnVisibility)}`)
+    // console.debug(`columnVisibility: ${JSON.stringify(columnVisibility)}`)
     const table = useReactTable({
         data: tableData,
         columns,
@@ -247,27 +261,25 @@ export function ResultsTable({
      * exercises (w1 protocol), there's no need to show ex 5-8 that are only in the osha protocol when we are not
      * showing any osha protocol results.
      */
-    function dynamicallyAdjustNumExeriseColumns() {
+    function dynamicallyAdjustNumExerciseColumns() {
         const filteredRowModel = table.getFilteredRowModel();
         const numExercises: { [key: string]: number } = {}
         // load protocols dynamically
         const protocolInstructionSets = appContext.settings.protocolDefinitions;
         for (const protocolName of Object.keys(protocolInstructionSets)) {
             const protocolInstructionSet = protocolInstructionSets[protocolName];
-            numExercises[protocolName] = protocolInstructionSet.length;
+            numExercises[protocolName] = calculateNumberOfExercises(protocolInstructionSet);
         }
         const protocolsShownInTable: string[] = []
         filteredRowModel.rows.forEach((row) => {
-            const protocolName = row.getValue("ProtocolName") as string;
+            const protocolName = row.original.ProtocolName as string;
             if (!(protocolsShownInTable.includes(protocolName))) {
                 protocolsShownInTable.push(protocolName);
             }
         });
 
-        // todo: if no records are on display, default to the currently selected protocol in the protocol dropdown
-
         // default to 4. before the protocol column was added, num exercises was hardcoded to 4
-        let maxExercises = protocolsShownInTable.length == 0 ? 0 : 4;
+        let maxExercises = Math.max(minExercisesToShow, protocolsShownInTable.length, 4)
         protocolsShownInTable.forEach((protocol) => {
             if (protocol in numExercises && numExercises[protocol] > maxExercises) {
                 maxExercises = numExercises[protocol];
@@ -296,130 +308,33 @@ export function ResultsTable({
     })
 
     useEffect(() => {
-        dynamicallyAdjustNumExeriseColumns();
-    }, [columnFilters, tableData]);
+        dynamicallyAdjustNumExerciseColumns();
+    }, [columnFilters, tableData, minExercisesToShow]);
 
     useEffect(() => {
-        if (qrcodeUrl) {
-            console.log("adding key listener")
-            const keyListener = (keyEvent: KeyboardEvent) => {
-                console.log(`key listener got event: ${JSON.stringify(keyEvent)}`)
-                if (keyEvent.code === "Escape") {
-                    setQrcodeUrl("");
-                }
-            };
-            window.addEventListener("keydown", keyListener)
-            return () => {
-                window.removeEventListener("keypress", keyListener)
-                console.log("removed key listener")
-            }
+        const listener: DataCollectorListener = {
+            currentTestUpdated(updatedRecord: SimpleResultsDBRecord) {
+                // happens when new test is started too
+                setTableData((prev) => {
+                    // upsert the updated record. force a copy so tanstack table sees the update
+                    return ([...prev.filter((record) => record.ID !== updatedRecord.ID), updatedRecord])
+                })
+            },
+
         }
-    }, [qrcodeUrl]);
-
-    function generateCsvPayload() {
-        const csvConfig = mkConfig({
-            fieldSeparator: ',',
-            filename: `fit-test-results-${new Date().getTime()}`,
-            decimalSeparator: '.',
-            // useKeysAsHeaders: true,
-            columnHeaders: table.getAllColumns().map(col => col.id)
-        });
-        const rows = table.getSortedRowModel().rows
-        const rowData = rows.map((row) => row.original)
-        const csv = generateCsv(csvConfig)(rowData)
-        return {csvConfig, csv};
-    }
-
-    function handleExportAsCsv() {
-        const {csvConfig, csv} = generateCsvPayload();
-        download(csvConfig)(csv)
-    }
-
-    function handleMailto() {
-        // can't have html body, so we'll construct something that's easily readable (not csv)
-
-        const rows = table.getSortedRowModel().rows
-        const rowData: SimpleResultsDBRecord[] = rows.map((row) => row.original)
-        let body = "Your fit test results:\n\n"
-        // TODO: dynamically figure out field names
-        const fields = ['Time', 'Participant', 'Mask', 'Notes', 'Ex 1', 'Ex 2', 'Ex 3', 'Ex 4', 'Final'];
-        rowData.forEach((row) => {
-            const rowInfo: string[] = []
-            fields.forEach((key) => {
-                if (key in row) {
-                    rowInfo.push(`${key}: ${row[key]}`)
-                }
-            })
-
-            body = body + rowInfo.join("\n") + "\n\n"
-        })
-
-        const link = createMailtoLink("", "Fit test results", body);
-        link.click()
-    }
-
-    function generateQRCode() {
-        // first, extract data and compress it with lz-string
-
-        // The table is filtered, so look at the filtered table data for which record IDs to include. Then grab these from localTableData
-        const rows = table.getSortedRowModel().rows
-        const rowData = rows.map((row) => row.original)
-        const recordIdsToInclude: number[] = rowData.map(rd => rd.ID)
-
-        const recordsToExport: SimpleResultsDBRecord[] = tableData
-            .filter((row) => recordIdsToInclude.includes(row.ID))
-            .map((record) => sanitizeRecord(record));
-
-        const str = LZString.compressToEncodedURIComponent(JSON.stringify(recordsToExport));
-        // sometimes location has a trailing '/', remove it so we don't get a '//'. This behavior is different between local and prod for some reason
-
-        const origin = location.origin
-        // const origin = "https://emcee5601.github.io"
-        const baseLocation = origin + appBasePath.replace(/\/$/, '')
-        const url = `${baseLocation}/view-results?data=${str}`;
-        console.log(`url is: ${url}`)
-        console.log(`url length is ${url.length}`);
-        if (url.length > 4296) {
-            console.log("url is too long")
-        } else {
-            setQrcodeUrl(url);
+        dataCollector.addListener(listener);
+        return () => {
+            dataCollector.removeListener(listener)
         }
-    }
+    }, [dataCollector]);
 
-    /**
-     * Returns a string summarising the filters in effect.
-     */
-    function getFilterSummary(): string {
-        let dateFilter = "";
-        let participantFilter = "";
-        columnFilters.forEach((columnFilter) => {
-            if ("Time" === columnFilter.id) {
-                dateFilter = columnFilter.value as string;
-            }
-            if ("Participant" === columnFilter.id) {
-                participantFilter = columnFilter.value as string;
-            }
-        })
-        return [participantFilter && `for ${participantFilter}`, dateFilter && `on ${dateFilter}`].join(" ")
-    }
 
     //All important CSS styles are included as inline styles for this example. This is not recommended for your code.
     return (
         <div style={{height: "100%", display: "flex", flexDirection: "column"}}>
             <div>
-                {qrcodeUrl &&
-                    <div className={"full-screen-overlay"}>
-                        <div onClick={() => setQrcodeUrl("")} id="results-qrcode">
-                            <span style={{display: "block"}}>Fit test results {getFilterSummary()}</span>
-                            <QRCodeSVG value={qrcodeUrl}
-                                       size={512}
-                                       marginSize={2}
-                                       title={"Fit Test Results"}/>
-                        </div>
-                    </div>}
-                <input type={"button"} value={"Export as CSV"} onClick={() => handleExportAsCsv()}/>
-                <input type={"button"} value={"Email"} onClick={() => handleMailto()}/>
-                <input type={"button"} value={"QR Code"} onClick={() => generateQRCode()}/>
+                <ReactTableCsvExportWidget table={table}/>
+                <ReactTableQrCodeExportWidget table={table} tableData={tableData} columnFilters={columnFilters}/>
             </div>
             <div
                 className="container"
@@ -510,7 +425,8 @@ export function ResultsTable({
                                 style={{
                                     display: 'flex',
                                     position: 'absolute',
-                                    transform: `translateY(${virtualRow.start}px)`, //this should always be a `style` as it changes on scroll
+                                    transform: `translateY(${virtualRow.start}px)`, //this should always be a `style`
+                                                                                    // as it changes on scroll
                                     width: '100%',
                                 }}
                             >

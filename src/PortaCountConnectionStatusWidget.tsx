@@ -25,7 +25,7 @@ export function PortaCountConnectionStatusWidget() {
     }, []);
 
     return (
-        <fieldset className="info-box">
+        <fieldset className="info-box-compact">
             <legend>Connection</legend>
             <span
                 className={getConnectionStatusCssClass(connectionStatus)}>{connectionStatus}</span>

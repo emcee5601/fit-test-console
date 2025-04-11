@@ -4,6 +4,9 @@ Not all combination of elements and formats are supported.
 */
 
 
+import {Table} from "@tanstack/react-table";
+import {download, generateCsv, mkConfig} from "export-to-csv";
+
 function getFilenamePrefix(htmlElement:HTMLElement, filenamePrefixHint = "data") {
     return (htmlElement.id || htmlElement.nodeName || filenamePrefixHint) + "_";
 }
@@ -37,7 +40,7 @@ export function createMailtoLink(to:string = "", subject:string = "", body:strin
  * @param extension
  */
 export function downloadData(data:string, filenameHint = "data", extension="txt") {
-    const fauxLink = createFauxLink(`${filenameHint}_${new Date().getTime()}.${extension}`, data);
+    const fauxLink = createFauxLink(`${filenameHint}_${new Date().toISOString().replace(/[:.]/g,"_")}.${extension}`, data);
     fauxLink.click();
 }
 
@@ -102,3 +105,29 @@ export function downloadTableAsJSON(tableElement:HTMLTableElement, filenameHint 
 }
 
 
+// somehow this import doesn't work
+// import {AcceptedData} from "export-to-csv/output/lib/types";
+// copied from export-to-csv/output/lib/types.d.ts
+type AcceptedData = number | string | boolean | null | undefined
+export type CsvAbleType = {
+    [key: number | string]: AcceptedData,
+};
+
+function generateCsvPayload<T extends CsvAbleType>(table: Table<T>) {
+    const csvConfig = mkConfig({
+        fieldSeparator: ',',
+        filename: `fit-test-results-${new Date().getTime()}`,
+        decimalSeparator: '.',
+        // useKeysAsHeaders: true,
+        columnHeaders: table.getAllColumns().map(col => col.id)
+    });
+    const rows = table.getSortedRowModel().rows
+    const rowData = rows.map((row) => row.original)
+    const csv = generateCsv(csvConfig)(rowData)
+    return {csvConfig, csv};
+}
+
+export function exportToCsv<T extends CsvAbleType>(table: Table<T>) {
+    const {csvConfig, csv} = generateCsvPayload(table);
+    download(csvConfig)(csv)
+}

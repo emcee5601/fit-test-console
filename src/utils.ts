@@ -3,14 +3,38 @@ import {isNull, isUndefined} from "json-2-csv/lib/utils";
 import {ConnectionStatus} from "./portacount-client-8020.ts";
 import {RefObject} from "react";
 
-export function convertFitFactorToFiltrationEfficiency(fitFactor:number) {
+/**
+ * Format a duration into hh:mm:ss:uuu
+ * @param absElapsedMs
+ * @param includeMs
+ */
+export function formatDuration(elapsedMs: number, includeMs: boolean = false): string {
+    const absElapsedMs = Math.abs(elapsedMs)
+    const millisVal = Math.round(absElapsedMs % 1000);
+    const totalSeconds = Math.floor(absElapsedMs / 1000);
+    const secondsVal = totalSeconds % 60;
+    const totalMinutes = Math.floor(totalSeconds / 60);
+    const minutesVal = totalMinutes % 60;
+    const totalHours = Math.floor(totalMinutes / 60);
+    // const hoursVal = totalHours % 24;
+    // const totalDays = Math.round(totalHours / 24);
+    // const daysVal = totalDays % 24;
+    // hh:mm:ss or m:ss if no h
+    return `${elapsedMs<0?"-":""}${totalHours ? `${totalHours}:` : ""}${minutesVal.toString().padStart(totalHours?2:1, "0")}:${secondsVal.toString().padStart(2, "0")}${includeMs ? (millisVal > 0 ? `.${millisVal.toString().padStart(3, "0")}` : '') : ""}`;
+}
+
+export function formatTime(date: Date) {
+    return `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`
+}
+
+export function convertFitFactorToFiltrationEfficiency(fitFactor: number) {
     const efficiency = 100 * (1.0 - 1.0 / fitFactor);
     const efficiencyPercentage: string = Number(efficiency).toFixed(efficiency < 99 ? 0 : 3)
     return efficiencyPercentage;
 }
 
 
-export function getConnectionStatusCssClass(connectionStatus: ConnectionStatus) : string {
+export function getConnectionStatusCssClass(connectionStatus: ConnectionStatus): string {
     switch (connectionStatus) {
         case ConnectionStatus.DISCONNECTED: {
             return "connection-status status-disconnected";
@@ -27,7 +51,7 @@ export function getConnectionStatusCssClass(connectionStatus: ConnectionStatus) 
     }
 }
 
-export function getFitFactorCssClass(fitFactor:number):string {
+export function getFitFactorCssClass(fitFactor: number): string {
     if (fitFactor < 1.1) {
         // probably aborted
         return "result aborted"
@@ -47,14 +71,17 @@ export function sum(theNumbers: number[], startIndex: number = 0, endIndex: numb
     return theNumbers.slice(startIndex, endIndex).reduce((total, theNumber) => total + theNumber, 0)
 }
 
-export function avg(theNumbers: number[], startIndex: number = 0, endIndex: number = -1) {
+export function avg(...theNumbers:number[]) {
+    return avgArray(theNumbers);
+}
+export function avgArray(theNumbers: number[], startIndex: number = 0, endIndex: number = -1) {
     if (endIndex < 0) {
         endIndex = theNumbers.length;
     }
     return sum(theNumbers, startIndex, endIndex) / (endIndex - startIndex);
 }
 
-export function formatFitFactor(value: number):string {
+export function formatFitFactor(value: number): string {
     if (isNaN(value) || isUndefined(value) || isNull(value)) {
         return "?";
     }

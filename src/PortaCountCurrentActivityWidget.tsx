@@ -43,7 +43,7 @@ export function PortaCountCurrentActivityWidget() {
     }, []);
 
     return (
-        <fieldset className="info-box">
+        <fieldset className="info-box-compact">
             <legend>Activity</legend>
             {client.state.activity}
         </fieldset>

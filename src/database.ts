@@ -40,7 +40,7 @@ class SimpleDB extends AbstractDB {
     getSomeRecentLines(callback: ((keepLines: SimpleDBRecord) => void)) {
         const transaction = this.openTransactionClassic("readonly");
         if (!transaction) {
-            console.log(`${this.dbName} database not ready`);
+            console.debug(`${this.dbName} database not ready`);
             return;
         }
         const request = transaction.objectStore(SimpleDB.SERIAL_LINE_OBJECT_STORE).openCursor(null, "prev");
@@ -99,10 +99,10 @@ class SimpleDB extends AbstractDB {
         };
         const request = transaction.objectStore(SimpleDB.SERIAL_LINE_OBJECT_STORE).add(record);
         request.onerror = (event) => {
-            console.log(`addRecord request error ${event}`);
+            console.error(`addRecord request error ${event}`);
         }
-        request.onsuccess = (event) => {
-            console.log(`addRecord request complete: ${event}, new key is ${request.result}`);
+        request.onsuccess = () => {
+            // console.debug(`addRecord request complete: ${event}, new key is ${request.result}`);
         }
     }
 }

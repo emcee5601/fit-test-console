@@ -1,8 +1,10 @@
 import {getLines} from "./datasource-helper.ts";
 import {ReadableStreamDefaultReader} from "node:stream/web";
-import {ExternalController} from "./external-control.tsx";
+import {ExternalController, ExternalControlResponsePatterns} from "./external-control.ts";
 import {SampleSource} from "./simple-protocol.ts";
 import {ControlSource} from "./control-source.ts";
+import {APP_SETTINGS_CONTEXT, AppSettings, AppSettingType} from "./app-settings.ts";
+import {StringLike, StringLikeWithMatchesIgnoringLineStart} from "./string-like.ts";
 
 
 class Patterns {
@@ -15,7 +17,8 @@ class Patterns {
     static AMBIENT_PURGE = /^Ambt\s+purge\s*=\s*(?<ambientPurgeTime>\d+)/i; // Ambt purge   = 4 sec.
     static AMBIENT_SAMPLE = /^Ambt\s+sample\s*=\s*(?<ambientSampleTime>\d+)/i; // Ambt sample  = 5 sec.
     static MASK_PURGE = /^Mask\s+purge\s*=\s*(?<maskPurgeTime>\d+)/i; // Mask purge  = 11 sec.
-    static MASK_SAMPLE = /^Mask\s+sample\s+(?<exerciseNumber>\d+)\s*=\s*(?<maskSampleTime>\d+)/i; // Mask sample 1 = 40 sec.
+    static MASK_SAMPLE = /^Mask\s+sample\s+(?<exerciseNumber>\d+)\s*=\s*(?<maskSampleTime>\d+)/i; // Mask sample 1 = 40
+                                                                                                  // sec.
     static DIP_SWITCH = /^DIP\s+switch\s+=\s+(?<dipSwitchBits>\d+)/i; // DIP switch  = 10111111
     static COUNT_READING = /^(?<timestamp>\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d.\d{3}Z)?\s*Conc\.\s+(?<concentration>[\d.]+)/i; // Conc.      0.00 #/cc
     static NEW_TEST = /^NEW\s+TEST\s+PASS\s*=\s*(?<passLevel>\d+)/i; // NEW TEST PASS =  100
@@ -25,18 +28,6 @@ class Patterns {
     static TEST_TERMINATED = /^Test\s+Terminated/i; // Test Terminated
     static OVERALL_FIT_FACTOR = /^Overall\s+FF\s+(?<fitFactor>[\d.]+)\s+(?<result>.+)/i; // Overall FF    89 FAIL
     static LOW_PARTICLE_COUNT = /^(?<concentration>\d+)\/cc\s+Low\s+Particle\s+Count/i; // 970/cc Low Particle Count
-}
-
-export class ExternalControlPatterns {
-    // external control response patterns
-    // 2024-10-24T17:38:02.876Z 005138.88
-    static PARTICLE_COUNT = /^(?<timestamp>\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d.\d{3}Z)?\s*(?<concentration>\d+\.\d+)\s*/; // 006408.45
-    static SAMPLING_FROM_MASK = /^VF$/;  // VF
-    static SAMPLING_FROM_AMBIENT = /^VN$/;  // VN
-    static DATA_TRANSMISSION_DISABLED = /^ZD$/; // ZD
-    static DATA_TRANSMISSION_ENABLED = /^ZE$/; // ZE
-    static EXTERNAL_CONTROL = /^(OK|EJ)$/; // OK.  EJ seems to be if it's already in external control mode
-    static INTERNAL_CONTROL = /^G$/; // G
 }
 
 abstract class PortaCountEvent {
@@ -216,6 +207,7 @@ export class PortaCountState {
 export type SerialPortLike = {
     open(options: SerialOptions): Promise<void>;
     getInfo(): SerialPortInfo;
+    connected: boolean;
     readonly readable: ReadableStream<Uint8Array> | null;
     readonly writable: WritableStream<Uint8Array> | null;
 }
@@ -293,6 +285,11 @@ export class PortaCountClient8020 {
         }
     }
 
+    /**
+     * This will update the control source based on where the concentration event came from.
+     * @param concentrationEvent
+     * @private
+     */
     private updateActivity(concentrationEvent: ParticleConcentrationEvent) {
         this.state.sampleSource = concentrationEvent.sampleSource;
         this.state.controlSource = concentrationEvent.controlSource;
@@ -310,7 +307,8 @@ export class PortaCountClient8020 {
     private async monitor(reader: ReadableStreamDefaultReader<Uint8Array>) {
         this.dispatch(new ConnectionStatusChangedEvent(ConnectionStatus.WAITING))
         for await (const line of getLines(reader)) {
-            // todo: remove non-printable characters from line. sometimes these are received and mess up the parsing. usually they are leading characters
+            // todo: remove non-printable characters from line. sometimes these are received and mess up the parsing.
+            // usually they are leading characters
             if (this.state.connectionStatus === ConnectionStatus.WAITING) {
                 this.dispatch(new ConnectionStatusChangedEvent(ConnectionStatus.RECEIVING))
             }
@@ -340,9 +338,9 @@ export class PortaCountClient8020 {
     }
 
     private dispatch(event: PortaCountEvent) {
-        console.log(`dispatch ${event.constructor.name}`);
+        // console.debug(`dispatch ${event.constructor.name}`);
         this.listeners.forEach((listener) => {
-            // console.log(`dispatch event ${event.constructor.name}`)
+            // console.debug(`dispatch event ${event.constructor.name}`)
             switch (event.constructor.name) {
                 case ParticleConcentrationEvent.name: {
                     if (listener.particleConcentrationReceived) {
@@ -403,31 +401,34 @@ export class PortaCountClient8020 {
                     break;
                 }
                 default: {
-                    console.log(`unsupported event: ${JSON.stringify(event)}`)
+                    console.debug(`unsupported event: ${JSON.stringify(event)}`)
                 }
             }
         })
     }
 
     // visible-for-testing
-    public processLine(line: string) {
-        if (line.length === 0) {
+    public processLine(rawLine: string, ignoreStartOfLineMatch: boolean = false) {
+        if (rawLine.length === 0) {
             return;
         }
+
+        const line: string | StringLike = ignoreStartOfLineMatch ? new StringLikeWithMatchesIgnoringLineStart(rawLine) : rawLine;
+
         // TODO: strip out (and process) timestamp if present. inject timestamp if missing
 
         let match;
-        if (line.match(ExternalControlPatterns.SAMPLING_FROM_MASK)) {
+        if (line.match(ExternalControlResponsePatterns.SAMPLING_FROM_MASK)) {
             this.dispatch(new SampleSourceChangedEvent(SampleSource.MASK));
-        } else if (line.match(ExternalControlPatterns.SAMPLING_FROM_AMBIENT)) {
+        } else if (line.match(ExternalControlResponsePatterns.SAMPLING_FROM_AMBIENT)) {
             this.dispatch(new SampleSourceChangedEvent(SampleSource.AMBIENT));
-        } else if (line.match(ExternalControlPatterns.DATA_TRANSMISSION_DISABLED)) {
+        } else if (line.match(ExternalControlResponsePatterns.DATA_TRANSMISSION_DISABLED)) {
             this.dispatch(new DataTransmissionStateChangedEvent(DataTransmissionState.Paused))
-        } else if (line.match(ExternalControlPatterns.DATA_TRANSMISSION_ENABLED)) {
+        } else if (line.match(ExternalControlResponsePatterns.DATA_TRANSMISSION_ENABLED)) {
             this.dispatch(new DataTransmissionStateChangedEvent(DataTransmissionState.Transmitting));
-        } else if (line.match(ExternalControlPatterns.EXTERNAL_CONTROL)) {
+        } else if (line.match(ExternalControlResponsePatterns.EXTERNAL_CONTROL)) {
             this.dispatch(new ControlSourceChangedEvent(ControlSource.External))
-        } else if (line.match(ExternalControlPatterns.INTERNAL_CONTROL)) {
+        } else if (line.match(ExternalControlResponsePatterns.INTERNAL_CONTROL)) {
             this.dispatch(new ControlSourceChangedEvent(ControlSource.Internal))
         } else if ((match = line.match(Patterns.NEW_TEST))) {
             this.state.activity = Activity.Testing
@@ -458,17 +459,32 @@ export class PortaCountClient8020 {
         } else if ((match = line.match(Patterns.TEST_TERMINATED))) {
             this.state.activity = Activity.Idle
             this.dispatch(new TestTerminatedEvent());
-        } else if ((match = line.match(Patterns.COUNT_READING) || line.match(ExternalControlPatterns.PARTICLE_COUNT))) {
+        } else if ((match = line.match(Patterns.COUNT_READING) || line.match(ExternalControlResponsePatterns.PARTICLE_COUNT))) {
             this.state.activity = Activity.Counting
             const concentration = Number(match.groups?.concentration);
             const source = this.state.sampleSource
-            const controlSource = line.match(ExternalControlPatterns.PARTICLE_COUNT) ? ControlSource.External : ControlSource.Internal
+            const controlSource = line.match(ExternalControlResponsePatterns.PARTICLE_COUNT) ? ControlSource.External : ControlSource.Internal
             const event = new ParticleConcentrationEvent(concentration, source, controlSource);
             const timestamp = match.groups?.timestamp;
             if (timestamp) {
                 event.asOf(Date.parse(timestamp))
             }
             this.dispatch(event);
+        } else {
+            // todo: lines starting with 'E' seem to be errors. try to retry once any commands that resulted in an error response.
+            if(line.match(/^E/)) {
+                // seems to be some error
+                // todo: put this above in the main parser section?
+                console.warn(`error received: ${line}`)
+            } else if (!ignoreStartOfLineMatch) {
+                // todo: don't do this anymore? don't think there's been a case of these not being errors
+                // try again, but ignore the start of line matching. this is in case there were extraneous characters
+                // for some reason
+                console.debug(`retrying unparsed pattern: ${line}`)
+                this.processLine(line.toString(), true)
+            } else {
+                console.debug(`unparsed pattern remains unparsed: ${line}`)
+            }
         }
     }
 
@@ -477,13 +493,46 @@ export class PortaCountClient8020 {
      * @param port
      */
     public connect(port: SerialPortLike) {
-        if (port.readable) {
-            this.monitor(port.readable.getReader());
+        // todo: maybe break this out?
+        console.debug(`portacount client connect(${JSON.stringify(port)})`)
+        if (port.connected) {
+            console.debug("portacount client connect, connected; setting up reader and writer")
+            if (port.readable) {
+                this.monitor(port.readable.getReader());
+            }
+            if (port.writable) {
+                this.externalController.setWriter(port.writable.getWriter());
+                /**
+                 * todo: the app needs to see data from the portacount to know it's connected properly.
+                 *  edge cases:
+                 *  1. connected to portacount already in external control mode, but data transmission is turned off
+                 * (won't receive data)
+                 *  2. connected to portacount in internal control mode, but is not counting (won't receive data)
+                 *  3. connected to portacount in external control mode but driver doesn't support setting CTS properly
+                 * and cable has CTS line connected (won't receive data)
+                 *
+                 * Workaround for 1 and 2 is to switch to external control mode, then turn on data transmission.
+                 */
+                APP_SETTINGS_CONTEXT.getActualSetting(AppSettings.SYNC_DEVICE_STATE_ON_CONNECT).then((syncOnConnect) => {
+                    if (syncOnConnect) {
+                        this.externalController.assumeManualControl()
+                        this.externalController.enableDataTransmission()
+                        // todo: use settings to determine: if we start in external or internal control mode
+                        // todo: synchronize state to portacount state by interrogation
+                        // todo: synchronize status to portacount (create a status widget)
+                    }
+                })
+                // todo: verify that we can connect. if not, disable auto-connect. see external-controls.verifyExternalControllability() for inspiration
+            }
+        } else {
+            console.debug("portacount client connect not connected, attempting to connect...")
+            APP_SETTINGS_CONTEXT.getActualSetting(AppSettings.BAUD_RATE).then((baudRate: AppSettingType) => {
+                port.open({baudRate: Number(baudRate)}).then(() => {
+                    console.log(`port opened: ${JSON.stringify(port.getInfo())}`)
+                    this.connect(port)
+                })
+            })
         }
-        if (port.writable) {
-            this.externalController.setWriter(port.writable.getWriter());
-        }
-
     }
 }
 
@@ -492,5 +541,3 @@ export enum ConnectionStatus {
     WAITING = "Waiting for PortaCount",
     RECEIVING = "Receiving data",
 }
-
-export const PORTACOUNT_CLIENT_8020 = new PortaCountClient8020()

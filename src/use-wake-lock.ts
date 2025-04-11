@@ -1,5 +1,6 @@
 import {useCallback, useEffect, useRef} from "react";
-import {AppSettings, useSetting} from "./app-settings.ts";
+import {AppSettings} from "./app-settings.ts";
+import {useSetting} from "./use-setting.ts";
 
 /**
  * hook to prevent screen from going to sleep tied to a setting.

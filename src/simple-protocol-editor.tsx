@@ -11,8 +11,9 @@ import {
 } from 'vanilla-jsoneditor';
 import {useEffect, useRef} from 'react';
 import "./simple-protocol-editor.css";
-import {AppSettings, useSetting} from "./app-settings.ts";
+import {AppSettings} from "./app-settings.ts";
 import stringifyDeterministically from "json-stringify-deterministic";
+import {useSetting} from "./use-setting.ts";
 
 export function SimpleFitTestProtocolPanel(props: JSONEditorPropsOptional) {
     // TODO: extract default
@@ -41,17 +42,29 @@ export function SimpleFitTestProtocolPanel(props: JSONEditorPropsOptional) {
             items: {
                 oneOf: [
                     {
-                        // v1: list of instructions
+                        // v1: list of instructions "vanilla"
                         type: "string"
                     },
                     {
                         oneOf: [
+                            { // v3: instructions with the 4 combinations of ambient/mask + sample/purge "standardized"
+                              type: "object",
+                              properties: {
+                                  "instructions": {type: "string"},
+                                  "ambient_purge": {type: "integer", minimum: 0, maximum: 10},
+                                  "ambient_sample": {type: "integer", minimum: 0, maximum: 60},
+                                  "mask_purge": {type: "integer", minimum: 0, maximum: 10},
+                                  "mask_sample": {type: "integer", minimum: 0, maximum: 60},
+                              },
+                                required: ["instructions"],
+                                additionalProperties: false
+                            },
                             {
-                                // v2: list of instructions with stage durations
+                                // v2: list of instructions with stage durations "legacy"
                                 type: "object",
                                 properties: {
                                     "instructions": {type: "string"},
-                                    "purge_duration": {type: "integer", minimum: 4, maximum: 10},
+                                    "purge_duration": {type: "integer", minimum: 0, maximum: 10},
                                     "ambient_duration": {type: "integer", minimum: 0, maximum: 60},
                                     "sample_duration": {type: "integer", minimum: 0, maximum: 60},
                                 },
@@ -60,11 +73,11 @@ export function SimpleFitTestProtocolPanel(props: JSONEditorPropsOptional) {
                             },
                             {
                                 // TODO: construct this from the above instead of copy-pasta
-                                // v2.1: abbreviated list of instructions with stage durations
+                                // v2.1: abbreviated list of instructions with stage durations "legacy"
                                 type: "object",
                                 properties: {
                                     "i": {type: "string"},
-                                    "p": {type: "integer", minimum: 4, maximum: 10},
+                                    "p": {type: "integer", minimum: 0, maximum: 10}, // allow zero purge so we can have zero delay back-to-back mask sampling
                                     "a": {type: "integer", minimum: 0, maximum: 60},
                                     "s": {type: "integer", minimum: 0, maximum: 60},
                                 },

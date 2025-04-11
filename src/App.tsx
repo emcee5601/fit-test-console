@@ -2,8 +2,8 @@ import './App.css'
 
 import {ProtocolExecutorPanel} from "./ProtocolExecutorPanel.tsx";
 import {CurrentParticipantPanel} from "./CurrentParticipantPanel.tsx";
-import {ProtocolSelectorWidget} from "./ProtocolSelectorWidget.tsx";
-import {AppSettings, useSetting} from "./app-settings.ts";
+import {ProtocolSelectorWidget1} from "./ProtocolSelectorWidget1.tsx";
+import {AppSettings} from "./app-settings.ts";
 import {PortaCountCommandWidget} from "./PortaCountCommandWidget.tsx";
 import {PortaCountControlSourceWidget} from "./PortaCountControlSourceWidget.tsx";
 import {PortaCountSampleSourceWidget} from "./PortaCountSampleSourceWidget.tsx";
@@ -11,15 +11,17 @@ import {PortaCountCurrentActivityWidget} from "./PortaCountCurrentActivityWidget
 import {PortaCountLastLineWidget} from "./PortaCountLastLineWidget.tsx";
 import {TestInstructionsPanel} from "./TestInstructionsPanel.tsx";
 import {DriverSelectorWidget} from "./DriverSelectorWidget.tsx";
+import {useSetting} from "./use-setting.ts";
 
 function App() {
     const [showExternalControl] = useSetting<boolean>(AppSettings.SHOW_EXTERNAL_CONTROL);
 
     return (
         <>
-            <section style={{float: "inline-start"}}>
+            <section style={{display:"flex", flexWrap:"wrap", float: "inline-start", alignItems:"center"}}>
+                {/*todo: auto-connect. should be part of app context. and a setting*/}
                 <DriverSelectorWidget/>
-                <ProtocolSelectorWidget/>
+                {(!showExternalControl) && <ProtocolSelectorWidget1/> /* don't need this here since protocol executor panel has one*/}
                 {showExternalControl && <PortaCountControlSourceWidget/>}
                 {showExternalControl && <PortaCountSampleSourceWidget/>}
                 <PortaCountCurrentActivityWidget/>
@@ -27,8 +29,8 @@ function App() {
                 <PortaCountLastLineWidget/>
                 {showExternalControl && <PortaCountCommandWidget/>}
             </section>
-            <div style={{display: "flex", width: "100%"}}>
-                {showExternalControl && <ProtocolExecutorPanel/>}
+            <div style={{display: "flex", width: "100%", flexDirection:"column"}}>
+                {showExternalControl && <ProtocolExecutorPanel style={{display:"block", width: "100%"}}/>}
                 <TestInstructionsPanel/>
             </div>
             <CurrentParticipantPanel/>

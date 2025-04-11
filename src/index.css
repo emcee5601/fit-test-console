@@ -1,169 +1,267 @@
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
 
-  color-scheme: normal;
-  /*color: rgba(255, 255, 255, 0.87);*/
-  /*background-color: green;*/
+    color-scheme: normal;
+    /*color: rgba(255, 255, 255, 0.87);*/
+    /*background-color: green;*/
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+    font-weight: 500;
+    color: #646cff;
+    text-decoration: inherit;
 }
+
 a:hover {
-  color: #535bf2;
+    color: #535bf2;
 }
 
 body {
-  margin: 0;
-  display: flex;
-  min-width: 320px;
-  min-height: 100vh;
+    margin: 0;
+    display: flex;
+    min-width: 320px;
+    min-height: 100vh;
 }
 
 h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+    font-size: 3.2em;
+    line-height: 1.1;
 }
 
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
+    border-radius: 8px;
+    border: 1px solid gray;
+    /*padding: 0.6em 1.2em;*/
+    /*font-size: 1em;*/
+    /*font-weight: 500;*/
+    /*font-family: inherit;*/
+    /*background-color: #1a1a1a;*/
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: border-color 0.25s, background-color 1s ease-in-out;
 }
+
 button:hover {
-  border-color: #646cff;
+    border-color: #646cff;
+    transition: background-color 1s ease-in-out;
 }
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+
+button:hover.start {
+    background-color: lightgreen;
+}
+
+button:hover.stop {
+    background-color: pink;
+}
+
+/*button:focus,*/
+/*button:focus-visible {*/
+/*  outline: 4px auto -webkit-focus-ring-color;*/
+/*}*/
+button:disabled {
+    cursor: not-allowed;
 }
 
 .resizer {
-  position: absolute;
-  right: 0;
-  top: 0;
-  height: 100%;
-  width: 5px;
-  background: rgba(0, 0, 0, 0.5);
-  cursor: col-resize;
-  user-select: none;
-  touch-action: none;
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    width: 5px;
+    background: rgba(0, 0, 0, 0.5);
+    cursor: col-resize;
+    user-select: none;
+    touch-action: none;
 }
 
 .resizer.isResizing {
-  background: blue;
-  opacity: 1;
+    background: blue;
+    opacity: 1;
 }
 
 @media (hover: hover) {
-  .resizer {
-    opacity: 0;
-  }
+    .resizer {
+        opacity: 0;
+    }
 
-  *:hover > .resizer {
-    opacity: 1;
-  }
+    *:hover > .resizer {
+        opacity: 1;
+    }
 }
 
 @media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+    :root {
+        color: #213547;
+        background-color: #ffffff;
+    }
+
+    a:hover {
+        color: #747bff;
+    }
+
+    button {
+        background-color: #f9f9f9;
+    }
 }
 
 table {
-  border-collapse: collapse;
+    border-collapse: collapse;
 }
 
 table th {
-  top: 0;
-  background-color: white;
-  border-top: 1px solid black;
-  border-left: 1px solid black;
-  border-right: 1px solid black;
-  border-bottom: 5px solid black;
+    top: 0;
+    background-color: white;
+    border-top: 1px solid black;
+    border-left: 1px solid black;
+    border-right: 1px solid black;
+    border-bottom: 5px solid black;
 }
 
 table td {
-  border: 1px solid black;
-  text-align: left;
+    border: 1px solid black;
+    text-align: left;
 }
 
 div.editable-table-cell {
-  display: inline-block;
-  outline: none;
+    display: inline-block;
+    outline: none;
 }
 
 textarea.table-cell-input {
-  border: none;
-  display: block;
-  overflow-y: hidden;
+    border: none;
+    display: block;
+    overflow-y: hidden;
 }
+
 td.results {
-  text-align: end;
+    text-align: end;
 }
 
 .result {
-  width: 100%;
-  padding-inline: 0.3em;
+    width: 100%;
+    padding-inline: 0.3em;
 }
+
 .efficiency {
-  font-size: smaller;
+    font-size: smaller;
 }
 
 .pass {
-  background-color: green;
-  color: white;
+    background-color: green;
+    color: white;
 }
 
 .fail {
-  background-color: darkred;
-  color: white;
+    background-color: darkred;
+    color: white;
 }
 
 .aborted {
-  background-color: gray;
-  text-align: center;
+    background-color: gray;
+    text-align: center;
 }
 
 .low-fit-score {
-  background-color: darkred;
-  color: whitesmoke;
+    background-color: darkred;
+    color: whitesmoke;
 }
+
 .moderate-fit-score {
-  background-color: darkorange;
-  color: whitesmoke;
+    background-color: darkorange;
+    color: whitesmoke;
 }
+
 .high-fit-score {
-  background-color: green;
-  color: whitesmoke
+    background-color: green;
+    color: whitesmoke
 }
 
 .info-box {
-  display: inline-block;
-  text-align: start;
-  vertical-align: top;
-  height: max-content;
+    display: inline-block;
+    text-align: start;
+    vertical-align: top;
+}
+
+.info-box-compact {
+    display: inline-block;
+    text-align: start;
+    vertical-align: top;
+    padding-top: 0;
+    padding-bottom: 0.2em;
+    padding-inline-start: 0.2em;
+    padding-inline-end: 0.4em;
+}
+
+/*for elapsed time widget*/
+.on-time {
+    background-color: lightgreen;
+}
+
+@property --offset {
+    syntax: "<percentage>";
+    inherits: true;
+    initial-value: 0%;
+}
+@keyframes slide-gradient {
+    from {
+        --offset: -1000%
+    }
+    to {
+        --offset:1000%
+    }
+}
+
+
+.over-time {
+    background-color: pink;
+    /*animation: pulse-background-2 1s infinite ease-in-out alternate;*/
+    /*, slide-gradient 30s infinite ease-in-out alternate;*/
+    /*background-image: repeating-linear-gradient(*/
+    /*        -60deg,*/
+    /*        red calc(var(--offset)),*/
+    /*        pink calc(var(--offset) + 30%),*/
+    /*        pink calc(var(--offset) + 50%),*/
+    /*        red calc(var(--offset) + 80%)*/
+    /*);*/
+}
+
+.idle {
+    background-color: #eeeeee;
+}
+
+.smooth-background-change {
+    transition: background-color 1s ease-in-out;
+}
+
+.number-field {
+    text-align: end;
+    font-variant-numeric: tabular-nums;
+}
+
+@keyframes pulse-background {
+    from {
+        filter: hue-rotate(-10deg);
+    }
+    to {
+        filter: hue-rotate(10deg);
+    }
+}
+
+
+@keyframes pulse-background-2 {
+    from {
+        filter: brightness(100%)
+    }
+    to {
+        filter: brightness(400%);
+    }
 }

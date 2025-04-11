@@ -1,14 +1,31 @@
 import {ConnectionStatus, PortaCountListener, SerialPortLike} from "./portacount-client-8020.ts";
 import {useContext, useEffect, useState} from "react";
 import {AppContext} from "./app-context.ts";
-import {AppSettings, useSetting} from "./app-settings.ts";
+import {AppSettings} from "./app-settings.ts";
 import {DataSource} from "./data-source.ts";
 import {UsbSerialDrivers} from "./web-usb-serial-drivers.ts";
 import {DataFilePushSource, getReadableStreamFromDataSource} from "./datasource-helper.ts";
 import {getConnectionStatusCssClass} from "./utils.ts";
+import {useSetting} from "./use-setting.ts";
 
 /**
  * Control for selecting the driver to use to connect to the PortaCount. Or to a simulator. Shows connection status.
+ * Putting notes here until there's a better home for it.
+ * We can use the drivers available via web serial interface. These are limited to whatever is on the computer/browser.
+ * These are labeled "WebSerial" or eventually "Computer's drivers". Alternatively, we can use our own drivers embedded
+ * into the app through libraries or rolling our own. These are labeled "WebUsbSerial" because they use the WebUSB
+ * interface and the serial interface sits on top of that. These will eventually be labeled "App's drivers".
+ *
+ * Depending on the quality of whatever driver we end up using, we may need a modified usb-serial adapter or
+ * equivalent. Some drivers, notably the ones currently used by the app, don't set CTS properly as required by the
+ * PortaCount in external control mode. The workaround to this seems to be to cut the CTS wire (via a modified
+ * adapter). This, for instance, allows us to use the ch340 cable which shows up under the WebSerial set of drivers,
+ * in external control mode.
+ *
+ * Symptoms of not having CTS set properly: the app can switch to external control mode, the PortaCount display goes
+ * off, but the app does not see counts. Or the counts stop after issuing subsequent commands. The simplest way to
+ * check for this is to send the beep command twice. If it cannot beep a second time, then CTS is probably not being
+ * set properly by the driver. The simplest fix is to cut the CTS wire in the cable/adapter.
  * @constructor
  */
 export function DriverSelectorWidget() {
@@ -16,10 +33,10 @@ export function DriverSelectorWidget() {
     const [dataCollector] = useState(appContext.dataCollector)
     const [portaCountClient] = useState(appContext.portaCountClient)
     const [enableSimulator] = useSetting<boolean>(AppSettings.ENABLE_SIMULATOR);
-    const [baudRate] = useSetting<string>(AppSettings.BAUD_RATE)
+    const [baudRate] = useSetting<number>(AppSettings.BAUD_RATE)
     const simulationSpeedsBytesPerSecond: number[] = [300, 1200, 14400, 28800, 56760];
-    const [simulationSpeedBytesPerSecond, setSimulationSpeedBytesPerSecond] = useState<number>(simulationSpeedsBytesPerSecond[simulationSpeedsBytesPerSecond.length - 1]);
-    const [dataSource, setDataSource] = useState<string>("web-serial")
+    const [simulationSpeedBytesPerSecond, setSimulationSpeedBytesPerSecond] = useSetting<number>(AppSettings.SIMULATOR_FILE_SPEED)
+    const [dataSource, setDataSource] = useSetting<DataSource>(AppSettings.SELECTED_DATA_SOURCE)
     const [connectionStatus, setConnectionStatus] = useState(portaCountClient.state.connectionStatus)
 
     useEffect(() => {
@@ -75,10 +92,12 @@ export function DriverSelectorWidget() {
             const fakeSerialPort: SerialPortLike = {
                 readable: fakeReader,
                 writable: fakeWriter,
+                connected: false,
                 getInfo(): SerialPortInfo {
                     return {};
                 },
                 open(): Promise<void> {
+                    this.connected = true;
                     return Promise.resolve();
                 }
             }
@@ -104,17 +123,17 @@ export function DriverSelectorWidget() {
 
     function connectButtonClickHandler() {
         switch (dataSource) {
-            case "web-usb-serial":
+            case DataSource.WebUsbSerial:
                 connectViaWebUsbSerial();
                 break;
-            case "web-serial":
+            case DataSource.WebSerial:
                 connectViaWebSerial()
                 break;
-            case "simulator":
+            case DataSource.Simulator:
                 dataCollector.fitFactorEstimator.resetChart();
                 connectViaSimulator()
                 break;
-            case "simulator-file":
+            case DataSource.SimulatorFile:
                 dataCollector.fitFactorEstimator.resetChart();
                 connectViaSimulatorFile()
                 break;
@@ -125,31 +144,32 @@ export function DriverSelectorWidget() {
     }
 
     return (
-        <fieldset className={"info-box"}>
+        <fieldset className={"info-box-compact"}>
             <legend>Data Source <span
                 className={getConnectionStatusCssClass(connectionStatus)}>{connectionStatus}</span>
             </legend>
             <div style={{display: "inline-block"}}>
                 <select id="data-source-selector"
-                        defaultValue={dataSource}
-                        onChange={(event) => setDataSource(event.target.value)}
+                        value={dataSource}
+                        onChange={(event) => setDataSource(event.target.value as DataSource)}
                         disabled={portaCountClient.state.connectionStatus !== ConnectionStatus.DISCONNECTED}>
-                    <option value="web-serial">WebSerial</option>
-                    <option value="web-usb-serial">Web USB Serial</option>
-                    {enableSimulator && <option value="simulator">Simulator</option>}
+                    <option value={DataSource.WebSerial}>Computer drivers (webserial)</option>
+                    <option value={DataSource.WebUsbSerial}>App drivers (webusb serial)</option>
+                    {enableSimulator && <option value={DataSource.SimulatorFile}>Simulator (file)</option>}
+                    {enableSimulator && <option value={DataSource.Simulator}>Simulator</option>}
                 </select>
+                {dataSource === DataSource.SimulatorFile &&
+                    <div style={{display: "inline-block"}}>
+                        <label htmlFor="simulation-speed-select"></label>
+                        <select id="simulation-speed-select"
+                                value={simulationSpeedBytesPerSecond}
+                                onChange={(event) => setSimulationSpeedBytesPerSecond(Number(event.target.value))}>
+                            {simulationSpeedsBytesPerSecond.map((bytesPerSecond: number) => <option
+                                key={bytesPerSecond}
+                                value={bytesPerSecond}>{bytesPerSecond} bps</option>)}
+                        </select>
+                    </div>}
             </div>
-            {dataSource === "simulator-file" &&
-                <div style={{display: "none"}}>
-                    <label htmlFor="simulation-speed-select">Speed: </label>
-                    <select id="simulation-speed-select"
-                            value={simulationSpeedBytesPerSecond}
-                            onChange={(event) => setSimulationSpeedBytesPerSecond(Number(event.target.value))}>
-                        {simulationSpeedsBytesPerSecond.map((bytesPerSecond: number) => <option
-                            key={bytesPerSecond}
-                            value={bytesPerSecond}>{bytesPerSecond} bps</option>)}
-                    </select>
-                </div>}
             {/*todo: change connect button to "stop" or "disconnect" button once connected*/}
             <input className="button" type="button" value="Connect" id="connect-button"
                    disabled={portaCountClient.state.connectionStatus !== ConnectionStatus.DISCONNECTED}

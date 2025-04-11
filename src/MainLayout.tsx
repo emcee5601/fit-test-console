@@ -5,11 +5,21 @@ import {AppContextProvider} from "./AppContextProvider.tsx";
 export function MainLayout() {
     return (<>
         <AppContextProvider>
-            <div style={{position:"fixed", top:0, left: 0, width:"100vw"}}>
+            <div id="navbar-container" style={{position: "relative", top: 0, left: 0}}>
                 <NavBar/>
             </div>
-            <div style={{position:"fixed", top:"2rem", left: 0, right: "0.5rem", width:"calc(100vw - 1rem)", bottom:0, overflow:"auto", marginInline:"0.5rem"}}>
-            <Outlet/>
+            <div style={{
+                position: "relative",
+                top: "0.5rem",
+                bottom: "2.4rem",
+                left: 0,
+                right: "0.5rem",
+                width: "calc(100vw - 1.4rem)",
+                height: "calc(100% - 2.4rem)",
+                overflow: "auto",
+                marginInline: "0.5rem"
+            }}>
+                <Outlet/>
             </div>
         </AppContextProvider>
     </>)

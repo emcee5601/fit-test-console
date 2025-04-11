@@ -23,7 +23,7 @@
     "echarts": "^5.5.1",
     "echarts-for-react": "^3.0.2",
     "export-to-csv": "^1.4.0",
-    "ftdi-js": "^0.4.1",
+    "ftdi-js": "https://github.com/emcee5601/ftdi-js",
     "json-2-csv": "^5.5.6",
     "json-stringify-deterministic": "^1.0.12",
     "lz-string": "^1.5.0",

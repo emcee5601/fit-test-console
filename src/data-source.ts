@@ -4,6 +4,7 @@
 export enum DataSource {
     NotInitialized = "NotInitialized",
     Simulator = "Simulator",
+    SimulatorFile = "Simulator-file",
     WebSerial = "WebSerial",
     WebUsbSerial = "WebUsbSerial",
 }

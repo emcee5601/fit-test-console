@@ -30,7 +30,7 @@ export function SettingsSelect({label, value, setValue, options}: {
     const id = `${label.replace(/[^\p{L}\p{N}]/ui, "")}-settings-select`;  // squash unicode non-alphanum
 
     return <>
-        <div style={{display: "block"}}>
+        <div className={"labeled-setting"}>
             <label htmlFor={id}>{label}: </label>
             <select id={id}
                     value={value}
@@ -40,7 +40,6 @@ export function SettingsSelect({label, value, setValue, options}: {
                     return Object.entries(v).map(([label, value]) => <option key={value} value={value}>{label}</option>)
                 })}
             </select>
-            &nbsp;&nbsp;
         </div>
     </>
 }

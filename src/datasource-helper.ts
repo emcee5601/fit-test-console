@@ -5,16 +5,16 @@
 const utf8Decoder = new TextDecoder("utf-8");
 
 /**
- * from https://developer.mozilla.org/en-US/docs/Web/API/ReadableStreamDefaultReader/read#example_2_-_handling_text_line_by_line
+ * from
+ * https://developer.mozilla.org/en-US/docs/Web/API/ReadableStreamDefaultReader/read#example_2_-_handling_text_line_by_line
  * @param reader
  * @returns an iterator that returns data from the reader broken up into lines
  */
-
 export async function* getLines(reader: ReadableStreamDefaultReader<Uint8Array>) {
     async function readFromReader() {
         const result = await reader.read();
         if (!result.done && result.value) {
-            // appendRaw(utf8Decoder.decode(result.value));
+            // console.debug(`getLines() got result '${result.value}'`)
         }
         return result;
     }
@@ -23,6 +23,7 @@ export async function* getLines(reader: ReadableStreamDefaultReader<Uint8Array>)
     let chunk : string = value ? utf8Decoder.decode(value, {stream: true}) : "";
 
 
+    // TODO: seems sometimes we exhaust the data and a new line is interpreted when that happens. this seems to be a bug with vite dynamic reloads running multiple copies of threads
     const re = /\r\n|\n|\r/gm;
     let startIndex = 0;
 
@@ -38,8 +39,12 @@ export async function* getLines(reader: ReadableStreamDefaultReader<Uint8Array>)
                 remainder + (value ? utf8Decoder.decode(value, {stream: true}) : "");
             startIndex = re.lastIndex = 0;
             continue;
+        } else {
+            // console.debug(`result type is '${typeof result}', isnull? ${result === null}, undefined? ${result === undefined}, `)
         }
-        yield chunk.substring(startIndex, result.index);
+        const line = chunk.substring(startIndex, result.index);
+        // console.debug(`yielding line '${line}', result was ${JSON.stringify(result)}, ${typeof result}, chunk was ${chunk}, value: ${value}`);
+        yield line;
         startIndex = re.lastIndex;
     }
     if (startIndex < chunk.length) {
@@ -77,12 +82,23 @@ export function getReadableStreamFromDataSource(pushSource: PushSource):Readable
     });
 }
 
-export interface PushSource {
-    dataRequest() : Promise<Uint8Array>
-    close() : void
+export abstract class PushSource {
+    abstract dataRequest() : Promise<Uint8Array>
+    protected abstract closeImpl() : void
+    private _closed:boolean = false;
+    close(): void {
+        this.closeImpl();
+        this._closed = true;
+    }
+    set closed(value: boolean) {
+        this._closed = value;
+    }
+    get closed() {
+        return this._closed
+    }
 }
 
-export class DataFilePushSource implements PushSource {
+export class DataFilePushSource extends PushSource {
     static DEFAULT_BYTES_PER_SECOND = 1200;
     static encoder = new TextEncoder();
     reader : ReadableStreamDefaultReader<Uint8Array> | undefined;
@@ -93,6 +109,7 @@ export class DataFilePushSource implements PushSource {
     lastRequestTime: number = 0;
 
     constructor(fileOrUrl : string|File, bytesPerSecond= DataFilePushSource.DEFAULT_BYTES_PER_SECOND) {
+        super();
         this.fileOrUrl = fileOrUrl;
         this.rateBytesPerSecond = Math.max(bytesPerSecond, 1); // make sure we always make progress
     }
@@ -160,7 +177,7 @@ export class DataFilePushSource implements PushSource {
     }
 
     // Dummy close function
-    close() {
+    protected closeImpl() {
         return;
     }
 }

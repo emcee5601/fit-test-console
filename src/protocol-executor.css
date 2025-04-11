@@ -1,0 +1,128 @@
+.exercise-segment {
+    background-color: lightskyblue;
+}
+
+.sample-source-mask {
+    background-color: #c1feb5;
+}
+.sample-source-mask.segment-purge {
+    background-image: repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 4px,
+            #9b9b9b 4px,
+            #9b9b9b 5px
+    );
+}
+
+.sample-source-ambient {
+    background-color: #bafde7;
+}
+.sample-source-ambient.segment-purge {
+    background-image: repeating-linear-gradient(
+            -45deg,
+            transparent,
+            transparent 4px,
+            #9b9b9b 4px,
+            #9b9b9b 5px
+    );
+}
+
+@keyframes slide {
+    /*this animates very smoothly. top to bottom works well, but stutters once per cycle(?)*/
+    0% {
+        background-position: 20px 10px, 20px 10px, 10px 10px, 10px 10px;
+    }
+    100% {
+        background-position: 10px 0, 10px 0, 0 0, 0 0;
+    }
+}
+
+@keyframes rotate {
+    0% {
+        --angle: -60deg;
+    }
+    100% {
+        --angle: 60deg;
+    }
+}
+
+/*seem to need --color to be a property so we can transition it*/
+@property --color {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: black;
+    /* initially we're stopped */
+}
+
+@property --angle {
+    syntax: "<angle>";
+    inherits: true;
+    initial-value: -60deg;
+}
+
+.protocol-position-pointer {
+    opacity: 50%;
+    overflow: hidden;
+    border: 1px solid var(--color);
+
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    width: 5px;
+    right: 100%;
+    transition: --color 0.4s linear;
+}
+
+*.protocol-position-pointer.paused {
+    --color: firebrick;
+}
+*.protocol-position-pointer.in-progress {
+    --color: green;
+}
+
+
+.protocol-position-pointer::before {
+    content: ""; /*needed so this shows up*/
+    background-image: repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 15%,
+            var(--color) 15%,
+            var(--color) 85%
+    );
+    background-size: 10px 10px;
+    transform: rotate(var(--angle));
+
+    position: absolute;
+    top: 0px;
+    left: -50px;
+    right: -50px;
+    bottom: -10px;
+    animation: slide 1s infinite linear, rotate 17s infinite ease-in-out alternate;
+}
+
+#protocol-executor-panel-main {
+    transition: background-color 1s ease-in-out, opacity 1s ease-in-out, filter 1s ease-in-out;
+}
+
+#protocol-executor-panel-main.in-progress {
+    background-color: #e7ffe7;
+}
+
+#protocol-executor-panel-main.idle {
+    /*background-color: #ffe3e3;*/
+    background-color: #eeeeee;
+    filter: grayscale(60%);
+    opacity: 80%;
+}
+
+.blue-bg {
+    background-color: #d9eeff;
+}
+
+.thin-border {
+    border: 1px solid black;
+    padding-inline: 0.2em;
+    box-shadow: lightgrey 2px 2px 2px;
+}

@@ -1,11 +1,12 @@
 // @ts-expect-error no types defined
 import ftdi from 'ftdi-js'
-import {logSource, PushSource} from "./datasource-helper.ts";
+import {logSource, PushSource} from "src/datasource-helper.ts";
 import ProlificUsbSerial from "pl2303"
 
 export class UsbSerialPort {
     readonly device: USBDevice;
     private readonly driver: UsbSerialDriver;
+    connected: boolean = false;
     readonly readable: ReadableStream<Uint8Array> | null;
     readonly writable: WritableStream<Uint8Array> | null;
 
@@ -24,11 +25,10 @@ export class UsbSerialPort {
         }
     };
 
-    async open(opts: { baudRate: number }):Promise<void> {
+    async open(opts: { baudRate: number }): Promise<void> {
         return new Promise((resolve, reject) => {
             this.driver.open(this.device, opts).then(() => {
-                this.driver.addEventListener(); // todo: implement this properly
-
+                this.connected = true;
                 resolve();
                 console.log(`${this.driver.name} opened`)
             }).catch(reject)
@@ -36,34 +36,7 @@ export class UsbSerialPort {
     }
 }
 
-export class UsbSerialDrivers {
-    async requestPort(): Promise<UsbSerialPort> {
-        const drivers: UsbSerialDriver[] = [new FtdiSerialDriver(), new ProlificSerialDriver()];
-
-        return new Promise((resolve, reject) => {
-            const supportedDevices = drivers.flatMap(driver => driver.options.flatMap(t => t.filters))
-
-            navigator.usb.requestDevice({filters: supportedDevices}).then(device => {
-                const driver = drivers.find((driver) => {
-                    const driverDevices = driver.options.flatMap(t => t.filters)
-                    const driverDevice = driverDevices.find(driverDevice => {
-                        return driverDevice.vendorId == device.vendorId
-                            && driverDevice.productId === device.productId
-                    })
-                    return driverDevice
-                })
-
-                if (driver) {
-                    resolve(new UsbSerialPort(device, driver));
-                } else {
-                    reject(`could not find driver for device ${JSON.stringify(device)}`)
-                }
-            })
-        })
-    }
-}
-
-abstract class UsbSerialDriver implements PushSource {
+abstract class UsbSerialDriver extends PushSource {
     readonly options: USBDeviceRequestOptions[];
     readonly name: string
 
@@ -78,13 +51,12 @@ abstract class UsbSerialDriver implements PushSource {
 
     abstract open(device: USBDevice, opts: { baudRate: number }): Promise<UsbSerialDriver>;
 
-    abstract close(): Promise<void>;
+    protected abstract closeImpl(): Promise<void>;
 
     abstract write(chunk: Uint8Array): Promise<USBOutTransferResult>;
 
-    abstract addEventListener(): void
-
     protected constructor(options: USBDeviceRequestOptions[]) {
+        super();
         this.name = this.constructor.name
         this.options = options;
     }
@@ -95,8 +67,8 @@ abstract class UsbSerialDriver implements PushSource {
             start(controller) {
                 readRepeatedly().catch((e) => controller.error(e));
 
-                async function readRepeatedly() :Promise<Uint8Array> {
-                    return driver.dataRequest().then((result:Uint8Array) => {
+                async function readRepeatedly(): Promise<Uint8Array> {
+                    return driver.dataRequest().then((result: Uint8Array) => {
                         if (result.length === 0) {
                             logSource(`No data from source: closing`);
                             controller.close();
@@ -112,12 +84,12 @@ abstract class UsbSerialDriver implements PushSource {
 
             cancel() {
                 logSource(`cancel() called on underlying source`);
-                driver.close();
+                driver.closeImpl();
             },
         });
     }
 
-    getWritableStreamFromDataSink():WritableStream<Uint8Array> {
+    getWritableStreamFromDataSink(): WritableStream<Uint8Array> {
         const queuingStrategy = new CountQueuingStrategy({highWaterMark: 1});
         const decoder = new TextDecoder();
         const driver = this as UsbSerialDriver;
@@ -152,11 +124,15 @@ abstract class UsbSerialDriver implements PushSource {
     async dataRequest(): Promise<Uint8Array> {
         if (this.inboundDataQueue.length === 0) {
             // Data not available. We need a way to know if there is no more data or if we're just waiting.
+            console.debug(`dataRequest() called, closed? ${this.closed}`)
+            if(this.closed) {
+                return Promise.resolve(new Uint8Array()) // empty
+            }
             return new Promise((resolve) => {
                 setTimeout(() => {
-                    console.log(`no data, waiting a bit...`);
+                    // console.debug(`no data, waiting a bit...`);
                     this.dataRequest().then((res) => {
-                        console.log(`trying to get more data...`);
+                        // console.debug(`trying to get more data...`);
                         resolve(res)
                     });  // is this the correct way to chain Promises?
                 }, this.noDataWaitTimeMs); // wait a little bit
@@ -175,13 +151,12 @@ abstract class UsbSerialDriver implements PushSource {
                 return (chunkIndex + chunk.length);
             }, 0);
 
-            console.log(`big chunk size is ${bigChunkSize}`)
+            // console.debug(`big chunk size is ${bigChunkSize}`)
             resolve(bigChunk);
         });
     }
 
 }
-
 
 class ProlificSerialDriver extends UsbSerialDriver {
     private delegate: ProlificUsbSerial | undefined;
@@ -198,11 +173,22 @@ class ProlificSerialDriver extends UsbSerialDriver {
     async open(device: USBDevice, opts: { baudRate: number }) {
         return new Promise<UsbSerialDriver>((resolve, reject) => {
             this.delegate = new ProlificUsbSerial(device, opts)
-            this.delegate.open().then(() => resolve(this)).catch(reject);
+            this.delegate.addEventListener('data', (event) => {
+                const chunk: Uint8Array = (event as CustomEvent).detail;
+                // chunk is a Uint8Array so we can't just use + or +=
+                this.inboundDataQueue.push(chunk);
+            })
+            this.delegate.addEventListener('ready', () => {resolve(this)})
+            this.delegate.addEventListener('error', (event:Event) => {reject(event)})
+            this.delegate.addEventListener('disconnected', () => {
+                console.debug(`disconnected from ${JSON.stringify(device)}`)
+                this.closed = true
+            })
+            this.delegate.open(); // this isn't wired up properly, the ready event is what denotes a successful open()
         })
     }
 
-    override async close() {
+    override async closeImpl() {
         return this.delegate?.close();
     }
 
@@ -214,19 +200,8 @@ class ProlificSerialDriver extends UsbSerialDriver {
             reject("not yet initialized")
         })
     }
-
-    override addEventListener() {
-        if (!this.delegate) {
-            return;
-        }
-        this.delegate.addEventListener('data', (event) => {
-            const chunk: Uint8Array = (event as CustomEvent).detail;
-            // chunk is a Uint8Array so we can't just use + or +=
-            this.inboundDataQueue.push(chunk);
-        })
-
-    }
 }
+
 
 class FtdiSerialDriver extends UsbSerialDriver {
     private delegate: ftdi;
@@ -236,25 +211,70 @@ class FtdiSerialDriver extends UsbSerialDriver {
     }
 
     override async open(device: USBDevice, opts: { baudRate: number }) {
-        this.delegate = new ftdi(device, opts)
-        return new Promise<UsbSerialDriver>((resolve) => {
-            resolve(this);
+        return new Promise<UsbSerialDriver>((resolve, reject) => {
+            this.delegate = new ftdi(device, opts)
+            this.delegate.addEventListener('data', (event: CustomEvent) => {
+                const chunk = event.detail;
+                this.inboundDataQueue.push(chunk);
+            })
+            this.delegate.addEventListener('ready', () => {resolve(this)})
+            this.delegate.addEventListener('error', (event:{detail:string}) => {reject(event.detail)})
+            this.delegate.addEventListener('disconnected', () => {
+                console.debug(`disconnected from ${JSON.stringify(device)}`)
+                this.closed = true
+            })
         })
     }
 
-    override async close() {
+    override async closeImpl() {
         return this.delegate.closeAsync();
     }
 
     override async write(chunk: Uint8Array) {
         return this.delegate.writeAsync(chunk);
     }
+}
 
-    override addEventListener() {
-        this.delegate.addEventListener('data', (event: CustomEvent) => {
-            const chunk = event.detail;
-            this.inboundDataQueue.push(chunk);
+export class UsbSerialDrivers {
+    static readonly supportedDrivers: UsbSerialDriver[] = [new FtdiSerialDriver(), new ProlificSerialDriver()];
+
+    static async getPorts(): Promise<UsbSerialPort[]> {
+        const devices = await navigator.usb.getDevices();
+        const ports: UsbSerialPort[] = []
+        devices.forEach(device => {
+            const driver = UsbSerialDrivers.findDriverForDevice(device)
+            if (driver) {
+                // just return the first matching driver
+                ports.push(new UsbSerialPort(device, driver));
+            }
         })
+        return ports;
+    }
+
+    async requestPort(): Promise<UsbSerialPort> {
+        return new Promise((resolve, reject) => {
+            const supportedDevices = UsbSerialDrivers.supportedDrivers.flatMap(driver => driver.options.flatMap(t => t.filters))
+
+            navigator.usb.requestDevice({filters: supportedDevices}).then(device => {
+                const driver = UsbSerialDrivers.findDriverForDevice(device)
+
+                if (driver) {
+                    resolve(new UsbSerialPort(device, driver));
+                } else {
+                    reject(`could not find driver for device ${JSON.stringify(device)}`)
+                }
+            })
+        })
+    }
+
+    private static findDriverForDevice(device: USBDevice) {
+        return this.supportedDrivers.find((driver) => {
+            const driverDevices = driver.options.flatMap(t => t.filters)
+            return driverDevices.find(driverDevice => {
+                return driverDevice.vendorId == device.vendorId
+                    && driverDevice.productId === device.productId
+            })
+        });
     }
 }
 

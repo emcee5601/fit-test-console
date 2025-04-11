@@ -4,7 +4,7 @@
 import {PortaCountState, SerialPortLike} from "./portacount-client-8020.ts";
 import {logSource} from "./datasource-helper.ts";
 import {SampleSource} from "./simple-protocol.ts";
-import {ExternalController} from "./external-control.tsx";
+import {ExternalController} from "./external-control.ts";
 import {ControlSource} from "./control-source.ts";
 
 export class PortaCount8020Simulator {
@@ -17,6 +17,9 @@ export class PortaCount8020Simulator {
     private readonly encoder: TextEncoder = new TextEncoder();
     private _started: boolean = false;
     private bias: number = 0; // how much to shift concentration values returned by simulator. as a percentage. + or -
+    private baseConcentration: number = 0;
+    private lastCommandTimeMs: number = 0;
+    private targetMaskFF: number = 100;
 
     constructor() {
         this.reader = this.createReader();
@@ -24,6 +27,7 @@ export class PortaCount8020Simulator {
         this._port = {
             readable: this.reader,
             writable: this.writer,
+            connected: true,
             getInfo(): SerialPortInfo {
                 return {};
             },
@@ -135,13 +139,26 @@ export class PortaCount8020Simulator {
         );
     }
 
-    private randomizeBias() {
+    private random():number {
+        if(Date.now() - this.lastCommandTimeMs > 3*60*1000) {
+            // more than 3 minutes has elapsed since the last command. We can reset the start point
+            this.baseConcentration = (1 + 5 * Math.random()) * 1000
+            this.targetMaskFF = (10 + 300 * Math.random())
+            console.debug(`simulator resetting baseConcentration to ${this.baseConcentration}, targetMaskFF to ${this.targetMaskFF}`)
+        }
+
+        this.baseConcentration += Math.round(Math.random() * 200)
+        return this.baseConcentration;
+    }
+
+    private randomize() {
         const maxBias = 30; // percentage points
         this.bias = (Math.random() * maxBias - (maxBias/2))/100;
+        this.lastCommandTimeMs = Date.now();
     }
 
     private executeCommand(command: string) {
-        this.randomizeBias()
+        this.randomize()
         switch(command) {
             case ExternalController.SWITCH_VALVE_OFF: {
                 // switch to mask
@@ -176,15 +193,17 @@ export class PortaCount8020Simulator {
     }
 
 
+    /**
+     * Generate increasing concentrations so we can verify math downstream.
+     * @private
+     */
     private generateConcentration(): string {
         let concentration: number
         if (this._portaCountState.sampleSource === SampleSource.MASK) {
-            // 100 +/- 10
-            concentration = Math.round(Math.random() * 10 + 100)
+            concentration = this.random() / this.targetMaskFF
         } else {
             // ambient
-            // 10,000 +/- 200
-            concentration = Math.round(Math.random() * 200 + 10000)
+            concentration = this.random()
         }
 
         // apply bias

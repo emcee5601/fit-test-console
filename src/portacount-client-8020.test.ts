@@ -3,7 +3,7 @@ import {beforeEach, describe, expect, test} from 'vitest'
 import {ParticleConcentrationEvent, PortaCountClient8020} from "./portacount-client-8020.ts";
 
 
-describe('PortaCountClient8020', () => {
+describe('PortaCountClient8020 test', () => {
     const client = new PortaCountClient8020();
     describe('processLine', () => {
         describe('ParticleConcentrationEvent', () => {

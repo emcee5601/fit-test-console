@@ -1,5 +1,9 @@
 #root {
-    max-width: 1600px;
+    position: fixed;
+    top:0;
+    bottom:0;
+    left:0;
+    right:0;
     margin: 0 auto;
     padding: 0.2rem;
     text-align: center;
@@ -48,8 +52,12 @@
     width: 90%;
 }
 
-.datePickerInput {
-    width: 85px
+.date-picker-input {
+    width: 6.5em;
+}
+
+.date-time-input {
+    width: 8.5em;
 }
 
 .button {

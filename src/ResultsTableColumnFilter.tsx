@@ -58,7 +58,7 @@ export function ResultsTableColumnFilter<V>({column, dates}: {
                                includeDates={dates}
                                showIcon={true}
                                showDisabledMonthNavigation={true}
-                               className={'datePickerInput'}
+                               className={'date-picker-input'}
                                todayButton={<input type={"button"} value={"Today"}/>}
                                onChange={(value) => column.setFilterValue(value?.toLocaleDateString())}
             ></DatePicker>

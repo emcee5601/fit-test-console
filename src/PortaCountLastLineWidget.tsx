@@ -24,9 +24,9 @@ export function PortaCountLastLineWidget() {
     }, []);
 
     return (
-        <fieldset className="info-box" style={{width:"8rem"}}>
+        <fieldset className="info-box-compact" style={{width:"8rem"}}>
             <legend>Last line</legend>
-            {lastLine}
+            <span style={{textWrap:"nowrap"}}>{lastLine}</span>
         </fieldset>
     )
 }
