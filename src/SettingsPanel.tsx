@@ -48,7 +48,7 @@ export function SettingsPanel() {
     }
 
     function downloadAllResultsAsJSON() {
-        RESULTS_DB.getAllData().then(data => {
+        RESULTS_DB.getData().then(data => {
             downloadData(JSON.stringify(data), "fit-test-all-results", "json");
         })
     }

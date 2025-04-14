@@ -77,7 +77,7 @@ export function CurrentParticipantPanel() {
 
     async function loadAllMasksFromDb() {
         await RESULTS_DB.open()
-        RESULTS_DB.getAllData().then((results) => {
+        RESULTS_DB.getData().then((results) => {
             const dbMasks = results.reduce((masks, currentValue) => {
                 // make sure mask has a value and strip that value of leading and trailing spaces
                 masks.add(((currentValue.Mask as string) ?? "").trim())
@@ -129,19 +129,14 @@ export function CurrentParticipantPanel() {
         const todayYyyymmdd = new Date(today.getTime() - today.getTimezoneOffset() * 60 * 1000).toISOString().substring(0, 10)
         // const todayYyyymmdd = new Date().toISOString().substring(0, 10)
         // console.log(`yyyymmdd is ${todayYyyymmdd}, today is ${today.toISOString()}`)
-        RESULTS_DB.getAllData().then((results) => {
-            const filteredResults = results.filter((record) => {
-                    // make sure both dates are formatted the same way
-                    const recordDate = new Date(record.Time);
-                    const recordTime = new Date(recordDate.getTime() - recordDate.getTimezoneOffset() * 60 * 1000).toISOString().substring(0, 10);
-                    // console.debug(`yyyymmdd is ${todayYyyymmdd}, record time is ${recordTime}; looking for
-                    // '${participant}', found '${record.Participant}'`)
-                    return record.Participant === participant
-                        && recordTime.startsWith(todayYyyymmdd)
-                }
-            )
-            setCurrentParticipantResults(filteredResults)
-        })
+        RESULTS_DB.getData((record: SimpleResultsDBRecord) => {
+            const recordDate = new Date(record.Time);
+            const recordTime = new Date(recordDate.getTime() - recordDate.getTimezoneOffset() * 60 * 1000).toISOString().substring(0, 10);
+            // console.debug(`yyyymmdd is ${todayYyyymmdd}, record time is ${recordTime}; looking for
+            // '${participant}', found '${record.Participant}'`)
+            return record.Participant === participant
+                && recordTime.startsWith(todayYyyymmdd)
+        }).then(setCurrentParticipantResults)
     }
 
     return (

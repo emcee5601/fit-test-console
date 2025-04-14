@@ -313,6 +313,10 @@ class AppSettingsContext {
         })
     }
 
+    getDefault<T extends AppSettingType>(setting: AppSettings): T {
+        return AppSettingsDefaults[setting] as T;
+    }
+
     // todo: load all values into the cache on constructor / startup
     get selectedProtocol(): string {
         // todo: use a sensible default
@@ -602,11 +606,29 @@ class AppSettingsContext {
         this.protocolSegments = convertStagesToSegments(protocolStages)
         this.protocolStages = protocolStages;
     }
+
+    getProtocolDuration(protocolName: string): number {
+        // todo: this should be pre-calculated since these wouldn't change
+        const protocolDefinition: StandardStageDefinition[] = this.protocolDefinitions[protocolName] ?? [];
+        const segments: ProtocolSegment[] = convertStagesToSegments(protocolDefinition);
+        return calculateProtocolDuration(segments)
+    }
+
 }
 
 export const APP_SETTINGS_CONTEXT = new AppSettingsContext()
 
-function convertStagesToSegments(stages: StandardStageDefinition[]): ProtocolSegment[] {
+/**
+ *
+ * @param segments
+ * @return protocol duration in seconds
+ */
+export function calculateProtocolDuration(segments: ProtocolSegment[]): number {
+    return segments.reduce((totalTime: number, segment: ProtocolSegment) => totalTime + segment.duration, 0)
+}
+
+// todo: keep this private, convert all stages to segments on settings load since these shouldn't change often
+export function convertStagesToSegments(stages: StandardStageDefinition[]): ProtocolSegment[] {
     const segments: ProtocolSegment[] = []
     let numExercisesSeen: number | null = null;
     let currentOffset: number = 0
@@ -616,8 +638,9 @@ function convertStagesToSegments(stages: StandardStageDefinition[]): ProtocolSeg
             // increment the exercise number if this stage has a mask sample segment
             numExercisesSeen = (numExercisesSeen ?? 0) + 1; // increment; 1-based
         }
-        // this stage's has an exercise num only if it has a mask sample segment. otherwise it has no exercise number (either a prep or finalize stage)
-        const thisStageExerciseNum = stage.mask_sample > 0 ? numExercisesSeen:null
+        // this stage's has an exercise num only if it has a mask sample segment. otherwise it has no exercise number
+        // (either a prep or finalize stage)
+        const thisStageExerciseNum = stage.mask_sample > 0 ? numExercisesSeen : null
 
         // allow any combination of ambient/mask/purge/sample. rely on the protocol standardizer to set these to
         // coherent values

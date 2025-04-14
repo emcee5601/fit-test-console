@@ -29,7 +29,7 @@ class SimpleDB extends AbstractDB {
     now = new Date(); // use .getTime() to get epoch time
 
     async getAllData(): Promise<SimpleDBRecord[]> {
-        return super.getAllDataFromDataSource(SimpleDB.SERIAL_LINE_OBJECT_STORE);
+        return super.getDataFromDataSource(SimpleDB.SERIAL_LINE_OBJECT_STORE);
     }
 
     /**

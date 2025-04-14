@@ -121,7 +121,7 @@ class FitTestProtocolDB extends AbstractDB {
 
     async getAllProtocols(): Promise<FitTestProtocol[]> {
         return new Promise<FitTestProtocol[]>((resolve, reject) => {
-        super.getAllDataFromDataSource<FitTestProtocol>(FitTestProtocolDB.PROTOCOLS_OBJECT_STORE).then((protocols) => {
+        super.getDataFromDataSource<FitTestProtocol>(FitTestProtocolDB.PROTOCOLS_OBJECT_STORE).then((protocols) => {
             // clean up protocols: strip any stages that are 'null'
             const fixedProtocols = protocols.map((protocol) => {
                 protocol.stages = protocol.stages.filter((stage) => stage)

@@ -20,11 +20,11 @@ export function formatDuration(elapsedMs: number, includeMs: boolean = false): s
     // const totalDays = Math.round(totalHours / 24);
     // const daysVal = totalDays % 24;
     // hh:mm:ss or m:ss if no h
-    return `${elapsedMs<0?"-":""}${totalHours ? `${totalHours}:` : ""}${minutesVal.toString().padStart(totalHours?2:1, "0")}:${secondsVal.toString().padStart(2, "0")}${includeMs ? (millisVal > 0 ? `.${millisVal.toString().padStart(3, "0")}` : '') : ""}`;
+    return `${elapsedMs < 0 ? "-" : ""}${totalHours ? `${totalHours}:` : ""}${minutesVal.toString().padStart(totalHours ? 2 : 1, "0")}:${secondsVal.toString().padStart(2, "0")}${includeMs ? (millisVal > 0 ? `.${millisVal.toString().padStart(3, "0")}` : '') : ""}`;
 }
 
-export function formatTime(date: Date) {
-    return `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`
+export function formatTime(date: Date, includeSeconds: boolean = false): string {
+    return `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}${includeSeconds ? `:${date.getSeconds().toString().padStart(2, "0")}` : ""}`;
 }
 
 export function convertFitFactorToFiltrationEfficiency(fitFactor: number) {
@@ -71,9 +71,10 @@ export function sum(theNumbers: number[], startIndex: number = 0, endIndex: numb
     return theNumbers.slice(startIndex, endIndex).reduce((total, theNumber) => total + theNumber, 0)
 }
 
-export function avg(...theNumbers:number[]) {
+export function avg(...theNumbers: number[]) {
     return avgArray(theNumbers);
 }
+
 export function avgArray(theNumbers: number[], startIndex: number = 0, endIndex: number = -1) {
     if (endIndex < 0) {
         endIndex = theNumbers.length;
@@ -100,3 +101,14 @@ export function scrollToBottom(textAreaRef: RefObject<HTMLTextAreaElement>) {
     }
 }
 
+export function median(array: number[]) {
+    const sortedArray = array.toSorted()
+    if (0 === sortedArray.length % 2) {
+        // even
+        return sortedArray[sortedArray.length / 2]
+    } else {
+        // odd
+        const index = Math.floor(sortedArray.length / 2);
+        return (sortedArray[index] + sortedArray[index + 1]) / 2;
+    }
+}

@@ -23,7 +23,7 @@ export function sanitizeRecord(record: Partial<SimpleResultsDBRecord>) {
 }
 
 export async function getStoredData() {
-    return await RESULTS_DB.getAllData();
+    return await RESULTS_DB.getData();
 }
 
 /**

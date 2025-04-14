@@ -357,5 +357,6 @@ export class ProtocolExecutor {
 }
 
 export function calculateSegmentConcentration(segment: ProtocolSegment): number {
-    return Math.round(segment.data.reduce((sum, currentValue: ParticleConcentrationEvent) => sum + currentValue.concentration, 0) / segment.data.length);
+    // don't round this here
+    return segment.data.reduce((sum, currentValue: ParticleConcentrationEvent) => sum + currentValue.concentration, 0) / segment.data.length;
 }

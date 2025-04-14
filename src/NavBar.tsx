@@ -40,6 +40,7 @@ export function NavBar() {
                 | <NavLink to={"/settings"}>Settings</NavLink>
                 | <NavLink to={"/protocols"}>Protocols</NavLink>
                 | <NavLink to={"/raw-data"}>Raw&nbsp;Data</NavLink>
+                | <NavLink to={"/stats"}>Stats</NavLink>
             </div>
             <EventTimeWidget style={{visibility: showEventTime?"visible":"hidden"}}/>
             <NewSettingsNotifier/>

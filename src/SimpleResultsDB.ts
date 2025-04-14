@@ -40,55 +40,8 @@ class SimpleResultsDB extends AbstractDB {
 
     keepRecords: SimpleResultsDBRecord[] = [];
 
-    async getAllData(): Promise<SimpleResultsDBRecord[]> {
-        return super.getAllDataFromDataSource(SimpleResultsDB.TEST_RESULTS_OBJECT_STORE);
-    }
-
-    /**
-     * Return a recent contiguous block of data. Look at the timestamp of the record. Stop when there is a gap of more than 1 hour between timestamps.
-     * Don't return anything if the most recent record is more than 1 hour old.
-     * @param callback
-     */
-    getSomeRecentData(callback: ((data: SimpleResultsDBRecord) => void)) {
-        const transaction = this.openTransactionClassic("readonly");
-        if (!transaction) {
-            console.log("database not ready");
-            return;
-        }
-        const request = transaction.objectStore(SimpleResultsDB.TEST_RESULTS_OBJECT_STORE).openCursor(null, "prev");
-        let done = false;
-
-        request.onerror = (event) => {
-            console.log(`getSomeRecentData openCursor request error ${event}`);
-        }
-        request.onsuccess = (event) => {
-            console.log(`getSomeRecentData openCursor request complete: ${event}`);
-            const cursor = request.result;
-            if (cursor) {
-                // console.log(`got key ${cursor.key}`);
-
-                // keep
-                this.keepRecords.push(cursor.value);
-                cursor.continue();
-
-                // callback();
-            } else {
-                // no more results
-                console.log(`${this.dbName} cursor done`);
-                done = true;
-            }
-
-            if (done) {
-                // now we can call the callback with records we're keeping in order of oldest to newest
-                console.log(`collected ${this.keepRecords.length} records`);
-                while (this.keepRecords.length > 0) {
-                    const record = this.keepRecords.pop();
-                    if (record) {
-                        callback(record);
-                    }
-                }
-            }
-        }
+    async getData(keep?:(item:SimpleResultsDBRecord) => boolean): Promise<SimpleResultsDBRecord[]> {
+        return this.getDataFromDataSource(SimpleResultsDB.TEST_RESULTS_OBJECT_STORE, keep);
     }
 
     /**

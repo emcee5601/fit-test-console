@@ -12,11 +12,11 @@ export default defineConfig({
     },
     optimizeDeps: {
         esbuildOptions: {
-            target: "es2022"
+            target: "es2023"
         }
     },
     build: {
-        target: "es2022"
+        target: "es2023"
     },
     plugins: [
         react(),

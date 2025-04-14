@@ -195,9 +195,9 @@ export function standardizeProtocolDefinitions(protocols: ProtocolDefinitions): 
                 mask_sample: 0
             })
 
-            console.debug(`protocol '${protocolName}' is vanilla`)
+            // console.debug(`protocol '${protocolName}' is vanilla`)
         } else {
-            console.debug(`protocol '${protocolName}' has customizations`)
+            // console.debug(`protocol '${protocolName}' has customizations`)
         }
     })
     return standardizedProtocols

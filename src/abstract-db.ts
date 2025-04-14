@@ -14,9 +14,12 @@ export default abstract class AbstractDB {
     abstract onUpgradeNeeded(request: IDBOpenDBRequest): void;
 
     /**
-     * read the whole db
+     *
+     * @param dataStoreName
+     * @param keep boolean function returning true if the element should be returned, defaults to return everything
+     * @protected
      */
-    protected async getAllDataFromDataSource<T>(dataStoreName: string): Promise<T[]> {
+    protected async getDataFromDataSource<T>(dataStoreName: string, keep:(item:T) => boolean = ()=>true): Promise<T[]> {
         return new Promise<T[]>((resolve, reject) => {
             const transaction = this.openTransactionClassic("readonly");
             const allRecords: T[] = [];
@@ -38,7 +41,9 @@ export default abstract class AbstractDB {
                 if (cursor) {
                     // console.log(`got key ${cursor.key}`);
 
-                    allRecords.push(cursor.value);
+                    if(keep(cursor.value)) {
+                        allRecords.push(cursor.value);
+                    }
                     cursor.continue();
 
                 } else {
@@ -180,7 +185,7 @@ export default abstract class AbstractDB {
             };
             request.onupgradeneeded = () => {
                 this.onUpgradeNeeded(request)
-                reject("upgrade needed")
+                resolve(request.result);
             };
         });
         return this.openPromise;

@@ -5,12 +5,26 @@
 
     color-scheme: normal;
     /*color: rgba(255, 255, 255, 0.87);*/
-    /*background-color: green;*/
+    background-color: var(--root-color);
 
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+}
+
+@property --root-color {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: #fff;
+}
+
+.app-container {
+    background-color: #fff;
+    position:relative;
+    top:0;
+    height:100%;
+    overflow: hidden;
 }
 
 a {
@@ -211,12 +225,13 @@ td.results {
     inherits: true;
     initial-value: 0%;
 }
+
 @keyframes slide-gradient {
     from {
         --offset: -1000%
     }
     to {
-        --offset:1000%
+        --offset: 1000%
     }
 }
 
@@ -245,6 +260,16 @@ td.results {
 .number-field {
     text-align: end;
     font-variant-numeric: tabular-nums;
+}
+.no-wrap {
+    text-wrap: nowrap;
+}
+.pre {
+    white-space-collapse: preserve;
+    font-family: monospace;
+}
+.inline-flex {
+    display:inline-flex;
 }
 
 @keyframes pulse-background {

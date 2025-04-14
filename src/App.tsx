@@ -18,8 +18,7 @@ function App() {
 
     return (
         <>
-            <section style={{display:"flex", flexWrap:"wrap", float: "inline-start", alignItems:"center"}}>
-                {/*todo: auto-connect. should be part of app context. and a setting*/}
+            <section id="control-widgets" style={{display:"flex", flexWrap:"wrap", alignItems:"center", justifySelf:"center"}}>
                 <DriverSelectorWidget/>
                 {(!showExternalControl) && <ProtocolSelectorWidget1/> /* don't need this here since protocol executor panel has one*/}
                 {showExternalControl && <PortaCountControlSourceWidget/>}

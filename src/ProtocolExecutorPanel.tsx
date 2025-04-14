@@ -3,7 +3,7 @@ import {calculateSegmentConcentration, ProtocolExecutorListener, SegmentState} f
 import {HTMLAttributes, ReactElement, useContext, useEffect, useRef, useState} from "react";
 import {AppContext} from "./app-context.ts";
 import {formatDuration, formatFitFactor} from "./utils.ts";
-import {AppSettings, isThisAnExerciseSegment, ProtocolSegment} from "./app-settings.ts";
+import {AppSettings, calculateProtocolDuration, isThisAnExerciseSegment, ProtocolSegment} from "./app-settings.ts";
 import {ControlSource} from "./control-source.ts";
 import {PortaCountListener} from "./portacount-client-8020.ts";
 import "./protocol-executor.css"
@@ -47,19 +47,19 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
      * Calculates total time, stage times, segment times.
      */
     function calculateTotalExpectedProtocolTime() {
-        let protocolTime: number = 0;
         const stageTimes: IndexedDurations = {}
         const segmentTimes: IndexedDurations = {}
         const segmentDivs: ReactElement[] = []
-        const stageExerciseNum: (null|number)[] = [] // the exercise num of the stage, or null if the stage is not an exercise stage
+        const stageExerciseNum: (null | number)[] = [] // the exercise num of the stage, or null if the stage is not an
+                                                       // exercise stage
         // protocolExecutor does not set segments or stages until execution starts.
         const stages = appContext.settings.protocolStages;
         const segments = appContext.settings.protocolSegments;
+        const protocolTime: number = calculateProtocolDuration(segments)
         segments.forEach((segment: ProtocolSegment) => {
             // console.debug("rebuilding segment divs")
             segmentTimes[segment.index] = segment.duration
             stageTimes[segment.stageIndex] = (stageTimes[segment.stageIndex] ?? 0) + segment.duration
-            protocolTime += segment.duration
             const isExerciseSegment = isThisAnExerciseSegment(segment);
             // seems flex items won't shrink smaller than 1 character if there is text inside
             const isCurrentSegment = segment.index === currentSegment?.index;
@@ -92,7 +92,7 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
                 minWidth: "1px",
                 maxHeight: "3rem",
                 overflow: "clip",
-            }}>{stageExerciseNum[stageIndex]?`Ex ${stageExerciseNum[stageIndex]}: `:""}{stages[stageIndex].instructions.split(".")[0]}</div>)
+            }}>{stageExerciseNum[stageIndex] ? `Ex ${stageExerciseNum[stageIndex]}: ` : ""}{stages[stageIndex].instructions.split(".")[0]}</div>)
         })
 
         setProtocolDuration(protocolTime)
@@ -273,7 +273,7 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
                     <span className={"thin-border number-field blue-bg"}>Mask: {getMaskConcentrationFormatted()}</span>
                     <span className={"thin-border number-field blue-bg"}>Estimate: {estimatedFitFactor}</span>
                 </legend>
-                <div id="protocol-visualizer-container" style={{minWidth:"fit-content"}}>
+                <div id="protocol-visualizer-container" style={{minWidth: "fit-content"}}>
                     <section id={"protocol-visualizer"} style={{position: 'relative'}}>
                         <div id={"protocol-pos-pointer"} ref={protocolPosPointerRef}
                              className={"protocol-position-pointer paused"}

@@ -10,6 +10,7 @@ import {MainLayout} from "./MainLayout.tsx";
 import {SimpleFitTestProtocolPanel} from "./simple-protocol-editor.tsx";
 import {DataCollectorPanel} from "./DataCollectorPanel.tsx";
 import {EstimatedFitFactorPanel} from "./EstimatedFitFactorPanel.tsx";
+import {StatsPanel} from "src/StatsPanel.tsx";
 
 // add this to prompt for a refresh
 const updateSW = registerSW({
@@ -31,6 +32,7 @@ createRoot(document.getElementById('root')!).render(
                     <Route path="protocols" element={<SimpleFitTestProtocolPanel/>}/>
                     <Route path="raw-data" element={<DataCollectorPanel/>}/>
                     <Route path={"estimate"} element={<EstimatedFitFactorPanel/>}/>
+                    <Route path={"stats"} element={<StatsPanel/>}/>
                 </Route>
             </Routes>
         </BrowserRouter>
