@@ -4,7 +4,7 @@ import {ExternalController} from "./external-control.ts";
 import {DataCollector} from "./data-collector.ts";
 import {ControlSource} from "./control-source.ts";
 import {ProtocolSegment} from "./app-settings.ts";
-import {avg} from "src/utils.ts";
+import {avg, formatFitFactor} from "src/utils.ts";
 import {deepCopy} from "json-2-csv/lib/utils";
 
 export enum SegmentState {
@@ -258,9 +258,10 @@ export class ProtocolExecutor {
         if (segmentIndex >= this._segments.length) {
             console.log("no more segments (test completed)")
             this.stopTimer()
-            this.dataCollector.recordExerciseResult("Final", this.calculateFinalFitFactor())
+            const finalScore = this.calculateFinalFitFactor();
+            this.dataCollector.recordExerciseResult("Final", finalScore)
             this.dataCollector.recordTestComplete()
-            this.dataCollector.setInstructions("Test complete")
+            this.dataCollector.setInstructions(`Test completed; final score: ${formatFitFactor(finalScore)}`)
             this.dispatch(new ProtocolCompletedEvent())
             this.controller.beep()
             this.controller.beep()

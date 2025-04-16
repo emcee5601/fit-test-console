@@ -40,14 +40,16 @@ export function ResultsTable({
     searchableColumns = ["Time", "Participant", "Mask", "Notes", "ProtocolName"],
     hideColumns = [],
     minExercisesToShow = 0,
-    columnSortingSettingKey = AppSettings.RESULTS_TABLE_SORT
+    columnSortingSettingKey = AppSettings.RESULTS_TABLE_SORT,
+    columnFilterSettingKey = AppSettings.RESULTS_TABLE_FILTER,
 }: {
     tableData: SimpleResultsDBRecord[],
     setTableData: Dispatch<SetStateAction<SimpleResultsDBRecord[]>>,
     searchableColumns?: string[],
     hideColumns?: string[],
     minExercisesToShow?: number,
-    columnSortingSettingKey?: AppSettings.RESULTS_TABLE_SORT | AppSettings.PARTICIPANT_RESULTS_TABLE_SORT
+    columnSortingSettingKey?: AppSettings.RESULTS_TABLE_SORT | AppSettings.PARTICIPANT_RESULTS_TABLE_SORT,
+    columnFilterSettingKey?: AppSettings.RESULTS_TABLE_FILTER | AppSettings.PARTICIPANT_RESULTS_TABLE_FILTER,
 }) {
     const appContext = useContext(AppContext)
     const dataCollector: DataCollector = appContext.dataCollector
@@ -203,7 +205,7 @@ export function ResultsTable({
     )
 
     const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
-    const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+    const [columnFilters, setColumnFilters] = useSetting<ColumnFiltersState>(columnFilterSettingKey)
     const [columnVisibility] = useState(hideColumns.reduce((result: { [key: string]: boolean }, column: string) => {
         result[column] = false;
         return result

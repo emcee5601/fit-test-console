@@ -8,7 +8,6 @@ import {ResultsTable} from "./ResultsTable.tsx";
 import CreatableSelect from "react-select/creatable";
 import {LabeledSection} from "./LabeledSection.tsx";
 import {useSetting} from "./use-setting.ts";
-import {useTimingSignal} from "src/timing-signal.ts";
 
 export function CurrentParticipantPanel() {
     const appContext = useContext(AppContext)
@@ -24,9 +23,11 @@ export function CurrentParticipantPanel() {
     const [maskList, setMaskList] = useState<string[]>([]) // todo: usememo here, and force an update when new masks
                                                            // are created
     const [selectedProtocol] = useSetting<string>(AppSettings.SELECTED_PROTOCOL)
+    const [currentParticipant, setCurrentParticipant] = useState<string>(testTemplate.Participant ?? "")
 
     function updateCurrentParticipant(value: string) {
-        console.debug(`updating current participant -> ${value}`)
+        value = value.trim() // strip extraneous spaces
+        console.debug(`updating current participant -> '${value}'`)
         if (testTemplate.Participant !== value) {
             // participant name changed, update start time
             testTemplate.Time = new Date().toISOString(); // todo: does this need to be localtime?
@@ -103,11 +104,10 @@ export function CurrentParticipantPanel() {
             appContext.settings.removeListener(settingsListener)
         }
     }, []);
-    useTimingSignal(updateState)
 
     useEffect(() => {
         console.debug(`testTemplate updated (via useEffect): ${JSON.stringify(testTemplate)}`)
-        updateState()
+        setCurrentParticipant(testTemplate.Participant??"")
     }, [testTemplate]);
 
     useEffect(() => {
@@ -122,9 +122,8 @@ export function CurrentParticipantPanel() {
      */
     function updateCurrentParticipantTests(participant: string | undefined) {
         const today = new Date();
-        if (!participant) {
-            participant = ""
-        }
+        participant = (participant??"").trim()
+
         // convert time back to local time
         const todayYyyymmdd = new Date(today.getTime() - today.getTimezoneOffset() * 60 * 1000).toISOString().substring(0, 10)
         // const todayYyyymmdd = new Date().toISOString().substring(0, 10)
@@ -134,7 +133,7 @@ export function CurrentParticipantPanel() {
             const recordTime = new Date(recordDate.getTime() - recordDate.getTimezoneOffset() * 60 * 1000).toISOString().substring(0, 10);
             // console.debug(`yyyymmdd is ${todayYyyymmdd}, record time is ${recordTime}; looking for
             // '${participant}', found '${record.Participant}'`)
-            return record.Participant === participant
+            return (record.Participant??"").trim() === participant
                 && recordTime.startsWith(todayYyyymmdd)
         }).then(setCurrentParticipantResults)
     }
@@ -159,7 +158,7 @@ export function CurrentParticipantPanel() {
                     <fieldset className={"info-box-compact"}>
                         <legend>Participant</legend>
                         <DebouncedTextArea className="table-cell-input" placeholder={"Click to add Participant"}
-                                           value={testTemplate.Participant as string}
+                                           value={currentParticipant}
                                            onChange={(value) => updateCurrentParticipant(value)}
                                            onInput={updateHeight}
                         />
@@ -187,6 +186,8 @@ export function CurrentParticipantPanel() {
                             }}
                             onChange={(event) => updateCurrentMask(event?.value as string)}
                             allowCreateWhileLoading={true}
+                            createOptionPosition={"first"}
+                            isValidNewOption={(mask) => !maskList.some(value => value === mask.trim())}
                             isSearchable={true}
                             placeholder={"Click to add Mask"}
                         />

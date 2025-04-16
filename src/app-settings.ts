@@ -6,7 +6,7 @@ import {
     StageDefinition,
     StandardizedProtocolDefinitions, ProtocolDefaults, StandardStageDefinition
 } from "./simple-protocol.ts";
-import {SortingState} from "@tanstack/react-table";
+import {ColumnFiltersState, SortingState} from "@tanstack/react-table";
 import AbstractDB from "./abstract-db.ts";
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 import stringifyDeterministically from "json-stringify-deterministic";
@@ -47,6 +47,12 @@ export enum AppSettings {
     AUTO_CREATE_FAST_PROTOCOLS = "auto-create-fast-protocols",
     LAST_KNOWN_SETTINGS_KEYS_HASH = "last-known-settings-keys-hash", // hash of sorted settings keys
 
+    // session only settings. todo: can we merge these from another enum into this?
+    STATS_FIRST_DATE = "so-stats-first-date",
+    STATS_LAST_DATE = "so-stats-last-date",
+    RESULTS_TABLE_FILTER = "so-results-table-filter",
+    PARTICIPANT_RESULTS_TABLE_FILTER = "so-participant-results-table-filter",
+
     // these are deprecated:
     DEFAULT_TO_PREVIOUS_PARTICIPANT = "default-to-previous-participant",
     AUTO_ESTIMATE_FIT_FACTOR = "auto-estimate-fit-factor",
@@ -61,7 +67,15 @@ export enum AppSettings {
 /**
  * Settings can be of these types.
  */
-export type AppSettingType = boolean | string | number | JSONContent | SortingState | Partial<SimpleResultsDBRecord>;
+export type AppSettingType =
+    boolean
+    | string
+    | number
+    | JSONContent
+    | SortingState
+    | ColumnFiltersState
+    | Partial<SimpleResultsDBRecord>
+    | Date;
 
 /**
  * Settings names and default values.
@@ -122,6 +136,10 @@ const AppSettingsDefaults = {
     "show-remaining-event-time": false,
     "auto-create-fast-protocols": false,
     "last-known-settings-keys-hash": "",
+    "so-stats-first-date": new Date(0), // epoch, sentinel value
+    "so-stats-last-date": new Date(), // today
+    "so-results-table-filter": [],
+    "so-participant-results-table-filter": [],
 
     "default-to-previous-participant": false, // deprecated
     "show-protocol-editor": false, // deprecated
@@ -133,6 +151,16 @@ const AppSettingsDefaults = {
 }
 // this class should use AppSettingsType for type checking/ validations to ensure every setting has a default.
 export type ValidSettings = keyof typeof AppSettingsDefaults;
+
+/**
+ * sessionOnlySettings are not preserved to database.
+ */
+const sessionOnlySettings: Set<ValidSettings> = new Set<ValidSettings>([
+    AppSettings.STATS_FIRST_DATE,
+    AppSettings.STATS_LAST_DATE,
+    AppSettings.RESULTS_TABLE_FILTER,
+    AppSettings.PARTICIPANT_RESULTS_TABLE_FILTER,
+])
 
 type SettingsDBEntry<T> = { ID: string, value: T }
 
@@ -526,13 +554,19 @@ class AppSettingsContext {
      * @private
      */
     private async loadSetting<T extends AppSettingType>(setting: ValidSettings): Promise<T> {
-        await SETTINGS_DB.open();
-        const dbValue = await SETTINGS_DB.getSetting(setting);
         const defaultValue = AppSettingsDefaults[setting] as T
-        const result: T = dbValue === undefined ? defaultValue : dbValue as T; // explicitly check for undefined
-                                                                               // instead of truthy
-        this.updateCache(setting, result);
-        return result;
+        if (sessionOnlySettings.has(setting)) {
+            // don't bother loading from db because session only settings are not saved to db
+            this.updateCache(setting, defaultValue);
+            return defaultValue;
+        } else {
+            await SETTINGS_DB.open();
+            const dbValue = await SETTINGS_DB.getSetting(setting);
+            const result: T = dbValue === undefined ? defaultValue : dbValue as T; // explicitly check for undefined
+                                                                                   // instead of truthy
+            this.updateCache(setting, result);
+            return result;
+        }
     }
 
     /**
@@ -581,10 +615,15 @@ class AppSettingsContext {
                 return false;
             }
 
-            // value was changed, update the db
-            SETTINGS_DB.open().then(() => {
-                SETTINGS_DB.saveSetting(setting, value);
-            })
+            // value was changed
+            if (sessionOnlySettings.has(setting)) {
+                // ignore. session-only settings don't get preserved to db
+            } else {
+                // update the db
+                SETTINGS_DB.open().then(() => {
+                    SETTINGS_DB.saveSetting(setting, value);
+                })
+            }
 
         } else {
             // the first time we're trying to update this cache key. This means this call was the result of loading
@@ -722,7 +761,8 @@ export function convertStagesToSegments(stages: StandardStageDefinition[]): Prot
  * calculation so we can detect changes.
  */
 export async function calculateSettingsKeysHash() {
-    const keysString = JSON.stringify(Object.keys(AppSettings).sort())
+    const qualifiedSettingsKeys = Object.values(AppSettings).filter((key) => !sessionOnlySettings.has(key));
+    const keysString = JSON.stringify(qualifiedSettingsKeys.sort())
     const data = new TextEncoder().encode(keysString);
     const digest = await crypto.subtle.digest("SHA-1", data);
     const digestString = Array.from(new Uint8Array(digest), (byte) => String.fromCodePoint(byte)).join("")

@@ -10,7 +10,12 @@ import {QRCodeSVG} from "qrcode.react";
  * A button that generatos a QR code for the given React Table to transfer to another instance of this app
  * @constructor
  */
-export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({table, tableData, columnFilters, ...props}: {
+export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({
+    table,
+    tableData,
+    columnFilters,
+    ...props
+}: {
     table: Table<T>,
     tableData: T[],
     columnFilters: ColumnFiltersState
@@ -29,7 +34,7 @@ export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({t
             };
             window.addEventListener("keydown", keyListener)
             return () => {
-                window.removeEventListener("keypress", keyListener)
+                window.removeEventListener("keydown", keyListener)
                 console.log("removed key listener")
             }
         }
@@ -38,7 +43,8 @@ export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({t
     function generateQRCode() {
         // first, extract data and compress it with lz-string
 
-        // The table is filtered, so look at the filtered table data for which record IDs to include. Then grab these from localTableData
+        // The table is filtered, so look at the filtered table data for which record IDs to include. Then grab these
+        // from localTableData
         const rows = table.getSortedRowModel().rows
         const rowData = rows.map((row) => row.original)
         const recordIdsToInclude: number[] = rowData.map(rd => rd.ID)
@@ -48,7 +54,8 @@ export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({t
             .map((record) => sanitizeRecord(record));
 
         const str = LZString.compressToEncodedURIComponent(JSON.stringify(recordsToExport));
-        // sometimes location has a trailing '/', remove it so we don't get a '//'. This behavior is different between local and prod for some reason
+        // sometimes location has a trailing '/', remove it so we don't get a '//'. This behavior is different between
+        // local and prod for some reason
 
         const origin = location.origin
         // const origin = "https://emcee5601.github.io"
@@ -89,7 +96,7 @@ export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({t
                         <span style={{display: "block"}}>Fit test results {getFilterSummary()}</span>
                         <QRCodeSVG value={qrcodeUrl}
                                    size={512}
-                                   marginSize={2}
+                                   marginSize={4}
                                    title={"Fit Test Results"}/>
                     </div>
                 </div>}

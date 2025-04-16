@@ -8,13 +8,15 @@ import {avgArray, formatDuration, median} from "src/utils.ts";
 import {InfoBox} from "src/InfoBox.tsx";
 import {AppContext} from "src/app-context.ts";
 import {AppSettings} from "src/app-settings.ts";
+import {useSetting} from "src/use-setting.ts";
 
 type Tally = [string, number]
 
 export function StatsPanel() {
     const appContext = useContext(AppContext)
-    const [firstDate, setFirstDate] = useState<Date | null>(null);
-    const [lastDate, setLastDate] = useState<Date | null>(null)
+    const [firstDate, setFirstDate] = useSetting<Date>(AppSettings.STATS_FIRST_DATE);
+    const [lastDate, setLastDate] = useSetting<Date>(AppSettings.STATS_LAST_DATE)
+    const [knownEventDates, setKnownEventDates] = useState<Date[]>([])
     const [numEvents, setNumEvents] = useState<number>(0)
     const [numTests, setNumTests] = useState<number>(0)
     const [numCompletedTests, setNumCompletedTests] = useState<number>(0)
@@ -182,6 +184,24 @@ export function StatsPanel() {
         // median time per participant
     }
 
+    /**
+     * todo: do this more efficiently, eg. add an index on the Time column or cache, for now, just scan the whole db
+     * since it's not too big and we're not doing it often.
+     */
+    async function getEventDates() {
+        return new Promise<Date[]>((resolve) => {
+            const dates: Set<Date> = new Set()
+            RESULTS_DB.getData((record: SimpleResultsDBRecord): boolean => {
+                // use the filter capability since we don't care about the results
+                dates.add(new Date(record.Time)) // todo: catch parsing problems?
+                return false;
+            }).then(() => resolve([...dates].toSorted((a, b) => {
+                // oldest date first
+                return a.getTime() - b.getTime()
+            })));
+        })
+    }
+
     function getResultsInRange() {
         // convert time back to local time
         // iso format is yyyy-mm-ddTHH:MM:ss
@@ -200,15 +220,66 @@ export function StatsPanel() {
         getResultsInRange()
     }, [firstDate, lastDate]);
 
+    useEffect(() => {
+        // load dates
+        getEventDates().then((dates: Date[]) => {
+            setKnownEventDates(dates)
+            // dates should be sorted
+
+            // always start with the last event only
+            if(dates.length === 0) {
+                // no dates in db, do nothing
+                return
+            }
+            if(firstDate.getTime() === 0) {
+                // sentinel value. user hasn't set a value yet.
+                // set to the last date
+                setFirstDate(dates[dates.length - 1]);
+            }
+        })
+    }, []);
+
+
+    function handleFirstDateChanged(newFirstDate: Date | null) {
+        if (newFirstDate) {
+            if (lastDate && newFirstDate > lastDate) {
+                setLastDate(newFirstDate); // make sure last date is not before the new first date
+            }
+            setFirstDate(newFirstDate);
+        } else {
+            if(knownEventDates.length > 0) {
+                setFirstDate(knownEventDates[0])
+            } else {
+                setFirstDate(new Date(0)); // we don't have any known event dates
+            }
+        }
+    }
+
+    function handleLastDateChanged(newLastDate: Date | null) {
+        if (newLastDate) {
+            if (firstDate && newLastDate < firstDate) {
+                setFirstDate(newLastDate); // make sure first date is not after the new last date
+            }
+            setLastDate(newLastDate);
+        } else {
+            if(knownEventDates.length>0) {
+                setLastDate(knownEventDates[knownEventDates.length - 1]);
+            } else {
+                setLastDate(new Date()); // today
+            }
+        }
+    }
+
     return (<div id={"stats-panel"}>
-        <section id={"stats-date-range-selection"}>
+        <section id={"stats-date-range-selection"} style={{display:"flex", justifySelf:"center"}}>
             from
             <DatePicker id={"stats-first-date-picker"}
                         className={"date-picker-input"} selected={firstDate}
                         showIcon={true}
                         dateFormat={"YYYY-MMM-dd"}
                         placeholderText={"Start date"}
-                        onChange={(date) => setFirstDate(date)}
+                        highlightDates={knownEventDates}
+                        onChange={(date) => handleFirstDateChanged(date)}
             />
 
             to
@@ -217,7 +288,8 @@ export function StatsPanel() {
                         showIcon={true}
                         dateFormat={"YYYY-MMM-dd"}
                         placeholderText={"End date"}
-                        onChange={(date) => setLastDate(date)}
+                        highlightDates={knownEventDates}
+                        onChange={(date) => handleLastDateChanged(date)}
             />
         </section>
         <section id={"stats-display"} style={{

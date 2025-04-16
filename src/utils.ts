@@ -102,6 +102,9 @@ export function scrollToBottom(textAreaRef: RefObject<HTMLTextAreaElement>) {
 }
 
 export function median(array: number[]) {
+    if(array.length === 0) {
+        return 0;
+    }
     const sortedArray = array.toSorted()
     if (0 === sortedArray.length % 2) {
         // even

@@ -1,7 +1,7 @@
 import {createContext} from "react";
 import {ParticleConcentrationEvent, PortaCountClient8020} from "./portacount-client-8020.ts";
 import {APP_SETTINGS_CONTEXT, AppSettings} from "./app-settings.ts";
-import {DataCollector} from "./data-collector.ts";
+import {DataCollector, DataCollectorListener} from "./data-collector.ts";
 import {SPEECH} from "./speech.ts";
 import {RESULTS_DB} from "./SimpleResultsDB.ts";
 import {RAW_DB} from "./database.ts";
@@ -44,18 +44,24 @@ function initSpeech() {
             }
         }
     })
-    dataCollector.addListener({
+    let prevInstructions: string = "";
+    const dataCollectorListener:DataCollectorListener = {
         instructionsChanged(instructions: string) {
             // say up to the first period in the instructions.
             const whatToSay = instructions.split(".", 2)[0]
-            SPEECH.sayItLater(whatToSay); // make sure instructions are queued.
+            if(prevInstructions !== instructions) {
+                prevInstructions = instructions;
+                SPEECH.sayItLater(whatToSay); // make sure instructions are queued.
+            }
+            // else, ignore
         },
         estimatedFitFactorChanged(estimate: number) {
             if (settings.sayEstimatedFitFactor) {
                 SPEECH.sayItPolitely(`Estimated Fit Factor is ${estimate.toFixed(0)}`)
             }
         },
-    })
+    };
+    dataCollector.addListener(dataCollectorListener)
 }
 
 /**

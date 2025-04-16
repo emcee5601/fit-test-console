@@ -232,7 +232,7 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
         }
         if (currentSegment.source === SampleSource.MASK) {
             if (currentSegmentConcentration && !isNaN(currentSegmentConcentration)) {
-                return currentSegmentConcentration.toString();
+                return currentSegmentConcentration.toFixed(currentSegmentConcentration<100?1:0);
             }
         }
         return "?"
@@ -245,10 +245,10 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
         if (currentSegment.source === SampleSource.AMBIENT) {
             const ambient = calculateSegmentConcentration(currentSegment);
             if (ambient) {
-                return ambient.toString();
+                return ambient.toFixed(0);
             }
         }
-        return lastKnownAmbient ? lastKnownAmbient.toString() : "?"
+        return lastKnownAmbient ? lastKnownAmbient.toFixed(0) : "?"
     }
 
     return (
