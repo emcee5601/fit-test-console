@@ -5,9 +5,9 @@ import {DebouncedTextArea} from "./DebouncedTextArea.tsx";
 import {AppSettings, AppSettingType, SettingsListener} from "./app-settings.ts";
 import {deepCopy} from "json-2-csv/lib/utils";
 import {ResultsTable} from "./ResultsTable.tsx";
-import CreatableSelect from "react-select/creatable";
 import {LabeledSection} from "./LabeledSection.tsx";
 import {useSetting} from "./use-setting.ts";
+import {MaskCreatableSelect} from "src/MaskCreatableSelect.tsx";
 
 export function CurrentParticipantPanel() {
     const appContext = useContext(AppContext)
@@ -20,8 +20,6 @@ export function CurrentParticipantPanel() {
 
     const [testTemplate, setTestTemplate] = useSetting<Partial<SimpleResultsDBRecord>>(AppSettings.TEST_TEMPLATE)
     const [currentParticipantResults, setCurrentParticipantResults] = useState([] as SimpleResultsDBRecord[])
-    const [maskList, setMaskList] = useState<string[]>([]) // todo: usememo here, and force an update when new masks
-                                                           // are created
     const [selectedProtocol] = useSetting<string>(AppSettings.SELECTED_PROTOCOL)
     const [currentParticipant, setCurrentParticipant] = useState<string>(testTemplate.Participant ?? "")
 
@@ -75,19 +73,6 @@ export function CurrentParticipantPanel() {
         updateCurrentParticipantTests(testTemplate.Participant)
     }
 
-
-    async function loadAllMasksFromDb() {
-        await RESULTS_DB.open()
-        RESULTS_DB.getData().then((results) => {
-            const dbMasks = results.reduce((masks, currentValue) => {
-                // make sure mask has a value and strip that value of leading and trailing spaces
-                masks.add(((currentValue.Mask as string) ?? "").trim())
-                return masks;
-            }, new Set<string>())
-            setMaskList([...dbMasks].sort())
-        })
-    }
-
     useEffect(() => {
         const settingsListener: SettingsListener = {
             subscriptions: () => [AppSettings.TEST_TEMPLATE],
@@ -98,7 +83,6 @@ export function CurrentParticipantPanel() {
             }
         }
         appContext.settings.addListener(settingsListener)
-        loadAllMasksFromDb()
 
         return () => {
             appContext.settings.removeListener(settingsListener)
@@ -138,6 +122,11 @@ export function CurrentParticipantPanel() {
         }).then(setCurrentParticipantResults)
     }
 
+    async function deleteRows(rows: number[]) {
+        await Promise.all(rows.map((id) => RESULTS_DB.deleteRecordById(id)));
+        updateCurrentParticipantTests(testTemplate.Participant)
+    }
+
     return (
         <div id="current-test-results">
             <LabeledSection>
@@ -165,32 +154,7 @@ export function CurrentParticipantPanel() {
                     </fieldset>
                     <fieldset className={"info-box-compact"} style={{width: "25ch"}}>
                         <legend>Mask</legend>
-                        <CreatableSelect
-                            name={"Mask"}
-                            options={maskList.map((maskName) => {
-                                return {
-                                    value: maskName,
-                                    label: maskName
-                                }
-                            })}
-                            value={testTemplate.Mask ? {value: testTemplate.Mask, label: testTemplate.Mask} : null}
-                            styles={{
-                                menu: (baseStyles) => ({
-                                    ...baseStyles,
-                                    zIndex: 2
-                                }),
-                                singleValue: (baseStyles) => ({
-                                    ...baseStyles,
-                                    whiteSpace: "normal", // disable truncating with ellipses
-                                }),
-                            }}
-                            onChange={(event) => updateCurrentMask(event?.value as string)}
-                            allowCreateWhileLoading={true}
-                            createOptionPosition={"first"}
-                            isValidNewOption={(mask) => !maskList.some(value => value === mask.trim())}
-                            isSearchable={true}
-                            placeholder={"Click to add Mask"}
-                        />
+                        <MaskCreatableSelect value={testTemplate.Mask} onChange={(value) => updateCurrentMask(value)}/>
                     </fieldset>
                     <fieldset className={"info-box-compact"} style={{width: "25ch"}}>
                         <legend>Notes</legend>
@@ -208,6 +172,8 @@ export function CurrentParticipantPanel() {
                                   searchableColumns={[]} hideColumns={["Participant", "Time"]}
                                   minExercisesToShow={appContext.settings.numExercises}
                                   columnSortingSettingKey={AppSettings.PARTICIPANT_RESULTS_TABLE_SORT}
+                                  columnFilterSettingKey={AppSettings.PARTICIPANT_RESULTS_TABLE_FILTER}
+                                  deleteRowsCallback={deleteRows}
                     />
                 </div>
             </LabeledSection>

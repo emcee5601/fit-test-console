@@ -9,9 +9,8 @@ import {exportToCsv, CsvAbleType} from "./download-helper.ts";
  */
 export function ReactTableCsvExportWidget<T extends CsvAbleType>({table, ...props}: {
     table: Table<T>
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onClick'>) {
+} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'>) {
 
     // todo: use <button/>. for now use <input/>
-    return (<input type={"button"} value={"Export to CSV"} {...props}
-                   onClick={() => exportToCsv(table)}/>)
+    return (<button {...props} onClick={() => exportToCsv(table)}>Export to CSV</button>)
 }

@@ -52,6 +52,7 @@ export enum AppSettings {
     STATS_LAST_DATE = "so-stats-last-date",
     RESULTS_TABLE_FILTER = "so-results-table-filter",
     PARTICIPANT_RESULTS_TABLE_FILTER = "so-participant-results-table-filter",
+    MASK_LIST = "so-mask-list",
 
     // these are deprecated:
     DEFAULT_TO_PREVIOUS_PARTICIPANT = "default-to-previous-participant",
@@ -70,6 +71,7 @@ export enum AppSettings {
 export type AppSettingType =
     boolean
     | string
+    | string[]
     | number
     | JSONContent
     | SortingState
@@ -140,6 +142,7 @@ const AppSettingsDefaults = {
     "so-stats-last-date": new Date(), // today
     "so-results-table-filter": [],
     "so-participant-results-table-filter": [],
+    "so-mask-list": [],
 
     "default-to-previous-participant": false, // deprecated
     "show-protocol-editor": false, // deprecated
@@ -154,12 +157,14 @@ export type ValidSettings = keyof typeof AppSettingsDefaults;
 
 /**
  * sessionOnlySettings are not preserved to database.
+ * todo: derive these from enum value prefix? eg, starts with 'so-'?
  */
 const sessionOnlySettings: Set<ValidSettings> = new Set<ValidSettings>([
     AppSettings.STATS_FIRST_DATE,
     AppSettings.STATS_LAST_DATE,
     AppSettings.RESULTS_TABLE_FILTER,
     AppSettings.PARTICIPANT_RESULTS_TABLE_FILTER,
+    AppSettings.MASK_LIST,
 ])
 
 type SettingsDBEntry<T> = { ID: string, value: T }

@@ -19,7 +19,7 @@ export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({
     table: Table<T>,
     tableData: T[],
     columnFilters: ColumnFiltersState
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onClick'>) {
+} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'>) {
     const [qrcodeUrl, setQrcodeUrl] = useState<string>("")
     const appBasePath = useHref("/")
 
@@ -100,7 +100,6 @@ export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({
                                    title={"Fit Test Results"}/>
                     </div>
                 </div>}
-            <input type={"button"} value={"QR Code"} {...props}
-                   onClick={() => generateQRCode()}/>
+            <button {...props} onClick={() => generateQRCode()}>QR Code</button>
         </>)
 }

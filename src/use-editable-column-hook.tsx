@@ -6,6 +6,7 @@ import {
     Unstable_NumberInput as NumberInput
 } from "@mui/base/Unstable_NumberInput";
 import {useTheme} from '@mui/system';
+import {MaskCreatableSelect} from "src/MaskCreatableSelect.tsx";
 
 declare module '@tanstack/react-table' {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -16,7 +17,7 @@ declare module '@tanstack/react-table' {
     //allows us to define custom properties for our columns
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     interface ColumnMeta<TData extends RowData, TValue> {
-        filterVariant?: 'text' | 'range' | 'select' | 'date'
+        filterVariant?: 'text' | 'range' | 'select' | 'date' | 'mask'
     }
 }
 
@@ -61,6 +62,29 @@ export function useEditableColumn<T, V>({
     )
 }
 
+export function useEditableMaskColumn<T, V>({
+    getValue,
+    row: {index},
+    column: {id},
+    table
+}: CellContext<T, V>) {
+    const initialValue = getValue()
+    // We need to keep and update the state of the cell normally
+    const [value, setValue] = React.useState<V>(initialValue)
+
+    const onChange = useCallback((newValue:string) => {
+        if (newValue != initialValue) {
+            // only update if changed
+            table.options.meta?.updateData(index, id, newValue)
+            setValue(newValue as V)
+        }
+    }, [value, id, index, table.options.meta, initialValue])
+
+
+    return (
+        <MaskCreatableSelect value={(value as string)??""} onChange={(v) => onChange(v)}/>
+    )
+}
 
 // from https://mui.com/base-ui/react-number-input/
 const cyan = {

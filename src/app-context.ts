@@ -45,11 +45,11 @@ function initSpeech() {
         }
     })
     let prevInstructions: string = "";
-    const dataCollectorListener:DataCollectorListener = {
+    const dataCollectorListener: DataCollectorListener = {
         instructionsChanged(instructions: string) {
             // say up to the first period in the instructions.
             const whatToSay = instructions.split(".", 2)[0]
-            if(prevInstructions !== instructions) {
+            if (prevInstructions !== instructions) {
                 prevInstructions = instructions;
                 SPEECH.sayItLater(whatToSay); // make sure instructions are queued.
             }
@@ -103,7 +103,7 @@ async function autoConnect() {
     //  bad port, say a built-in bluetooth port, and auto-connect will try to connect to it
     // todo: update selected data source when auto-connecting
     // make sure to check for existence of navigator.serial, which doesn't exist on android
-    const webSerialPorts: SerialPort[] = navigator.serial?(await navigator.serial.getPorts()).filter((port => port.getInfo().usbVendorId)) : [];
+    const webSerialPorts: SerialPort[] = navigator.serial ? (await navigator.serial.getPorts()).filter((port => port.getInfo().usbVendorId)) : [];
     const usbSerialPorts = await UsbSerialDrivers.getPorts()
     console.log(`autoConnect: available web serial ${JSON.stringify(webSerialPorts)}, available web usb serial ports: ${JSON.stringify(usbSerialPorts)}`);
     // prefer webSerialPorts
@@ -121,11 +121,24 @@ async function autoConnect() {
     }
 }
 
+async function initMaskList() {
+    await RESULTS_DB.open()
+    RESULTS_DB.getData().then((results) => {
+        const dbMasks = results.reduce((masks, currentValue) => {
+            // make sure mask has a value and strip that value of leading and trailing spaces
+            masks.add(((currentValue.Mask as string) ?? "").trim())
+            return masks;
+        }, new Set<string>())
+        settings.saveSetting(AppSettings.MASK_LIST, [...dbMasks].sort())
+    })
+}
+
 async function init() {
     initSpeech();
     initDataCollector()
     await RESULTS_DB.open() // start init process
     await RAW_DB.open()
+    await initMaskList();
     initPortaCountListener();
     initSelectedProtocol();
     timingSignal.start();

@@ -118,6 +118,13 @@ class SimpleResultsDB extends AbstractDB {
             await this.addRecord(record);
         }
     }
+
+    async deleteRecord(record: SimpleResultsDBRecord) {
+        return this.deleteRecordById(record.ID);
+    }
+    async deleteRecordById(recordId: number) {
+        return this.delete(SimpleResultsDB.TEST_RESULTS_OBJECT_STORE, recordId);
+    }
 }
 
 

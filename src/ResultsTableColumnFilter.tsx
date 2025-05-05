@@ -2,6 +2,7 @@ import {Column} from "@tanstack/react-table";
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 import {DebouncedInput} from "./DebouncedInput.tsx";
 import DatePicker from "react-datepicker";
+import {MaskCreatableSelect} from "src/MaskCreatableSelect.tsx";
 
 export function ResultsTableColumnFilter<V>({column, dates}: {
     column: Column<SimpleResultsDBRecord, V>,
@@ -62,6 +63,10 @@ export function ResultsTableColumnFilter<V>({column, dates}: {
                                todayButton={<input type={"button"} value={"Today"}/>}
                                onChange={(value) => column.setFilterValue(value?.toLocaleDateString())}
             ></DatePicker>
+        }
+        case 'mask': {
+            const curFilter = column.getFilterValue() as string;
+            return <MaskCreatableSelect value={curFilter} onChange={value => column.setFilterValue(value)}/>
         }
         default:
             return <DebouncedInput

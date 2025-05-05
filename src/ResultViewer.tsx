@@ -42,9 +42,15 @@ export function ResultViewer() {
         RESULTS_DB.open().then(() => processUrlData()).catch((error) => console.log(`error while opening db: ${error}`));
     }, []);
 
+    async function deleteRows(rows: number[]) {
+        await Promise.all(rows.map((id) => RESULTS_DB.deleteRecordById(id)));
+        setResults(await getStoredData());
+    }
+
     return (
         <>
-            <ResultsTable tableData={results} setTableData={setResults}/>
+            <ResultsTable tableData={results} setTableData={setResults}
+                          deleteRowsCallback={deleteRows}/>
         </>
     );
 }

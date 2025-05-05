@@ -21,7 +21,7 @@ import './ResultsTable.css'
 
 import {useVirtualizer} from '@tanstack/react-virtual'
 import "react-datepicker/dist/react-datepicker.css";
-import {useEditableColumn} from "./use-editable-column-hook.tsx";
+import {useEditableColumn, useEditableMaskColumn} from "./use-editable-column-hook.tsx";
 import {useSkipper} from "./use-skipper-hook.ts";
 import {convertFitFactorToFiltrationEfficiency, getFitFactorCssClass} from "./utils.ts";
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
@@ -32,6 +32,8 @@ import {ResultsTableColumnFilter} from "./ResultsTableColumnFilter.tsx";
 import {ReactTableCsvExportWidget} from "./ReactTableCsvExportWidget.tsx";
 import {ReactTableQrCodeExportWidget} from "./ReactTableQrCodeExportWidget.tsx";
 import {useSetting} from "./use-setting.ts";
+import {BooleanToggleButton} from "src/ToggleButton.tsx";
+import {deepCopy} from "json-2-csv/lib/utils";
 
 //This is a dynamic row height example, which is more complicated, but allows for a more realistic table.
 //See https://tanstack.com/virtual/v3/docs/examples/react/table for a simpler fixed row height example.
@@ -42,6 +44,7 @@ export function ResultsTable({
     minExercisesToShow = 0,
     columnSortingSettingKey = AppSettings.RESULTS_TABLE_SORT,
     columnFilterSettingKey = AppSettings.RESULTS_TABLE_FILTER,
+    deleteRowsCallback,
 }: {
     tableData: SimpleResultsDBRecord[],
     setTableData: Dispatch<SetStateAction<SimpleResultsDBRecord[]>>,
@@ -50,6 +53,7 @@ export function ResultsTable({
     minExercisesToShow?: number,
     columnSortingSettingKey?: AppSettings.RESULTS_TABLE_SORT | AppSettings.PARTICIPANT_RESULTS_TABLE_SORT,
     columnFilterSettingKey?: AppSettings.RESULTS_TABLE_FILTER | AppSettings.PARTICIPANT_RESULTS_TABLE_FILTER,
+    deleteRowsCallback?: (recordIds: number[]) => void,
 }) {
     const appContext = useContext(AppContext)
     const dataCollector: DataCollector = appContext.dataCollector
@@ -64,7 +68,7 @@ export function ResultsTable({
         year: "numeric"
     })
 
-    function getExerciseResultCell(info: CellContext<SimpleResultsDBRecord, string | number>) {
+    function getExerciseResultCell(info: CellContext<SimpleResultsDBRecord, string | number|boolean>) {
         const fitFactor = info.getValue<number>();
 
         const efficiencyPercentage = convertFitFactorToFiltrationEfficiency(fitFactor);
@@ -125,8 +129,8 @@ export function ResultsTable({
     const [numExerciseColumns, setNumExerciseColumns] = useState(1) // make sure this is not zero
 
     function safeRegExpFilter(row: Row<SimpleResultsDBRecord>, columnId: string, filterValue: string): boolean {
-        const cellValue:string = row.getValue(columnId);
-        if((filterValue??"").trim() === (cellValue??"").trim()) {
+        const cellValue: string = row.getValue(columnId);
+        if ((filterValue ?? "").trim() === (cellValue ?? "").trim()) {
             // matches empty strings, and empty values
             return true;
         }
@@ -138,8 +142,31 @@ export function ResultsTable({
         }
     }
 
-    const columns = React.useMemo<ColumnDef<SimpleResultsDBRecord, string | number>[]>(
+    const [selectedRows, setSelectedRows] = useState<number[]>([])
+
+    useEffect(() => {
+    }, [selectedRows]);
+    const columns = React.useMemo<ColumnDef<SimpleResultsDBRecord, string | number|boolean>[]>(
         () => [
+            {
+                accessorFn: record => {
+                    return selectedRows.includes(record.ID)
+                },
+                header: 'Select',
+                cell: info => {
+                    const recordId: number = info.row.getValue("ID") as number;
+                    return <input type={"checkbox"} checked={selectedRows.includes(recordId)}
+                                  onChange={(event) => {
+                                      if(event.target.checked) {
+                                          setSelectedRows((prev) => [...prev, recordId])
+                                      } else {
+                                          setSelectedRows((prev) => prev.filter((item) => item !== recordId));
+                                      }
+                                  }}></input>
+                },
+                enableColumnFilter: false,
+                size: 50,
+            },
             {
                 accessorKey: 'ID',
                 header: 'ID',
@@ -176,9 +203,12 @@ export function ResultsTable({
             },
             {
                 accessorKey: 'Mask',
-                cell: useEditableColumn,
+                cell: useEditableMaskColumn,
                 enableColumnFilter: searchableColumns.includes('Mask'),
                 filterFn: safeRegExpFilter,
+                meta: {
+                    filterVariant: 'mask',
+                },
                 size: 250,
             },
             {
@@ -201,16 +231,25 @@ export function ResultsTable({
                 size: 75,
             },
         ],
-        [numExerciseColumns]
+        [numExerciseColumns, selectedRows]
     )
 
+    const [enableSelection, setEnableSelection] = useState<boolean>(false)
     const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
     const [columnFilters, setColumnFilters] = useSetting<ColumnFiltersState>(columnFilterSettingKey)
-    const [columnVisibility] = useState(hideColumns.reduce((result: { [key: string]: boolean }, column: string) => {
+    const [sorting, setSorting] = useSetting<SortingState>(columnSortingSettingKey)
+    const [columnVisibility, setColumnVisibility] = useState(hideColumns.reduce((result: { [key: string]: boolean }, column: string) => {
         result[column] = false;
         return result
     }, {}))
-    const [sorting, setSorting] = useSetting<SortingState>(columnSortingSettingKey)
+    useEffect(() => {
+        columnVisibility["Select"] = enableSelection;
+        setColumnVisibility(deepCopy(columnVisibility))
+        if(!enableSelection) {
+            setSelectedRows([]) // clear
+        }
+    }, [enableSelection]);
+
 
     // console.debug(`columnVisibility: ${JSON.stringify(columnVisibility)}`)
     const table = useReactTable({
@@ -331,10 +370,21 @@ export function ResultsTable({
     }, [dataCollector]);
 
 
+    function deleteSelectedRecords() {
+        setSelectedRows([]) // reset
+        if(deleteRowsCallback) {
+            deleteRowsCallback(selectedRows)
+        }
+    }
+
     //All important CSS styles are included as inline styles for this example. This is not recommended for your code.
     return (
         <div style={{height: "100%", display: "flex", flexDirection: "column"}}>
             <div>
+                <div style={{display: "inline-block"}}><BooleanToggleButton trueLabel={"Enable selection"}
+                                                                            value={enableSelection}
+                                                                            setValue={setEnableSelection}/></div>
+                {enableSelection && deleteRowsCallback &&<button onClick={() => deleteSelectedRecords()}>Delete selected</button>}
                 <ReactTableCsvExportWidget table={table}/>
                 <ReactTableQrCodeExportWidget table={table} tableData={tableData} columnFilters={columnFilters}/>
             </div>
