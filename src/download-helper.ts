@@ -116,7 +116,7 @@ export type CsvAbleType = {
 function generateCsvPayload<T extends CsvAbleType>(table: Table<T>) {
     const csvConfig = mkConfig({
         fieldSeparator: ',',
-        filename: `fit-test-results-${new Date().getTime()}`,
+        filename: `fit-test-results-${new Date().toISOString().replace(/[:.]/g,"_")}`,
         decimalSeparator: '.',
         // useKeysAsHeaders: true,
         columnHeaders: table.getAllColumns().map(col => col.id)
