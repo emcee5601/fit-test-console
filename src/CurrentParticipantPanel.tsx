@@ -4,10 +4,10 @@ import {AppContext} from "./app-context.ts";
 import {DebouncedTextArea} from "./DebouncedTextArea.tsx";
 import {AppSettings, AppSettingType, SettingsListener} from "./app-settings.ts";
 import {deepCopy} from "json-2-csv/lib/utils";
-import {ResultsTable} from "./ResultsTable.tsx";
 import {LabeledSection} from "./LabeledSection.tsx";
 import {useSetting} from "./use-setting.ts";
 import {MaskCreatableSelect} from "src/MaskCreatableSelect.tsx";
+import {ResultsTable} from "src/lazy-components.ts";
 
 export function CurrentParticipantPanel() {
     const appContext = useContext(AppContext)

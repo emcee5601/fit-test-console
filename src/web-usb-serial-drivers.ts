@@ -239,15 +239,17 @@ export class UsbSerialDrivers {
     static readonly supportedDrivers: UsbSerialDriver[] = [new FtdiSerialDriver(), new ProlificSerialDriver()];
 
     static async getPorts(): Promise<UsbSerialPort[]> {
-        const devices = await navigator.usb.getDevices();
         const ports: UsbSerialPort[] = []
-        devices.forEach(device => {
-            const driver = UsbSerialDrivers.findDriverForDevice(device)
-            if (driver) {
-                // just return the first matching driver
-                ports.push(new UsbSerialPort(device, driver));
-            }
-        })
+        if(navigator.usb) {
+            const devices = await navigator.usb.getDevices();
+            devices.forEach(device => {
+                const driver = UsbSerialDrivers.findDriverForDevice(device)
+                if (driver) {
+                    // just return the first matching driver
+                    ports.push(new UsbSerialPort(device, driver));
+                }
+            })
+        }
         return ports;
     }
 

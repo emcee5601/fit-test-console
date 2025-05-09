@@ -1,7 +1,7 @@
 import {EstimatedFitFactorWidget} from "./EstimatedFitFactorWidget.tsx";
 import {EstimatedFitFactorChart} from "./EstimatedFitFactorChart.tsx";
 
-export function EstimatedFitFactorPanel() {
+export default function EstimatedFitFactorPanel() {
     return (
         <div id="estimated-ff-and-chart-panel"
              style={{

@@ -1,9 +1,9 @@
 import LZString from "lz-string";
 import {useNavigate, useSearchParams} from "react-router";
 import {useEffect, useState} from "react";
-import {ResultsTable} from "./ResultsTable.tsx";
 import {RESULTS_DB, SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 import {getStoredData, updateStoredData} from "./results-transfer-util.ts";
+import {ResultsTable} from "src/lazy-components.ts";
 
 export function ResultViewer() {
     const [results, setResults] = useState<SimpleResultsDBRecord[]>([])

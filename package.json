@@ -20,6 +20,7 @@
     "@tanstack/react-virtual": "^3.10.9",
     "@types/node": "^22.10.0",
     "@types/w3c-web-usb": "^1.0.10",
+    "@yudiel/react-qr-scanner": "^2.3.1",
     "echarts": "^5.5.1",
     "echarts-for-react": "^3.0.2",
     "export-to-csv": "^1.4.0",

@@ -2,7 +2,7 @@ import {NavBar} from "./NavBar.tsx";
 import {Outlet} from "react-router";
 import {AppContextProvider} from "./AppContextProvider.tsx";
 
-export function MainLayout() {
+export default function MainLayout() {
     return (<>
         <AppContextProvider>
             <div className={"app-container"}>

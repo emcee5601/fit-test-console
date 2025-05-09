@@ -464,7 +464,7 @@ class AppSettingsContext {
                         instructions: "Prep",
                         ambient_purge: firstStage.ambient_purge || ProtocolDefaults.defaultAmbientPurgeDuration,
                         ambient_sample: firstStage.ambient_sample || ProtocolDefaults.defaultAmbientSampleDuration,
-                        mask_purge: firstStage.mask_purge || ProtocolDefaults.defaultMaskPurgeDuration,
+                        mask_purge: 0,
                         mask_sample: 0,
                     })
 
@@ -476,7 +476,7 @@ class AppSettingsContext {
                                 instructions: baseStage.instructions,
                                 ambient_purge: 0,
                                 ambient_sample: 0,
-                                mask_purge: 0, // todo: optionally keep this if present
+                                mask_purge: 4, // it takes about 4 seconds to clear the counting chamber. the tube takes about 0.1 sec to clear
                                 // todo: make min and reduction ratio configurable
                                 mask_sample: Math.min(baseStage.mask_sample, Math.max(20, baseStage.mask_sample * 0.75)),
                             })

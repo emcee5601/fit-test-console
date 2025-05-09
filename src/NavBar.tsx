@@ -5,7 +5,7 @@ import {EventTimeWidget} from "src/EventTimeWidget.tsx";
 import {CurrentParticipantTimeWidget} from "src/CurrentParticipantTimeWidget.tsx";
 import {useSetting} from "src/use-setting.ts";
 import {AppSettings} from "src/app-settings.ts";
-import {NewSettingsNotifier} from "src/NewSettingsNotifier.tsx";
+import {BrowserDetect} from "src/BrowserDetect.tsx";
 
 export function NavBar() {
     const navigate = useNavigate();
@@ -31,19 +31,23 @@ export function NavBar() {
 
     useWakeLock()
     return (
-        <div style={{display: "flex", justifyContent: "space-between"}}>
-            <CurrentParticipantTimeWidget style={{visibility: showParticipantTime?"visible":"hidden"}}/>
-            <div>
-                <NavLink to={"/"}>Home</NavLink>
-                | <NavLink to={"/estimate"}>Estimate</NavLink>
-                | <NavLink to={"/view-results"}>Results</NavLink>
-                | <NavLink to={"/settings"}>Settings</NavLink>
-                | <NavLink to={"/protocols"}>Protocols</NavLink>
-                | <NavLink to={"/raw-data"}>Raw&nbsp;Data</NavLink>
-                | <NavLink to={"/stats"}>Stats</NavLink>
+        <>
+            <div style={{display: "flex", justifyContent: "space-between"}}>
+                <CurrentParticipantTimeWidget style={{visibility: showParticipantTime ? "visible" : "hidden"}}/>
+                <div>
+                    <NavLink to={"/"}>Home</NavLink>
+                    | <NavLink to={"/estimate"}>Estimate</NavLink>
+                    | <NavLink to={"/view-results"}>Results</NavLink>
+                    | <NavLink to={"/settings"}>Settings</NavLink>
+                    | <NavLink to={"/protocols"}>Protocols</NavLink>
+                    | <NavLink to={"/raw-data"}>Raw&nbsp;Data</NavLink>
+                    | <NavLink to={"/stats"}>Stats</NavLink>
+                    {<>| <NavLink to={"/qrscanner"}>QR Scanner</NavLink></>}
+                </div>
+                <EventTimeWidget style={{visibility: showEventTime ? "visible" : "hidden"}}/>
+                {/*<NewSettingsNotifier/> this interferes with browser detection redirect, since this also redirects*/}
             </div>
-            <EventTimeWidget style={{visibility: showEventTime?"visible":"hidden"}}/>
-            <NewSettingsNotifier/>
-        </div>
+            <BrowserDetect/>
+        </>
     )
 }

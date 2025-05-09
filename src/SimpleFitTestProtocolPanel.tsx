@@ -15,7 +15,7 @@ import {AppSettings} from "./app-settings.ts";
 import stringifyDeterministically from "json-stringify-deterministic";
 import {useSetting} from "./use-setting.ts";
 
-export function SimpleFitTestProtocolPanel(props: JSONEditorPropsOptional) {
+export default function SimpleFitTestProtocolPanel(props: JSONEditorPropsOptional) {
     // TODO: extract default
     const [protocolInstructionSets, setProtocolInstructionSets] = useSetting<JSONContent>(AppSettings.PROTOCOL_INSTRUCTION_SETS)
 
@@ -106,7 +106,11 @@ export function SimpleFitTestProtocolPanel(props: JSONEditorPropsOptional) {
                     console.log("no non-whitespace change")
                     return;
                 }
-                setProtocolInstructionSets(jsonContent)
+                if(jsonContent) {
+                    // only save if we have some value
+                    console.debug(`saved : ${JSON.stringify(jsonContent)}`);
+                    setProtocolInstructionSets(jsonContent)
+                }
             }
         }
     } // defaults

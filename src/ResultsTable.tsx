@@ -37,7 +37,7 @@ import {deepCopy} from "json-2-csv/lib/utils";
 
 //This is a dynamic row height example, which is more complicated, but allows for a more realistic table.
 //See https://tanstack.com/virtual/v3/docs/examples/react/table for a simpler fixed row height example.
-export function ResultsTable({
+export default function ResultsTable({
     tableData, setTableData,
     searchableColumns = ["Time", "Participant", "Mask", "Notes", "ProtocolName"],
     hideColumns = [],

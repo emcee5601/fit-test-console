@@ -1,7 +1,9 @@
 {
   "custom-protocol-example": [
     {
-      "instructions": "A protocol definition is a name-array pair. In this example, the name of the protocol is 'custom-protocol-example'. The definition is this array of json objects. Each item in this array is called a 'Stage'. The editor will make sure invalid definitions cannot be saved."
+      "instructions": "A protocol definition is a name-array pair. In this example, the name of the protocol is 'custom-protocol-example'. The definition is this array of json objects. Each item in this array is called a 'Stage'. The editor will make sure invalid definitions cannot be saved.",
+      "ambient_sample": 0,
+      "mask_sample": 0
     },
     {
       "instructions": "There are 3 supported fields in a Stage. Only 'instructions' is required. Default values will be applied to the optional fields. See the code for the latest values.",
@@ -33,6 +35,50 @@
     "Heavy breathing. Take deep breaths.",
     "Jaw movement. Read a passage, sing a song, talk, or pretend to do so.",
     "Head movement. Look up, down, left, and right. Repeat."
+  ],
+  "Modified CNC Fit Protocol (B)": [
+    {
+      "instructions": "prep",
+      "ambient_purge": 4,
+      "ambient_sample": 20,
+      "mask_purge": 0,
+      "mask_sample": 0
+    },
+    {
+      "instructions": "Bending over",
+      "ambient_purge": 0,
+      "ambient_sample": 0,
+      "mask_purge": 4,
+      "mask_sample": 30
+    },
+    {
+      "instructions": "Talking",
+      "ambient_purge": 0,
+      "ambient_sample": 0,
+      "mask_purge": 4,
+      "mask_sample": 30
+    },
+    {
+      "instructions": "Head side-to-side",
+      "ambient_purge": 0,
+      "ambient_sample": 0,
+      "mask_purge": 4,
+      "mask_sample": 30
+    },
+    {
+      "instructions": "Head up-and-down",
+      "ambient_purge": 0,
+      "ambient_sample": 0,
+      "mask_purge": 4,
+      "mask_sample": 30
+    },
+    {
+      "instructions": "finalize",
+      "ambient_purge": 4,
+      "ambient_sample": 9,
+      "mask_purge": 0,
+      "mask_sample": 0
+    }
   ],
   "osha": [
     "Normal breathing. In a normal standing position, without talking, the subject shall breathe normally",
