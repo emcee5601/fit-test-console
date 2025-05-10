@@ -53,6 +53,9 @@ export enum AppSettings {
     RESULTS_TABLE_FILTER = "so-results-table-filter",
     PARTICIPANT_RESULTS_TABLE_FILTER = "so-participant-results-table-filter",
     MASK_LIST = "so-mask-list",
+    CONTROL_SOURCE_IN_VIEW = "so-control-source-in-view",
+    SAMPLE_SOURCE_IN_VIEW = "so-sample-source-in-view",
+    CONNECTION_STATUS_IN_VIEW = "so-connection-status-in-view",
 
     // these are deprecated:
     DEFAULT_TO_PREVIOUS_PARTICIPANT = "default-to-previous-participant",
@@ -143,6 +146,9 @@ const AppSettingsDefaults = {
     "so-results-table-filter": [],
     "so-participant-results-table-filter": [],
     "so-mask-list": [],
+    "so-control-source-in-view": true,
+    "so-sample-source-in-view": true,
+    "so-connection-status-in-view": true,
 
     "default-to-previous-participant": false, // deprecated
     "show-protocol-editor": false, // deprecated
@@ -165,6 +171,9 @@ const sessionOnlySettings: Set<ValidSettings> = new Set<ValidSettings>([
     AppSettings.RESULTS_TABLE_FILTER,
     AppSettings.PARTICIPANT_RESULTS_TABLE_FILTER,
     AppSettings.MASK_LIST,
+    AppSettings.CONTROL_SOURCE_IN_VIEW,
+    AppSettings.SAMPLE_SOURCE_IN_VIEW,
+    AppSettings.CONNECTION_STATUS_IN_VIEW,
 ])
 
 type SettingsDBEntry<T> = { ID: string, value: T }

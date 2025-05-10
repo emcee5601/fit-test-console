@@ -7,6 +7,7 @@ import {UsbSerialDrivers} from "./web-usb-serial-drivers.ts";
 import {DataFilePushSource, getReadableStreamFromDataSource} from "./datasource-helper.ts";
 import {getConnectionStatusCssClass} from "./utils.ts";
 import {useSetting} from "./use-setting.ts";
+import {useInView} from "react-intersection-observer";
 
 /**
  * Control for selecting the driver to use to connect to the PortaCount. Or to a simulator. Shows connection status.
@@ -38,6 +39,8 @@ export function DriverSelectorWidget() {
     const [simulationSpeedBytesPerSecond, setSimulationSpeedBytesPerSecond] = useSetting<number>(AppSettings.SIMULATOR_FILE_SPEED)
     const [dataSource, setDataSource] = useSetting<DataSource>(AppSettings.SELECTED_DATA_SOURCE)
     const [connectionStatus, setConnectionStatus] = useState(portaCountClient.state.connectionStatus)
+    const [, setConnectionStatusInView] = useSetting(AppSettings.CONNECTION_STATUS_IN_VIEW)
+    const {ref, inView} = useInView()
 
     useEffect(() => {
         const listener: PortaCountListener = {
@@ -50,6 +53,9 @@ export function DriverSelectorWidget() {
             portaCountClient.removeListener(listener)
         };
     }, []);
+    useEffect(() => {
+        setConnectionStatusInView(inView)
+    }, [inView]);
 
     function connectViaWebUsbSerial() {
         dataCollector.dataSource = DataSource.WebUsbSerial
@@ -144,7 +150,7 @@ export function DriverSelectorWidget() {
     }
 
     return (
-        <fieldset className={"info-box-compact"}>
+        <fieldset className={"info-box-compact"} ref={ref}>
             <legend>Data Source <span
                 className={getConnectionStatusCssClass(connectionStatus)}>{connectionStatus}</span>
             </legend>

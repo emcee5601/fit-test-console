@@ -21,9 +21,9 @@
 
 .app-container {
     background-color: #fff;
-    position:relative;
-    top:0;
-    height:100%;
+    position: relative;
+    top: 0;
+    height: 100%;
     overflow: hidden;
 }
 
@@ -261,15 +261,18 @@ td.results {
     text-align: end;
     font-variant-numeric: tabular-nums;
 }
+
 .no-wrap {
     text-wrap: nowrap;
 }
+
 .pre {
     white-space-collapse: preserve;
     font-family: monospace;
 }
+
 .inline-flex {
-    display:inline-flex;
+    display: inline-flex;
 }
 
 @keyframes pulse-background {
@@ -288,5 +291,54 @@ td.results {
     }
     to {
         filter: brightness(400%);
+    }
+}
+
+
+#nav-bar-container {
+    container-type: inline-size;
+    container-name: nav-bar-container;
+}
+
+@container nav-bar-container (width < 50em) {
+    .wide-nav-links {
+        display: none;
+    }
+    .wide-time-trackers {
+        display: none;
+    }
+    .narrow-nav-links {
+        display: block;
+    }
+    .narrow-time-trackers {
+        display: block;
+    }
+}
+@container nav-bar-container (50em <= width < 60em) {
+    .wide-nav-links {
+        display: block;
+    }
+    .wide-time-trackers {
+        display: none;
+    }
+    .narrow-nav-links {
+        display: none;
+    }
+    .narrow-time-trackers {
+        display: block;
+    }
+}
+@container nav-bar-container (width >= 60em) {
+    .wide-nav-links {
+        display: block;
+    }
+    .wide-time-trackers {
+        display: block;
+    }
+    .narrow-nav-links {
+        display: none;
+    }
+    .narrow-time-trackers {
+        display: none;
     }
 }

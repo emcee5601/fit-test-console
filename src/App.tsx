@@ -12,6 +12,7 @@ import {PortaCountLastLineWidget} from "./PortaCountLastLineWidget.tsx";
 import {TestInstructionsPanel} from "./TestInstructionsPanel.tsx";
 import {DriverSelectorWidget} from "./DriverSelectorWidget.tsx";
 import {useSetting} from "./use-setting.ts";
+import {CurrentParticipantResults} from "src/CurrentParticipantResults.tsx";
 
 function App() {
     const [showExternalControl] = useSetting<boolean>(AppSettings.SHOW_EXTERNAL_CONTROL);
@@ -28,11 +29,12 @@ function App() {
                 <PortaCountLastLineWidget/>
                 {showExternalControl && <PortaCountCommandWidget/>}
             </section>
+            <CurrentParticipantPanel/>
             <div style={{display: "flex", width: "100%", flexDirection:"column"}}>
-                {showExternalControl && <ProtocolExecutorPanel style={{display:"block", width: "100%"}}/>}
                 <TestInstructionsPanel/>
             </div>
-            <CurrentParticipantPanel/>
+            {showExternalControl && <ProtocolExecutorPanel style={{display:"block", width: "100%"}}/>}
+            <CurrentParticipantResults/>
         </>
     )
 }

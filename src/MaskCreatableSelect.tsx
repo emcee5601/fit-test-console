@@ -3,7 +3,7 @@ import {useSetting} from "src/use-setting.ts";
 import {AppSettings} from "src/app-settings.ts";
 
 export function MaskCreatableSelect({value, onChange}: { value?: string, onChange?: (value: string) => void }) {
-    const [maskList] = useSetting<string[]>(AppSettings.MASK_LIST) // todo: store this is context
+    const [maskList] = useSetting<string[]>(AppSettings.MASK_LIST)
 
     return (
         <CreatableSelect
@@ -16,6 +16,8 @@ export function MaskCreatableSelect({value, onChange}: { value?: string, onChang
             })}
             value={value ? {value: value, label: value} : null}
             menuPortalTarget={document.body} // this fixes the menu rendering under other instances of the Select when the Select is used in table cells
+            menuShouldScrollIntoView={true}
+            menuPlacement={"auto"}
             styles={{
                 menu: (baseStyles) => ({
                     ...baseStyles,
@@ -24,6 +26,12 @@ export function MaskCreatableSelect({value, onChange}: { value?: string, onChang
                     ...baseStyles,
                     whiteSpace: "normal", // disable truncating with ellipses
                 }),
+            }}
+            onBlur={(event) => {
+                // needed to capture these so any entered value is preserved/created even if create isn't selected
+                if(onChange && event.target.value !== "") {
+                    onChange(event.target.value)
+                }
             }}
             onChange={(event) => {
                 if(onChange) {

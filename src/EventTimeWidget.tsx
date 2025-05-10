@@ -8,7 +8,7 @@ import {useSetting} from "src/use-setting.ts";
 import {AppSettings} from "src/app-settings.ts";
 import {useTimingSignal} from "src/timing-signal.ts";
 
-export function EventTimeWidget({...props}:HTMLAttributes<HTMLSpanElement>) {
+export function EventTimeWidget({...props}:HTMLAttributes<HTMLDivElement>) {
     const appContext = useContext(AppContext)
     const [minutesPerParticipant] = useSetting<number>(AppSettings.MINUTES_ALLOTTED_PER_PARTICIPANT)
     const [eventTimeStr, setEventTimeStr] = useState<string>("")
@@ -34,13 +34,10 @@ export function EventTimeWidget({...props}:HTMLAttributes<HTMLSpanElement>) {
     useTimingSignal(updateUi)
 
     return (
-        // <fieldset className={`info-box-compact ${getEventElapsedTimeClass()}`}
-        //           style={{
-        //               textAlign: "center",
-        //               transition: "background-color 1s ease-in-out"
-        //           }}>
-        //     {/*<legend>Event ends {formatTime(appContext.settings.eventEndTime)}</legend>*/}
-        // </fieldset>
-    <span {...props} className={`number-field thin-border smooth-background-change ${getEventElapsedTimeClass()}`}>Event Time: {eventTimeStr}</span>
-)
+    <div {...props} style={{display:"flex"}}
+         className={`number-field thin-border smooth-background-change ${getEventElapsedTimeClass()}`}>
+        <span className={"wide-time-trackers"}>Event Time</span>
+        <span className={"narrow-time-trackers"}>ET</span>: {eventTimeStr}
+    </div>
+    )
 }

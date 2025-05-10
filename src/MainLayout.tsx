@@ -5,20 +5,15 @@ import {AppContextProvider} from "./AppContextProvider.tsx";
 export default function MainLayout() {
     return (<>
         <AppContextProvider>
-            <div className={"app-container"}>
+            <div className={"app-container"} style={{display:"flex", flexDirection:"column"}}>
                 <div id="navbar-container" style={{position: "relative", top: 0, left: 0}}>
                     <NavBar/>
                 </div>
-                <div style={{
+                <div id="main-container" style={{
                     position: "relative",
-                    top: "0.5rem",
-                    bottom: "2.4rem",
-                    left: 0,
-                    right: "0.5rem",
-                    width: "calc(100vw - 1.4rem)",
-                    height: "calc(100% - 2.4rem)",
+                    top: "0.1rem",
+                    height: "100%",
                     overflow: "auto",
-                    marginInline: "0.5rem"
                 }}>
                     <Outlet/>
                 </div>
