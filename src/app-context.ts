@@ -122,14 +122,19 @@ async function autoConnect() {
 }
 
 async function initMaskList() {
-    await RESULTS_DB.open()
-    RESULTS_DB.getData().then((results) => {
-        const dbMasks = results.reduce((masks, currentValue) => {
-            // make sure mask has a value and strip that value of leading and trailing spaces
-            masks.add(((currentValue.Mask as string) ?? "").trim())
-            return masks;
-        }, new Set<string>())
-        settings.saveSetting(AppSettings.MASK_LIST, [...dbMasks].sort())
+    // must do this only after settings have been loaded
+    settings.addListener({
+        async ready() {
+            await RESULTS_DB.open()
+            RESULTS_DB.getData().then((results) => {
+                const dbMasks = results.reduce((masks, currentValue) => {
+                    // make sure mask has a value and strip that value of leading and trailing spaces
+                    masks.add(((currentValue.Mask as string) ?? "").trim())
+                    return masks;
+                }, new Set<string>())
+                settings.saveSetting(AppSettings.MASK_LIST, [...dbMasks].sort())
+            })
+        }
     })
 }
 
