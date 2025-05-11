@@ -315,6 +315,7 @@ class AppSettingsContext {
             }
         })
         this.loadAllSettings().then(() => {
+            // todo: call this in app context initialization instead. then we can await this before proceeding to the other initializers
             this.updateReadyStatus()
         });
     }

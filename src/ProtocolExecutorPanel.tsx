@@ -12,6 +12,8 @@ import {ProtocolSelectorWidget0} from "./ProtocolSelectorWidget0.tsx";
 import {useSetting} from "./use-setting.ts";
 import {ImPlay2, ImStop} from "react-icons/im";
 import {useTimingSignal} from "src/timing-signal.ts";
+import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
+import {DataCollectorListener} from "src/data-collector.ts";
 
 /**
  * Helper type. Maps from stage indexes or segment indexes to durations
@@ -26,11 +28,14 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
     const appContext = useContext(AppContext)
     const protocolExecutor = appContext.protocolExecutor;
     const portaCountClient = appContext.portaCountClient;
+    const dataCollector = appContext.dataCollector;
     const [currentSegment, setCurrentSegment] = useState<ProtocolSegment | undefined>()
     const [segmentStartTimeMs, setSegmentStartTimeMs] = useState(Date.now())
     // todo: save running state this to db so we can continue if the app reloads or navigating between tabs
     const [protocolRunning, setProtocolRunning] = useState<boolean>(false)
     const [selectedProtocol] = useSetting(AppSettings.SELECTED_PROTOCOL)
+    const [currentTestData, setCurrentTestData] = useState<SimpleResultsDBRecord>({} as SimpleResultsDBRecord)
+    const [uiUpdateNeeded, setUiUpdateNeeded] = useState<boolean>(true)
 
     function shouldEnableStartButton(controlSource: ControlSource): boolean {
         // todo: protocol executor should emit events for "isInProgress" state changed
@@ -42,6 +47,35 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
     const [segmentElements, setSegmentElements] = useState<ReactElement[]>([])
     const [stageElements, setStageElements] = useState<ReactElement[]>([])
     const [formattedProtocolElapsedTime, setFormattedProtocolElapsedTime] = useState<string>(formatDuration(0))
+    const protocolPosPointerRef = useRef<HTMLDivElement>(null);
+    const protocolExecutorPanelRef = useRef<HTMLFieldSetElement>(null);
+    const lastKnownAmbient = protocolExecutor.lastAmbientSegment ? calculateSegmentConcentration(protocolExecutor.lastAmbientSegment) : undefined
+    const currentSegmentConcentration = currentSegment ? calculateSegmentConcentration(currentSegment) : undefined;
+    const estimatedFitFactor = lastKnownAmbient && currentSegmentConcentration ? formatFitFactor(lastKnownAmbient / currentSegmentConcentration) : "?"
+
+    function getSegmentText(segment: ProtocolSegment) {
+        const isExerciseSegment = isThisAnExerciseSegment(segment);
+        const isCurrentSegment = segment.index === currentSegment?.index;
+        const segmentRemainingTimeMs = segment.duration * 1000 - (Date.now() - segmentStartTimeMs);
+        if(!isExerciseSegment) {
+            return ""
+        }
+        const segmentResult = currentTestData[`Ex ${segment.exerciseNumber}`];
+        if(segmentResult) {
+            // this segment was completed
+            return `done - ${segmentResult}`
+        }
+        if(!isCurrentSegment) {
+            // future segment
+            return formatDuration(1000 * segment.duration)
+        }
+        if( segmentRemainingTimeMs > 0) {
+            // current segment in progress
+            return `${formatDuration(segmentRemainingTimeMs)} (${estimatedFitFactor})`;
+        }
+        // these might be negative times. shouldn't generally get here since we'd have a result instead
+        return `${formatDuration(segmentRemainingTimeMs)} (${estimatedFitFactor})`;
+     }
 
     /**
      * Calculates total time, stage times, segment times.
@@ -60,10 +94,9 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
             // console.debug("rebuilding segment divs")
             segmentTimes[segment.index] = segment.duration
             stageTimes[segment.stageIndex] = (stageTimes[segment.stageIndex] ?? 0) + segment.duration
-            const isExerciseSegment = isThisAnExerciseSegment(segment);
             // seems flex items won't shrink smaller than 1 character if there is text inside
             const isCurrentSegment = segment.index === currentSegment?.index;
-            const segmentRemainingTimeMs = segment.duration * 1000 - (Date.now() - segmentStartTimeMs);
+            // display segment time, time remaining, or fit factor for this stage.
             segmentDivs.push(<div className={`segment-${segment.state} sample-source-${segment.source}`}
                                   key={`segment-${segment.index}`}
                                   style={{
@@ -74,7 +107,7 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
                                       minWidth: "2px",
                                       overflow: "clip",
                                       animation: isCurrentSegment ? "pulse-background infinite 1s ease-in-out alternate" : ""
-                                  }}>{isExerciseSegment && `${isCurrentSegment ? `${formatDuration(segmentRemainingTimeMs)}` : `${formatDuration(1000 * segment.duration)}`}`}</div>)
+                                  }}>{getSegmentText(segment)}</div>)
             stageExerciseNum[segment.stageIndex] = segment.exerciseNumber
         })
 
@@ -128,7 +161,7 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
                 setEnableStartButton(shouldEnableStartButton(source))
             }
         }
-        const listener: ProtocolExecutorListener = {
+        const protocolExecutorListener: ProtocolExecutorListener = {
             segmentDataUpdated() {
                 // todo: implement me
                 // tick()
@@ -150,20 +183,29 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
                 // todo: display the final result
             },
         };
+        const dataCollectorListener: DataCollectorListener = {
+            currentTestUpdated(data: SimpleResultsDBRecord) {
+                setCurrentTestData(data)
+                setUiUpdateNeeded(true)
+            }
+        };
 
-        protocolExecutor.addListener(listener)
+        protocolExecutor.addListener(protocolExecutorListener)
         portaCountClient.addListener(portaCountListener)
+        dataCollector.addListener(dataCollectorListener)
         // appContext.timingSignal.addListener(timingSignalListener)
 
         maybeContinueProtocolExecution();
         return () => {
-            protocolExecutor.removeListener(listener);
+            protocolExecutor.removeListener(protocolExecutorListener);
             portaCountClient.removeListener(portaCountListener)
+            dataCollector.removeListener(dataCollectorListener)
         }
     }, []);
 
     useEffect(() => {
-        calculateTotalExpectedProtocolTime()
+        setCurrentTestData({} as SimpleResultsDBRecord)
+        setUiUpdateNeeded(true)
     }, [selectedProtocol]);
 
     useEffect(() => {
@@ -177,19 +219,14 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
     useTimingSignal(updateUi)
 
     function updateUi() {
-        if (currentSegment && currentSegment.state && currentSegment.state !== SegmentState.IDLE) {
+        if (uiUpdateNeeded || currentSegment && currentSegment.state && currentSegment.state !== SegmentState.IDLE) {
             // only update if we're not idle
             setFormattedProtocolElapsedTime(formatDuration(calculateProtocolElapsedTimeMs(1000 * (currentSegment?.duration ?? 0))))
             // setSegmentElapsedTimeMs(Math.round(Date.now() - segmentStartTimeMs))
             calculateTotalExpectedProtocolTime()
+            setUiUpdateNeeded(false)
         }
     }
-
-    const protocolPosPointerRef = useRef<HTMLDivElement>(null);
-    const protocolExecutorPanelRef = useRef<HTMLFieldSetElement>(null);
-    const lastKnownAmbient = protocolExecutor.lastAmbientSegment ? calculateSegmentConcentration(protocolExecutor.lastAmbientSegment) : undefined
-    const currentSegmentConcentration = currentSegment ? calculateSegmentConcentration(currentSegment) : undefined;
-    const estimatedFitFactor = lastKnownAmbient && currentSegmentConcentration ? formatFitFactor(lastKnownAmbient / currentSegmentConcentration) : "?"
 
     function calculateProtocolElapsedTimeMs(segmentDurationMs: number) {
         const segmentElapsedTimeMs = Date.now() - segmentStartTimeMs;
@@ -232,7 +269,7 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
         }
         if (currentSegment.source === SampleSource.MASK) {
             if (currentSegmentConcentration && !isNaN(currentSegmentConcentration)) {
-                return currentSegmentConcentration.toFixed(currentSegmentConcentration<100?1:0);
+                return currentSegmentConcentration.toFixed(currentSegmentConcentration < 100 ? 1 : 0);
             }
         }
         return "?"

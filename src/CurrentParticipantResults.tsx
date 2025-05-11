@@ -30,6 +30,8 @@ export function CurrentParticipantResults() {
         }
         appContext.settings.addListener(settingsListener)
 
+        updateCurrentParticipantTests(testTemplate.Participant)
+
         return () => {
             appContext.settings.removeListener(settingsListener)
         }
