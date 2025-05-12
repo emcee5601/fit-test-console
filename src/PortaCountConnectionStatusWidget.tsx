@@ -1,7 +1,8 @@
-import {ConnectionStatus, PortaCountClient8020, PortaCountListener} from "./portacount-client-8020.ts";
+import {PortaCountClient8020, PortaCountListener} from "./portacount-client-8020.ts";
 import {useContext, useEffect, useState} from "react";
 import {getConnectionStatusCssClass} from "./utils.ts";
 import {AppContext} from "./app-context.ts";
+import {ConnectionStatus} from "src/connection-status.ts";
 
 /**
  * Displays connection status.

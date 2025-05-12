@@ -5,6 +5,7 @@ import {SampleSource} from "./simple-protocol.ts";
 import {ControlSource} from "./control-source.ts";
 import {APP_SETTINGS_CONTEXT, AppSettings, AppSettingType} from "./app-settings.ts";
 import {StringLike, StringLikeWithMatchesIgnoringLineStart} from "./string-like.ts";
+import {ConnectionStatus} from "src/connection-status.ts";
 
 
 class Patterns {
@@ -536,8 +537,3 @@ export class PortaCountClient8020 {
     }
 }
 
-export enum ConnectionStatus {
-    DISCONNECTED = "Disconnected",
-    WAITING = "Waiting for PortaCount",
-    RECEIVING = "Receiving data",
-}

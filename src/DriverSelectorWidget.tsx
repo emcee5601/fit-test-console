@@ -1,4 +1,4 @@
-import {ConnectionStatus, PortaCountListener, SerialPortLike} from "./portacount-client-8020.ts";
+import {PortaCountListener, SerialPortLike} from "./portacount-client-8020.ts";
 import {useContext, useEffect, useState} from "react";
 import {AppContext} from "./app-context.ts";
 import {AppSettings} from "./app-settings.ts";
@@ -8,6 +8,7 @@ import {DataFilePushSource, getReadableStreamFromDataSource} from "./datasource-
 import {getConnectionStatusCssClass} from "./utils.ts";
 import {useSetting} from "./use-setting.ts";
 import {useInView} from "react-intersection-observer";
+import {ConnectionStatus} from "src/connection-status.ts";
 
 /**
  * Control for selecting the driver to use to connect to the PortaCount. Or to a simulator. Shows connection status.

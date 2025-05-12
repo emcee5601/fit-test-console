@@ -1,11 +1,12 @@
 import {useContext, useEffect, useState} from "react";
-import {ConnectionStatus, PortaCountListener} from "src/portacount-client-8020.ts";
+import {PortaCountListener} from "src/portacount-client-8020.ts";
 import {AppContext} from "src/app-context.ts";
 import {HiLinkSlash} from "react-icons/hi2";
 import {PiPlugsConnectedLight} from "react-icons/pi";
 import {MdOutlinePending} from "react-icons/md";
 import {useSetting} from "src/use-setting.ts";
 import {AppSettings} from "src/app-settings.ts";
+import {ConnectionStatus} from "src/connection-status.ts";
 
 export function ConnectionStatusWidget() {
     const appContext = useContext(AppContext)

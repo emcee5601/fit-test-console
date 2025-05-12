@@ -1,4 +1,4 @@
-import {ConnectionStatus, PortaCountClient8020, PortaCountListener} from "./portacount-client-8020.ts";
+import {PortaCountClient8020, PortaCountListener} from "./portacount-client-8020.ts";
 import {useContext, useEffect, useState} from "react";
 import {AppContext} from "./app-context.ts";
 import {AppSettings} from "./app-settings.ts";
@@ -6,6 +6,7 @@ import {ToggleButton} from "./ToggleButton.tsx";
 import {ControlSource} from "./control-source.ts";
 import {useSetting} from "./use-setting.ts";
 import {useInView} from "react-intersection-observer";
+import {ConnectionStatus} from "src/connection-status.ts";
 
 /**
  * Shows current state of the PortaCount's control source and a toggle to change it when appropriate

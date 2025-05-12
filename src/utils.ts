@@ -1,7 +1,7 @@
 import {isNull, isUndefined} from "json-2-csv/lib/utils";
 
-import {ConnectionStatus} from "./portacount-client-8020.ts";
 import {RefObject} from "react";
+import {ConnectionStatus} from "src/connection-status.ts";
 
 /**
  * Format a duration into hh:mm:ss:uuu
@@ -108,10 +108,11 @@ export function median(array: number[]) {
     const sortedArray = array.toSorted()
     if (0 === sortedArray.length % 2) {
         // even
-        return sortedArray[sortedArray.length / 2]
+        const right = sortedArray.length / 2
+        return (sortedArray[right-1] + sortedArray[right]) / 2;
     } else {
         // odd
-        const index = Math.floor(sortedArray.length / 2);
-        return (sortedArray[index] + sortedArray[index + 1]) / 2;
+        const middle = Math.floor(sortedArray.length / 2);
+        return sortedArray[middle]
     }
 }
