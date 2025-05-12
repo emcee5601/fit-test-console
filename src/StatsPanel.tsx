@@ -60,26 +60,35 @@ export function StatsPanel() {
     }
 
     function calculateStats(results: SimpleResultsDBRecord[]) {
-        // todo: ignore simulator tests. these are records where the time between tests is less than the expected
-        // protocol duration.
-
         // make sure results are sorted by date so we don't get negative elapsed times
-        const resultsSortedByTime = results.toSorted((a, b) => {
+        results = results.toSorted((a, b) => {
             return (a.Time ? dateToLocalTime(new Date(a.Time)).getTime() : 0) - (b.Time ? dateToLocalTime(new Date(b.Time)).getTime() : 0)
         })
 
-        setTotalMasksTested(new Set(results.map((record: SimpleResultsDBRecord) => record.Mask)).size)
-        setNumTests(resultsSortedByTime.length)
-        setNumCompletedTests(resultsSortedByTime.reduce((total: number, record: SimpleResultsDBRecord) => total + (record.Final ? 1 : 0), 0))
+        results = results.filter((record) => {
+            // ignore some records
+            if (record.Participant?.match(/zero\s+filter/i)) {
+                // ignore zero filter
+                return false
+            }
+            // todo: ignore simulator tests. need a way to differentiate these.
+            return true;
+        });
 
-        setNumEvents(resultsSortedByTime.reduce((result, cur, curIndex, array) => {
+
+
+        setTotalMasksTested(new Set(results.map((record: SimpleResultsDBRecord) => record.Mask)).size)
+        setNumTests(results.length)
+        setNumCompletedTests(results.reduce((total: number, record: SimpleResultsDBRecord) => total + (record.Final ? 1 : 0), 0))
+
+        setNumEvents(results.reduce((result, cur, curIndex, array) => {
             const prev = array[curIndex - 1] ?? {};
             return result + (isNewEventStart(prev, cur) ? 1 : 0)
         }, 0));
 
         // each event-participant is a new participant for this metric
-        setNumEventParticipants(new Set(resultsSortedByTime.map((record: SimpleResultsDBRecord) => `${getEventYyyymmdd(record)}-${record.Participant}`)).size)
-        setTotalEventTimeMs(resultsSortedByTime.reduce((result, cur, curIndex, array) => {
+        setNumEventParticipants(new Set(results.map((record: SimpleResultsDBRecord) => `${getEventYyyymmdd(record)}-${record.Participant}`)).size)
+        setTotalEventTimeMs(results.reduce((result, cur, curIndex, array) => {
             const prev = array[curIndex - 1] ?? {};
             if (!isNewEventStart(prev, cur)) {
                 return result + getElapsedTimeMs(prev, cur)
@@ -90,7 +99,7 @@ export function StatsPanel() {
 
         // median time per participant
         const eventParticipantTime: Map<string, number> = new Map();
-        resultsSortedByTime.forEach((cur: SimpleResultsDBRecord, curIndex: number, array: SimpleResultsDBRecord[]) => {
+        results.forEach((cur: SimpleResultsDBRecord, curIndex: number, array: SimpleResultsDBRecord[]) => {
             const prev = array[curIndex - 1] ?? {};
             if (isNewEventStart(prev, cur)) {
                 // start of a new event. ignore the previous event's last test since we don't know when it ended.
@@ -114,7 +123,7 @@ export function StatsPanel() {
         setAverageMasksPerParticipant(avgArray(eventParticipantMaskCount))
 
         // median time per test
-        setMedianTimePerTestMs(median(resultsSortedByTime.map((cur: SimpleResultsDBRecord, curIndex: number, array: SimpleResultsDBRecord[]) => {
+        setMedianTimePerTestMs(median(results.map((cur: SimpleResultsDBRecord, curIndex: number, array: SimpleResultsDBRecord[]) => {
             const prev = array[curIndex - 1] ?? {};
             if (isNewEventStart(prev, cur)) {
                 // start of a new event. ignore the previous event's last test since we don't know when it ended. todo:
@@ -138,11 +147,6 @@ export function StatsPanel() {
         setTopResults(results.toSorted((a, b) => {
             return (b.Final ?? 0) - (a.Final ?? 0)
         }).filter((record) => {
-            // ignore some records
-            if (record.Participant?.match(/zero\s+filter/i)) {
-                // ignore zero filter
-                return false
-            }
             if (!record.Final) {
                 // ignore aborted tests
                 return false;

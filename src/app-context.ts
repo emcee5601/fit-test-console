@@ -132,7 +132,8 @@ async function initMaskList() {
                     masks.add(((currentValue.Mask as string) ?? "").trim())
                     return masks;
                 }, new Set<string>())
-                settings.saveSetting(AppSettings.MASK_LIST, [...dbMasks].sort())
+                const collator = Intl.Collator("en", {sensitivity:"base"}) // case-insensitive sort
+                settings.saveSetting(AppSettings.MASK_LIST, [...dbMasks].sort(collator.compare))
             })
         }
     })

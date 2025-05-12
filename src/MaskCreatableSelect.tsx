@@ -15,9 +15,11 @@ export function MaskCreatableSelect({value, onChange}: { value?: string, onChang
                 }
             })}
             value={value ? {value: value, label: value} : null}
+            defaultInputValue={value} // this seems to only apply the first time this is displayed. need to re-mount for this to behave correctly afterwards
             menuPortalTarget={document.body} // this fixes the menu rendering under other instances of the Select when the Select is used in table cells
             menuShouldScrollIntoView={true}
             menuPlacement={"auto"}
+            tabSelectsValue={false} // prevent tabbing from accidentally selecting the first item on the list
             styles={{
                 menu: (baseStyles) => ({
                     ...baseStyles,
@@ -44,6 +46,7 @@ export function MaskCreatableSelect({value, onChange}: { value?: string, onChang
             isValidNewOption={(mask) => !maskList.some(value => value === mask.trim())}
             isSearchable={true}
             placeholder={"Click to add Mask"}
+
         />
     )
 }

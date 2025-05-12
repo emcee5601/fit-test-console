@@ -21,7 +21,13 @@ export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({
     columnFilters: ColumnFiltersState
 } & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'>) {
     const [qrcodeUrl, setQrcodeUrl] = useState<string>("")
-    const appBasePath = useHref("/")
+    const appBasePath = `${import.meta.env.BASE_URL}`
+    const origin = location.origin
+    // const origin = "https://emcee5601.github.io"
+    // sometimes location has a trailing '/', remove it so we don't get a '//'. This behavior is different between
+    // local and prod for some reason
+    // use useHref here so it can insert the # needed by HashRouter. HashRouter and BrowserRouter are not drop-in replacements for each other, so maybe the hash can be hardcoded.
+    const baseLocation = origin + appBasePath.replace(/\/$/, '') + useHref("/view-results");
 
     useEffect(() => {
         if (qrcodeUrl) {
@@ -54,13 +60,7 @@ export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({
             .map((record) => sanitizeRecord(record));
 
         const str = LZString.compressToEncodedURIComponent(JSON.stringify(recordsToExport));
-        // sometimes location has a trailing '/', remove it so we don't get a '//'. This behavior is different between
-        // local and prod for some reason
-
-        const origin = location.origin
-        // const origin = "https://emcee5601.github.io"
-        const baseLocation = origin + appBasePath.replace(/\/$/, '')
-        const url = `${baseLocation}/view-results?data=${str}`;
+        const url = `${baseLocation}?data=${str}`;
         console.log(`url is: ${url}`)
         console.log(`url length is ${url.length}`);
         if (url.length > 4296) {
