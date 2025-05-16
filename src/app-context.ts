@@ -11,6 +11,7 @@ import {ControlSource} from "./control-source.ts";
 import {UsbSerialDrivers} from "./web-usb-serial-drivers.ts";
 import {DataSource} from "./data-source.ts";
 import {timingSignal} from "src/timing-signal.ts";
+import {enCaseInsensitiveCollator} from "src/utils.ts";
 
 /**
  * Global context.
@@ -89,11 +90,7 @@ function initPortaCountListener() {
 }
 
 function initSelectedProtocol() {
-    settings.addListener({
-        ready() {
-            adjustSelectedProtocol(portaCountClient.state.controlSource) // on startup this should always be internal
-        }
-    })
+    adjustSelectedProtocol(portaCountClient.state.controlSource) // on startup this should always be internal
 }
 
 async function autoConnect() {
@@ -123,27 +120,28 @@ async function autoConnect() {
 
 async function initMaskList() {
     // must do this only after settings have been loaded
-    settings.addListener({
-        async ready() {
-            await RESULTS_DB.open()
-            RESULTS_DB.getData().then((results) => {
-                const dbMasks = results.reduce((masks, currentValue) => {
-                    // make sure mask has a value and strip that value of leading and trailing spaces
-                    masks.add(((currentValue.Mask as string) ?? "").trim())
-                    return masks;
-                }, new Set<string>())
-                const collator = Intl.Collator("en", {sensitivity:"base"}) // case-insensitive sort
-                settings.saveSetting(AppSettings.MASK_LIST, [...dbMasks].sort(collator.compare))
-            })
-        }
+    RESULTS_DB.getData().then((results) => {
+        const dbMasks = results.reduce((masks, currentValue) => {
+            // make sure mask has a value and strip that value of leading and trailing spaces
+            masks.add(((currentValue.Mask as string) ?? "").trim())
+            return masks;
+        }, new Set<string>())
+        settings.saveSetting(AppSettings.MASK_LIST, [...dbMasks].sort(enCaseInsensitiveCollator.compare))
     })
 }
 
+function initPortaCountClient() {
+    portaCountClient.baudRate = settings.getSetting(AppSettings.BAUD_RATE)
+    portaCountClient.syncOnConnect = settings.getSetting(AppSettings.SYNC_DEVICE_STATE_ON_CONNECT)
+}
+
 async function init() {
-    initSpeech();
-    initDataCollector()
+    await settings.loadAllSettings()
     await RESULTS_DB.open() // start init process
     await RAW_DB.open()
+    initPortaCountClient()
+    initSpeech();
+    initDataCollector()
     await initMaskList();
     initPortaCountListener();
     initSelectedProtocol();

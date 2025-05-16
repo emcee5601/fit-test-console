@@ -1,6 +1,6 @@
 import {SampleSource} from "./simple-protocol.ts";
 import {calculateSegmentConcentration, ProtocolExecutorListener, SegmentState} from "./protocol-executor.ts";
-import {HTMLAttributes, ReactElement, useContext, useEffect, useRef, useState} from "react";
+import {HTMLAttributes, PropsWithChildren, ReactElement, useContext, useEffect, useRef, useState} from "react";
 import {AppContext} from "./app-context.ts";
 import {formatDuration, formatFitFactor} from "./utils.ts";
 import {AppSettings, calculateProtocolDuration, isThisAnExerciseSegment, ProtocolSegment} from "./app-settings.ts";
@@ -14,11 +14,33 @@ import {ImPlay2, ImStop} from "react-icons/im";
 import {useTimingSignal} from "src/timing-signal.ts";
 import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
 import {DataCollectorListener} from "src/data-collector.ts";
+import {BsWind} from "react-icons/bs";
+import {PiFaceMask, PiWatch} from "react-icons/pi";
+import {IoGlassesOutline} from "react-icons/io5";
 
 /**
  * Helper type. Maps from stage indexes or segment indexes to durations
  */
 type IndexedDurations = { [key: number]: number };
+
+type IconTextProps = {
+    icon?: any,
+    text?: string
+}
+
+/**
+ * Renders svg icons and text together. Makes sure svg takes up full the height of the line.
+ * @param children
+ * @constructor
+ */
+function IconText({icon, text, children}: PropsWithChildren<IconTextProps>) {
+    return (<div className={"icon-text svg-container thin-border blue-bg number-field"}
+                 style={{display: "inline-flex", gap: "0.2em"}}>
+        <div className={"wide-display"}>{text}</div>
+        <div className={"narrow-display"}>{icon ? icon() : null}</div>
+        {children}
+    </div>)
+}
 
 /**
  * Controls for running a custom protocol.
@@ -57,25 +79,25 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
         const isExerciseSegment = isThisAnExerciseSegment(segment);
         const isCurrentSegment = segment.index === currentSegment?.index;
         const segmentRemainingTimeMs = segment.duration * 1000 - (Date.now() - segmentStartTimeMs);
-        if(!isExerciseSegment) {
+        if (!isExerciseSegment) {
             return ""
         }
         const segmentResult = currentTestData[`Ex ${segment.exerciseNumber}`];
-        if(segmentResult) {
+        if (segmentResult) {
             // this segment was completed
             return `done - ${segmentResult}`
         }
-        if(!isCurrentSegment) {
+        if (!isCurrentSegment) {
             // future segment
             return formatDuration(1000 * segment.duration)
         }
-        if( segmentRemainingTimeMs > 0) {
+        if (segmentRemainingTimeMs > 0) {
             // current segment in progress
             return `${formatDuration(segmentRemainingTimeMs)} (${estimatedFitFactor})`;
         }
         // these might be negative times. shouldn't generally get here since we'd have a result instead
         return `${formatDuration(segmentRemainingTimeMs)} (${estimatedFitFactor})`;
-     }
+    }
 
     /**
      * Calculates total time, stage times, segment times.
@@ -291,7 +313,7 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
     return (
         <section id="custom-control-panel" {...props}>
             <fieldset id={"protocol-executor-panel-main"} ref={protocolExecutorPanelRef} className={"idle"}
-                      style={{minWidth: 0, overflow: "scroll"}}>
+                      style={{minWidth: 0, overflow: "auto", paddingBottom:"0.2em"}}>
                 <legend style={{
                     textAlign: "start",
                     display: "inline-flex",
@@ -303,12 +325,13 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
                     </button>
                     <button disabled={!protocolRunning} onClick={() => handleStopButtonClick()}
                             className={"stop"}>Stop <ImStop/></button>
-                    <span
-                        className={"thin-border number-field blue-bg"}>Time: {formattedProtocolElapsedTime} / {formatDuration(protocolDuration * 1000)}</span>
-                    <span
-                        className={"thin-border number-field blue-bg"}>Ambient: {getAmbientConcentrationFormatted()}</span>
-                    <span className={"thin-border number-field blue-bg"}>Mask: {getMaskConcentrationFormatted()}</span>
-                    <span className={"thin-border number-field blue-bg"}>Estimate: {estimatedFitFactor}</span>
+                    <div style={{display:"inline-flex"}}>
+                        <IconText icon={PiWatch}
+                                  text="Time:">{formattedProtocolElapsedTime} / {formatDuration(protocolDuration * 1000)}</IconText>
+                        <IconText icon={BsWind} text={"Ambient:"}>{getAmbientConcentrationFormatted()}</IconText>
+                        <IconText icon={PiFaceMask} text="Mask:">{getMaskConcentrationFormatted()}</IconText>
+                        <IconText icon={IoGlassesOutline} text={"Estimate:"}>{estimatedFitFactor}</IconText>
+                    </div>
                 </legend>
                 <div id="protocol-visualizer-container" style={{minWidth: "fit-content"}}>
                     <section id={"protocol-visualizer"} style={{position: 'relative'}}>

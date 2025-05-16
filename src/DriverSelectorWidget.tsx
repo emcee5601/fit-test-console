@@ -9,6 +9,10 @@ import {getConnectionStatusCssClass} from "./utils.ts";
 import {useSetting} from "./use-setting.ts";
 import {useInView} from "react-intersection-observer";
 import {ConnectionStatus} from "src/connection-status.ts";
+import {ActionMenuWidget} from "src/ActionMenuWidget.tsx";
+import {HiLinkSlash} from "react-icons/hi2";
+import {MdOutlinePending} from "react-icons/md";
+import {HiLink} from "react-icons/hi";
 
 /**
  * Control for selecting the driver to use to connect to the PortaCount. Or to a simulator. Shows connection status.
@@ -30,7 +34,7 @@ import {ConnectionStatus} from "src/connection-status.ts";
  * set properly by the driver. The simplest fix is to cut the CTS wire in the cable/adapter.
  * @constructor
  */
-export function DriverSelectorWidget() {
+export function DriverSelectorWidget({compact = false}: { compact?: boolean }) {
     const appContext = useContext(AppContext)
     const [dataCollector] = useState(appContext.dataCollector)
     const [portaCountClient] = useState(appContext.portaCountClient)
@@ -66,10 +70,10 @@ export function DriverSelectorWidget() {
 
     function serialPortConnectionHandler(port: SerialPortLike) {
         console.log(`got serial port ${port.toLocaleString()}, using baud rate ${baudRate}`)
-        port.open({baudRate: Number(baudRate)}).then(() => {
-            console.log(`opened ${port.getInfo()}`)
-            portaCountClient.connect(port)
-        })
+        portaCountClient.connect(port)
+        // port.open({baudRate: Number(baudRate)}).then(() => {
+        //     console.log("opened", JSON.stringify(port.getInfo()))
+        // })
     }
 
     function connectViaWebSerial() {
@@ -129,6 +133,10 @@ export function DriverSelectorWidget() {
     }
 
     function connectButtonClickHandler() {
+        connect(dataSource)
+    };
+
+    function connect(dataSource: DataSource) {
         switch (dataSource) {
             case DataSource.WebUsbSerial:
                 connectViaWebUsbSerial();
@@ -150,38 +158,74 @@ export function DriverSelectorWidget() {
         }
     }
 
+    function handleWidgetSelection(value: string) {
+        connect(value as DataSource)
+    }
+
+    const options = [
+        {
+            value: DataSource.WebSerial,
+            label: "Computer drivers (webserial)"
+        },
+        {
+            value: DataSource.WebUsbSerial,
+            label: "App drivers (webusb serial)"
+        },
+    ];
+    if (enableSimulator) {
+        options.push(
+            {
+                value: DataSource.SimulatorFile,
+                label: "Simulator (file)"
+            },
+            {
+                value: DataSource.Simulator,
+                label: "Simulator"
+            }
+        )
+    }
+
+    const compactWidget = <ActionMenuWidget options={options}
+                                            onChange={(value) => handleWidgetSelection(value)} >
+        {connectionStatus === ConnectionStatus.DISCONNECTED && <HiLinkSlash color={"red"}/>}
+        {connectionStatus === ConnectionStatus.WAITING && <MdOutlinePending color={"orange"}/>}
+        {connectionStatus === ConnectionStatus.RECEIVING && <HiLink color={"green"}/>}
+    </ActionMenuWidget>
+
     return (
-        <fieldset className={"info-box-compact"} ref={ref}>
-            <legend>Data Source <span
-                className={getConnectionStatusCssClass(connectionStatus)}>{connectionStatus}</span>
-            </legend>
-            <div style={{display: "inline-block"}}>
-                <select id="data-source-selector"
-                        value={dataSource}
-                        onChange={(event) => setDataSource(event.target.value as DataSource)}
-                        disabled={portaCountClient.state.connectionStatus !== ConnectionStatus.DISCONNECTED}>
-                    <option value={DataSource.WebSerial}>Computer drivers (webserial)</option>
-                    <option value={DataSource.WebUsbSerial}>App drivers (webusb serial)</option>
-                    {enableSimulator && <option value={DataSource.SimulatorFile}>Simulator (file)</option>}
-                    {enableSimulator && <option value={DataSource.Simulator}>Simulator</option>}
-                </select>
-                {dataSource === DataSource.SimulatorFile &&
-                    <div style={{display: "inline-block"}}>
-                        <label htmlFor="simulation-speed-select"></label>
-                        <select id="simulation-speed-select"
-                                value={simulationSpeedBytesPerSecond}
-                                onChange={(event) => setSimulationSpeedBytesPerSecond(Number(event.target.value))}>
-                            {simulationSpeedsBytesPerSecond.map((bytesPerSecond: number) => <option
-                                key={bytesPerSecond}
-                                value={bytesPerSecond}>{bytesPerSecond} bps</option>)}
-                        </select>
-                    </div>}
-            </div>
-            {/*todo: change connect button to "stop" or "disconnect" button once connected*/}
-            <input className="button" type="button" value="Connect" id="connect-button"
-                   disabled={portaCountClient.state.connectionStatus !== ConnectionStatus.DISCONNECTED}
-                   onClick={connectButtonClickHandler}/>
-        </fieldset>
+        compact
+            ? compactWidget
+            : <fieldset id="driver-selector-widget" className={"info-box-compact"} ref={ref}>
+                <legend>Data Source <span
+                    className={getConnectionStatusCssClass(connectionStatus)}>{connectionStatus}</span>
+                </legend>
+                <div style={{display: "inline-block"}}>
+                    <select id="data-source-selector"
+                            value={dataSource}
+                            onChange={(event) => setDataSource(event.target.value as DataSource)}
+                            disabled={portaCountClient.state.connectionStatus !== ConnectionStatus.DISCONNECTED}>
+                        <option value={DataSource.WebSerial}>Computer drivers (webserial)</option>
+                        <option value={DataSource.WebUsbSerial}>App drivers (webusb serial)</option>
+                        {enableSimulator && <option value={DataSource.SimulatorFile}>Simulator (file)</option>}
+                        {enableSimulator && <option value={DataSource.Simulator}>Simulator</option>}
+                    </select>
+                    {dataSource === DataSource.SimulatorFile &&
+                        <div style={{display: "inline-block"}}>
+                            <label htmlFor="simulation-speed-select"></label>
+                            <select id="simulation-speed-select"
+                                    value={simulationSpeedBytesPerSecond}
+                                    onChange={(event) => setSimulationSpeedBytesPerSecond(Number(event.target.value))}>
+                                {simulationSpeedsBytesPerSecond.map((bytesPerSecond: number) => <option
+                                    key={bytesPerSecond}
+                                    value={bytesPerSecond}>{bytesPerSecond} bps</option>)}
+                            </select>
+                        </div>}
+                </div>
+                {/*todo: change connect button to "stop" or "disconnect" button once connected*/}
+                <input className="button" type="button" value="Connect" id="connect-button"
+                       disabled={portaCountClient.state.connectionStatus !== ConnectionStatus.DISCONNECTED}
+                       onClick={connectButtonClickHandler}/>
+            </fieldset>
 
     )
 }

@@ -9,8 +9,10 @@ import {InfoBox} from "src/InfoBox.tsx";
 import {AppContext} from "src/app-context.ts";
 import {AppSettings} from "src/app-settings.ts";
 import {useSetting} from "src/use-setting.ts";
+import {RAW_DB, SimpleDBRecord} from "src/database.ts";
 
 type Tally = [string, number]
+const ONE_HOUR = 60*60*1000;
 
 export function StatsPanel() {
     const appContext = useContext(AppContext)
@@ -74,7 +76,6 @@ export function StatsPanel() {
             // todo: ignore simulator tests. need a way to differentiate these.
             return true;
         });
-
 
 
         setTotalMasksTested(new Set(results.map((record: SimpleResultsDBRecord) => record.Mask)).size)
@@ -206,18 +207,49 @@ export function StatsPanel() {
         })
     }
 
-    function getResultsInRange() {
+    async function getResultsInRange() {
         // convert time back to local time
         // iso format is yyyy-mm-ddTHH:MM:ss
         const rangeStartYyyymmdd = Number(dateToLocalYyyymmdd(firstDate ?? new Date(0)));
-        const rangeEndYyyymmdd = Number(dateToLocalYyyymmdd(lastDate ?? new Date())); // there shouldn't be any date in
-                                                                                      // the future
-        RESULTS_DB.getData((record: SimpleResultsDBRecord): boolean => {
+        // there shouldn't be any date in the future
+        const rangeEndYyyymmdd = Number(dateToLocalYyyymmdd(lastDate ?? new Date()));
+
+        // look at the raw data collected to see when the machine was powered on. assume the longest block of machine
+        // powered-on time is for a given day is the event. others would be checkout tests, etc
+        const rawRecords = await RAW_DB.getData((record: SimpleDBRecord): boolean => {
+            const recordYyyymmdd = Number(dateToLocalYyyymmdd(new Date(record.timestamp)))
+            return rangeStartYyyymmdd <= recordYyyymmdd && recordYyyymmdd <= rangeEndYyyymmdd
+        })
+        type Result = { start: number, end: number, longest:Map<string,Result>,  }
+        const eventStartEnd = rawRecords.toSorted((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).reduce((result: Result, record: SimpleDBRecord) => {
+                const timestamp = new Date(record.timestamp).getTime() // millis
+                if (timestamp > result.end + ONE_HOUR) {
+                    // new event
+                    const recordYyyymmdd = dateToLocalYyyymmdd(new Date(record.timestamp))
+                    const longestResult = result.longest.get(recordYyyymmdd) || {start:timestamp, end:timestamp, longest:{}}
+
+                    if(longestResult.end - longestResult.start < result.end - result.start) {
+                        // current duration is longer than the longest; update
+                        longestResult.start = result.start
+                        longestResult.end = result.end
+                        result.longest.set(recordYyyymmdd, longestResult as Result)
+                    }
+                    result.start = timestamp
+                }
+                result.end = timestamp
+                return result;
+            },
+            {start: 0, end: 0, longest:new Map<string,Result>()},
+        )
+
+        console.debug(`event date ranges: ${JSON.stringify(eventStartEnd.longest)}`, eventStartEnd)
+
+        calculateStats(await RESULTS_DB.getData((record: SimpleResultsDBRecord): boolean => {
             // make sure both dates are in localtime
             // record time should be in localtime. todo: check that this conversion is correct/required
             const recordYyyymmdd = Number(dateToLocalYyyymmdd(new Date(record.Time)))
             return rangeStartYyyymmdd <= recordYyyymmdd && recordYyyymmdd <= rangeEndYyyymmdd
-        }).then(calculateStats)
+        }))
     }
 
     useEffect(() => {
@@ -231,11 +263,11 @@ export function StatsPanel() {
             // dates should be sorted
 
             // always start with the last event only
-            if(dates.length === 0) {
+            if (dates.length === 0) {
                 // no dates in db, do nothing
                 return
             }
-            if(firstDate.getTime() === 0) {
+            if (firstDate.getTime() === 0) {
                 // sentinel value. user hasn't set a value yet.
                 // set to the last date
                 setFirstDate(dates[dates.length - 1]);
@@ -251,7 +283,7 @@ export function StatsPanel() {
             }
             setFirstDate(newFirstDate);
         } else {
-            if(knownEventDates.length > 0) {
+            if (knownEventDates.length > 0) {
                 setFirstDate(knownEventDates[0])
             } else {
                 setFirstDate(new Date(0)); // we don't have any known event dates
@@ -266,7 +298,7 @@ export function StatsPanel() {
             }
             setLastDate(newLastDate);
         } else {
-            if(knownEventDates.length>0) {
+            if (knownEventDates.length > 0) {
                 setLastDate(knownEventDates[knownEventDates.length - 1]);
             } else {
                 setLastDate(new Date()); // today
@@ -275,7 +307,7 @@ export function StatsPanel() {
     }
 
     return (<div id={"stats-panel"}>
-        <section id={"stats-date-range-selection"} style={{display:"flex", justifySelf:"center"}}>
+        <section id={"stats-date-range-selection"} style={{display: "flex", justifySelf: "center"}}>
             from
             <DatePicker id={"stats-first-date-picker"}
                         className={"date-picker-input"} selected={firstDate}

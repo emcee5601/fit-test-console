@@ -7,6 +7,7 @@ import {AppContext} from "src/app-context.ts";
 import {useSetting} from "src/use-setting.ts";
 import {AppSettings} from "src/app-settings.ts";
 import {useTimingSignal} from "src/timing-signal.ts";
+import {IoToday} from "react-icons/io5";
 
 export function EventTimeWidget({...props}:HTMLAttributes<HTMLDivElement>) {
     const appContext = useContext(AppContext)
@@ -28,16 +29,17 @@ export function EventTimeWidget({...props}:HTMLAttributes<HTMLDivElement>) {
     }
 
     function updateUi() {
-        setEventTimeStr(formatDuration(appContext.settings.eventEndTime.getTime() - Date.now()))
+        setEventTimeStr(formatDuration(appContext.settings.eventEndTime.getTime() - Date.now(), false, false))
     }
 
     useTimingSignal(updateUi)
 
+    props.style = {...props.style, ...{display:"flex", height:"inherit", gap:"0.3em"}}
     return (
-    <div {...props} style={{display:"flex"}}
-         className={`number-field thin-border smooth-background-change ${getEventElapsedTimeClass()}`}>
-        <span className={"wide-time-trackers"}>Event Time</span>
-        <span className={"narrow-time-trackers"}>ET</span>: {eventTimeStr}
+    <div {...props}
+         className={`number-field thin-border smooth-background-change ${getEventElapsedTimeClass()}`} >
+        <span className={"wide-time-trackers"}>Event Time:</span>
+        <span className={"narrow-time-trackers svg-container"}><IoToday /></span>{eventTimeStr}
     </div>
     )
 }

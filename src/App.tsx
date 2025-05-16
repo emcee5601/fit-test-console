@@ -16,18 +16,19 @@ import {CurrentParticipantResults} from "src/CurrentParticipantResults.tsx";
 
 function App() {
     const [showExternalControl] = useSetting<boolean>(AppSettings.SHOW_EXTERNAL_CONTROL);
+    const [useCompactControls] = useSetting<boolean>(AppSettings.USE_COMPACT_UI);
 
     return (
         <>
             <section id="control-widgets" style={{display:"flex", flexWrap:"wrap", alignItems:"center", justifySelf:"center"}}>
-                <DriverSelectorWidget/>
+                {!useCompactControls &&<DriverSelectorWidget/>}
                 {(!showExternalControl) && <ProtocolSelectorWidget1/> /* don't need this here since protocol executor panel has one*/}
-                {showExternalControl && <PortaCountControlSourceWidget/>}
-                {showExternalControl && <PortaCountSampleSourceWidget/>}
+                {!useCompactControls && showExternalControl && <PortaCountControlSourceWidget/>}
+                {!useCompactControls && showExternalControl && <PortaCountSampleSourceWidget/>}
                 <PortaCountCurrentActivityWidget/>
                 {/*<PortaCountDataTransmissionWidget/>*/}
                 <PortaCountLastLineWidget/>
-                {showExternalControl && <PortaCountCommandWidget/>}
+                {!useCompactControls && showExternalControl && <PortaCountCommandWidget/>}
             </section>
             <CurrentParticipantPanel/>
             <div style={{display: "flex", width: "100%", flexDirection:"column"}}>

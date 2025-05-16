@@ -28,13 +28,13 @@ class SimpleDB extends AbstractDB {
     keepRecords: SimpleDBRecord[] = [];
     now = new Date(); // use .getTime() to get epoch time
 
-    async getAllData(): Promise<SimpleDBRecord[]> {
-        return super.getDataFromDataSource(SimpleDB.SERIAL_LINE_OBJECT_STORE);
+    async getData(keep?:(item:SimpleDBRecord) => boolean): Promise<SimpleDBRecord[]> {
+        return this.getDataFromDataSource(SimpleDB.SERIAL_LINE_OBJECT_STORE, keep);
     }
 
     /**
-     * Return a recent contiguous block of lines. Look at the timestamp of the record. Stop when there is a gap of more than 1 hour between timestamps.
-     * Don't return anything if the most recent record is more than 1 hour old.
+     * Return a recent contiguous block of lines. Look at the timestamp of the record. Stop when there is a gap of more
+     * than 1 hour between timestamps. Don't return anything if the most recent record is more than 1 hour old.
      * @param callback
      */
     getSomeRecentLines(callback: ((keepLines: SimpleDBRecord) => void)) {

@@ -7,6 +7,7 @@ import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
 import {AppSettings} from "src/app-settings.ts";
 import {HTMLAttributes, useState} from "react";
 import {useTimingSignal} from "src/timing-signal.ts";
+import {IoPersonSharp} from "react-icons/io5";
 
 export function CurrentParticipantTimeWidget({...props}: HTMLAttributes<HTMLDivElement>) {
     const [testTemplate] = useSetting<Partial<SimpleResultsDBRecord>>(AppSettings.TEST_TEMPLATE)
@@ -45,11 +46,12 @@ export function CurrentParticipantTimeWidget({...props}: HTMLAttributes<HTMLDivE
 
     useTimingSignal(updateUi)
 
+    props.style = {...props.style, ...{display:"flex", height:"inherit", gap:"0.3em"}}
     return (
-        <div {...props} style={{display:"flex"}}
+        <div {...props}
               className={`thin-border number-field smooth-background-change ${getParticipantElapsedTimeClass()}`}>
-            <span className={"wide-time-trackers"}>Participant Time</span>
-            <span className={"narrow-time-trackers"}>PT</span>: {elapsedTimeString}
+            <span className={"wide-time-trackers"}>Participant Time:</span>
+            <span className={"narrow-time-trackers svg-container"}><IoPersonSharp /></span>{elapsedTimeString}
         </div>
     )
 }

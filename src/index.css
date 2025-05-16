@@ -149,6 +149,16 @@ div.editable-table-cell {
     display: inline-block;
     outline: none;
 }
+.svg-container {
+    /* match svg's height to the line height when next to text to maximize the svg's size*/
+    height:1.5em;
+    line-height:1.5em;
+}
+.svg-container svg {
+    /* override the height and width of the svg element to fill the available height */
+    height: inherit;
+    width: auto;
+}
 
 textarea.table-cell-input {
     border: none;
@@ -294,13 +304,12 @@ td.results {
     }
 }
 
-
-#nav-bar-container {
+#nav-bar {
     container-type: inline-size;
     container-name: nav-bar-container;
 }
 
-@container nav-bar-container (width < 50em) {
+@container nav-bar-container (width < 52em) {
     .wide-nav-links {
         display: none;
     }
@@ -314,7 +323,7 @@ td.results {
         display: block;
     }
 }
-@container nav-bar-container (50em <= width < 60em) {
+@container nav-bar-container (52em <= width < 62em) {
     .wide-nav-links {
         display: block;
     }
@@ -328,7 +337,7 @@ td.results {
         display: block;
     }
 }
-@container nav-bar-container (width >= 60em) {
+@container nav-bar-container (width >= 62em) {
     .wide-nav-links {
         display: block;
     }
@@ -339,6 +348,23 @@ td.results {
         display: none;
     }
     .narrow-time-trackers {
+        display: none;
+    }
+}
+
+@container root-container (width <= 55em) {
+    .icon-text .wide-display {
+        display: none;
+    }
+    .icon-text .narrow-display {
+        display:inline-flex;
+    }
+}
+@container root-container (width > 55em) {
+    .icon-text .wide-display {
+        display: block;
+    }
+    .icon-text .narrow-display {
         display: none;
     }
 }

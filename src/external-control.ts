@@ -9,7 +9,6 @@ import {SPEECH} from "./speech.ts";
 import {ControlSource} from "./control-source.ts";
 import {SampleSource} from "./simple-protocol.ts";
 import {PortaCountClient8020, PortaCountListener} from "./portacount-client-8020.ts";
-import {APP_SETTINGS_CONTEXT, AppSettings} from "./app-settings.ts";
 
 export class ExternalControlResponsePatterns {
     // 2024-10-24T17:38:02.876Z 005138.88
@@ -241,8 +240,9 @@ export class ExternalController {
             this.portaCountClient.removeListener(verificationListener)
             if (Date.now() - lastLineReceivedTime > 3000) {
                 // too much time since last received line, probably can't externally control
-                console.log("Could not verify that we can externally control the device, disable external control mode")
-                APP_SETTINGS_CONTEXT.saveSetting(AppSettings.SHOW_EXTERNAL_CONTROL, false); // disable
+                console.log("Could not verify that we can externally control the device")
+                // todo: don't do this. only advanced users should be getting here
+                // APP_SETTINGS_CONTEXT.saveSetting(AppSettings.SHOW_EXTERNAL_CONTROL, false); // disable
             } else {
                 this.verifiedToBeExternallyControllable = true;
             }

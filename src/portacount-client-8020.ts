@@ -3,7 +3,6 @@ import {ReadableStreamDefaultReader} from "node:stream/web";
 import {ExternalController, ExternalControlResponsePatterns} from "./external-control.ts";
 import {SampleSource} from "./simple-protocol.ts";
 import {ControlSource} from "./control-source.ts";
-import {APP_SETTINGS_CONTEXT, AppSettings, AppSettingType} from "./app-settings.ts";
 import {StringLike, StringLikeWithMatchesIgnoringLineStart} from "./string-like.ts";
 import {ConnectionStatus} from "src/connection-status.ts";
 
@@ -237,11 +236,29 @@ export class PortaCountClient8020 {
     private readonly _externalController: ExternalController
     private readonly listeners: PortaCountListener[] = [];
     private _state: PortaCountState = new PortaCountState()
+    private _baudRate: number = 1200;
+    private _syncOnConnect: boolean = false;
 
     constructor() {
         console.log("PortaCountClient8020 constructor called")
         this._externalController = new ExternalController(this)
         this.addListener(this.stateUpdatingListener) // todo: directly update state? since it's internal anyway?
+    }
+
+    get baudRate(): number {
+        return this._baudRate;
+    }
+
+    set baudRate(value: number) {
+        this._baudRate = value;
+    }
+
+    get syncOnConnect(): boolean {
+        return this._syncOnConnect;
+    }
+
+    set syncOnConnect(value: boolean) {
+        this._syncOnConnect = value;
     }
 
     get externalController(): ExternalController {
@@ -472,8 +489,9 @@ export class PortaCountClient8020 {
             }
             this.dispatch(event);
         } else {
-            // todo: lines starting with 'E' seem to be errors. try to retry once any commands that resulted in an error response.
-            if(line.match(/^E/)) {
+            // todo: lines starting with 'E' seem to be errors. try to retry once any commands that resulted in an
+            // error response.
+            if (line.match(/^E/)) {
                 // seems to be some error
                 // todo: put this above in the main parser section?
                 console.warn(`error received: ${line}`)
@@ -514,24 +532,21 @@ export class PortaCountClient8020 {
                  *
                  * Workaround for 1 and 2 is to switch to external control mode, then turn on data transmission.
                  */
-                APP_SETTINGS_CONTEXT.getActualSetting(AppSettings.SYNC_DEVICE_STATE_ON_CONNECT).then((syncOnConnect) => {
-                    if (syncOnConnect) {
-                        this.externalController.assumeManualControl()
-                        this.externalController.enableDataTransmission()
-                        // todo: use settings to determine: if we start in external or internal control mode
-                        // todo: synchronize state to portacount state by interrogation
-                        // todo: synchronize status to portacount (create a status widget)
-                    }
-                })
-                // todo: verify that we can connect. if not, disable auto-connect. see external-controls.verifyExternalControllability() for inspiration
+                if (this.syncOnConnect) {
+                    this.externalController.assumeManualControl()
+                    this.externalController.enableDataTransmission()
+                    // todo: use settings to determine: if we start in external or internal control mode
+                    // todo: synchronize state to portacount state by interrogation
+                    // todo: synchronize status to portacount (create a status widget)
+                }
+                // todo: verify that we can connect. if not, disable auto-connect. see
+                // external-controls.verifyExternalControllability() for inspiration
             }
         } else {
             console.debug("portacount client connect not connected, attempting to connect...")
-            APP_SETTINGS_CONTEXT.getActualSetting(AppSettings.BAUD_RATE).then((baudRate: AppSettingType) => {
-                port.open({baudRate: Number(baudRate)}).then(() => {
-                    console.log(`port opened: ${JSON.stringify(port.getInfo())}`)
-                    this.connect(port)
-                })
+            port.open({baudRate: Number(this.baudRate)}).then(() => {
+                console.log(`port opened: ${JSON.stringify(port.getInfo())}`)
+                this.connect(port)
             })
         }
     }

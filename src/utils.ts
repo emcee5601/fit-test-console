@@ -5,10 +5,11 @@ import {ConnectionStatus} from "src/connection-status.ts";
 
 /**
  * Format a duration into hh:mm:ss:uuu
- * @param absElapsedMs
+ * @param elapsedMs
+ * @param includeSeconds
  * @param includeMs
  */
-export function formatDuration(elapsedMs: number, includeMs: boolean = false): string {
+export function formatDuration(elapsedMs: number, includeMs: boolean = false, includeSeconds: boolean = true): string {
     const absElapsedMs = Math.abs(elapsedMs)
     const millisVal = Math.round(absElapsedMs % 1000);
     const totalSeconds = Math.floor(absElapsedMs / 1000);
@@ -20,7 +21,11 @@ export function formatDuration(elapsedMs: number, includeMs: boolean = false): s
     // const totalDays = Math.round(totalHours / 24);
     // const daysVal = totalDays % 24;
     // hh:mm:ss or m:ss if no h
-    return `${elapsedMs < 0 ? "-" : ""}${totalHours ? `${totalHours}:` : ""}${minutesVal.toString().padStart(totalHours ? 2 : 1, "0")}:${secondsVal.toString().padStart(2, "0")}${includeMs ? (millisVal > 0 ? `.${millisVal.toString().padStart(3, "0")}` : '') : ""}`;
+    const secondsStr = includeSeconds ? `:${secondsVal.toString().padStart(2, "0")}` : "";
+    const millisStr = includeMs && includeSeconds ? (millisVal > 0 ? `.${millisVal.toString().padStart(3, "0")}` : '') : "";
+    // show hours if there are hours to show, OR if there are no seconds to show. eg. don't just show minutes.
+    const includeHours = totalHours||!includeSeconds;
+    return `${elapsedMs < 0 ? "-" : ""}${includeHours ? `${totalHours}:` : ""}${minutesVal.toString().padStart(includeHours ? 2 : 1, "0")}${secondsStr}${millisStr}`;
 }
 
 export function formatTime(date: Date, includeSeconds: boolean = false): string {
@@ -102,17 +107,20 @@ export function scrollToBottom(textAreaRef: RefObject<HTMLTextAreaElement>) {
 }
 
 export function median(array: number[]) {
-    if(array.length === 0) {
+    if (array.length === 0) {
         return 0;
     }
     const sortedArray = array.toSorted()
     if (0 === sortedArray.length % 2) {
         // even
         const right = sortedArray.length / 2
-        return (sortedArray[right-1] + sortedArray[right]) / 2;
+        return (sortedArray[right - 1] + sortedArray[right]) / 2;
     } else {
         // odd
         const middle = Math.floor(sortedArray.length / 2);
         return sortedArray[middle]
     }
 }
+
+export const enCaseInsensitiveCollator = Intl.Collator("en", {sensitivity: "base"}) // case-insensitive sort
+

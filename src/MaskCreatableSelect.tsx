@@ -1,9 +1,10 @@
 import CreatableSelect from "react-select/creatable";
 import {useSetting} from "src/use-setting.ts";
 import {AppSettings} from "src/app-settings.ts";
+import {enCaseInsensitiveCollator} from "src/utils.ts";
 
 export function MaskCreatableSelect({value, onChange}: { value?: string, onChange?: (value: string) => void }) {
-    const [maskList] = useSetting<string[]>(AppSettings.MASK_LIST)
+    const [maskList,setMaskList] = useSetting<string[]>(AppSettings.MASK_LIST)
 
     return (
         <CreatableSelect
@@ -39,6 +40,13 @@ export function MaskCreatableSelect({value, onChange}: { value?: string, onChang
                 if(onChange) {
                     // todo: use SingleValue here instead of a string type for onChange parameters
                     onChange(event?.value as string)
+                }
+            }}
+            onCreateOption={(inputValue:string) => {
+                if(onChange) {
+                    onChange(inputValue)
+                    // add the newly created mask to the list
+                    setMaskList((prev) => [...prev, inputValue].toSorted(enCaseInsensitiveCollator.compare))
                 }
             }}
             allowCreateWhileLoading={true}

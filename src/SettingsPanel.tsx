@@ -42,7 +42,7 @@ export function SettingsPanel() {
 
     async function downloadAllRawDataAsJSON() {
         // grab all data from the database and download it
-        await RAW_DB.getAllData().then(data => {
+        await RAW_DB.getData().then(data => {
             downloadData(JSON.stringify(data), "fit-test-all-raw-data", "json");
         })
     }
@@ -154,6 +154,7 @@ export function SettingsPanel() {
                             <BooleanSettingToggleButton trueLabel={"Verbose speech"} setting={AppSettings.VERBOSE}/>
                             <BooleanSettingToggleButton
                                 setting={AppSettings.SHOW_EXTERNAL_CONTROL}/>
+                            <BooleanSettingToggleButton setting={AppSettings.USE_COMPACT_UI}/>
                             <BooleanSettingToggleButton
                                 setting={AppSettings.KEEP_SCREEN_AWAKE}/>
                             <BooleanSettingToggleButton

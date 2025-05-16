@@ -13,6 +13,7 @@ export function ConnectionStatusWidget() {
     const portaCountClient = appContext.portaCountClient
     const [connectionStatus, setConnectionStatus] = useState(portaCountClient.state.connectionStatus)
     const [connectionStatusInView] = useSetting<boolean>(AppSettings.CONNECTION_STATUS_IN_VIEW)
+    const [useCompactControls] = useSetting<boolean>(AppSettings.USE_COMPACT_UI);
 
     useEffect(() => {
         const listener: PortaCountListener = {
@@ -27,7 +28,7 @@ export function ConnectionStatusWidget() {
     }, []);
 
     return (
-        !connectionStatusInView ? <div>
+        (!connectionStatusInView || useCompactControls) ? <div className={"svg-container"}>
             {connectionStatus === ConnectionStatus.DISCONNECTED && <HiLinkSlash/>}
             {connectionStatus === ConnectionStatus.WAITING && <MdOutlinePending/>}
             {connectionStatus === ConnectionStatus.RECEIVING && <PiPlugsConnectedLight/>}

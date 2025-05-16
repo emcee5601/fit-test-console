@@ -46,8 +46,9 @@ export enum AppSettings {
     SHOW_REMAINING_EVENT_TIME = "show-remaining-event-time",
     AUTO_CREATE_FAST_PROTOCOLS = "auto-create-fast-protocols",
     LAST_KNOWN_SETTINGS_KEYS_HASH = "last-known-settings-keys-hash", // hash of sorted settings keys
+    USE_COMPACT_UI = "use-compact-ui",
 
-    // session only settings. todo: can we merge these from another enum into this?
+    // session only settings (these start with "so-". todo: can we merge these from another enum into this?
     STATS_FIRST_DATE = "so-stats-first-date",
     STATS_LAST_DATE = "so-stats-last-date",
     RESULTS_TABLE_FILTER = "so-results-table-filter",
@@ -141,6 +142,7 @@ const AppSettingsDefaults = {
     "show-remaining-event-time": false,
     "auto-create-fast-protocols": false,
     "last-known-settings-keys-hash": "",
+    "use-compact-ui": true,
     "so-stats-first-date": new Date(0), // epoch, sentinel value
     "so-stats-last-date": new Date(), // today
     "so-results-table-filter": [],
@@ -161,20 +163,9 @@ const AppSettingsDefaults = {
 // this class should use AppSettingsType for type checking/ validations to ensure every setting has a default.
 export type ValidSettings = keyof typeof AppSettingsDefaults;
 
-/**
- * sessionOnlySettings are not preserved to database.
- * todo: derive these from enum value prefix? eg, starts with 'so-'?
- */
-const sessionOnlySettings: Set<ValidSettings> = new Set<ValidSettings>([
-    AppSettings.STATS_FIRST_DATE,
-    AppSettings.STATS_LAST_DATE,
-    AppSettings.RESULTS_TABLE_FILTER,
-    AppSettings.PARTICIPANT_RESULTS_TABLE_FILTER,
-    AppSettings.MASK_LIST,
-    AppSettings.CONTROL_SOURCE_IN_VIEW,
-    AppSettings.SAMPLE_SOURCE_IN_VIEW,
-    AppSettings.CONNECTION_STATUS_IN_VIEW,
-])
+function isSessionOnlySetting(setting: ValidSettings) {
+    return setting.toLowerCase().startsWith("so-")
+}
 
 type SettingsDBEntry<T> = { ID: string, value: T }
 
@@ -217,8 +208,6 @@ export interface SettingsListener {
     subscriptions?(): AppSettings[],
 
     settingsChanged?(setting: ValidSettings, value: AppSettingType): void
-
-    ready?(): void;
 }
 
 // todo put these into utils?
@@ -264,8 +253,6 @@ class AppSettingsContext {
     private readonly listeners: SettingsListener[] = [];
     private _protocolStages: StageDefinition[] = []; // kept in sync with selected protocol
     private _protocolSegments: ProtocolSegment[] = []; // kept in sync with protocol stages
-    private _ready: boolean = false;
-    private settingsLoaded: boolean = false;
 
     constructor() {
         this.addListener({
@@ -314,21 +301,6 @@ class AppSettingsContext {
                 }
             }
         })
-        this.loadAllSettings().then(() => {
-            // todo: call this in app context initialization instead. then we can await this before proceeding to the other initializers
-            this.updateReadyStatus()
-        });
-    }
-
-    private updateReadyStatus() {
-        this._ready = this.settingsLoaded && true;
-        if (this._ready) {
-            this.listeners.forEach((listener) => {
-                if (listener.ready) {
-                    listener.ready();
-                }
-            })
-        }
     }
 
     public addListener(listener: SettingsListener): void {
@@ -570,7 +542,7 @@ class AppSettingsContext {
      */
     private async loadSetting<T extends AppSettingType>(setting: ValidSettings): Promise<T> {
         const defaultValue = AppSettingsDefaults[setting] as T
-        if (sessionOnlySettings.has(setting)) {
+        if (isSessionOnlySetting(setting)) {
             // don't bother loading from db because session only settings are not saved to db
             this.updateCache(setting, defaultValue);
             return defaultValue;
@@ -588,12 +560,11 @@ class AppSettingsContext {
      * load all known settings into the cache
      * @private
      */
-    private async loadAllSettings() {
+    public async loadAllSettings() {
         const enumKeys = Object.keys(AppSettingsDefaults) // todo: can this be taken from AppSettings?
         for (const key of enumKeys) {
             await this.loadSetting(key as ValidSettings);
         }
-        this.settingsLoaded = true;
     }
 
     /**
@@ -631,7 +602,7 @@ class AppSettingsContext {
             }
 
             // value was changed
-            if (sessionOnlySettings.has(setting)) {
+            if (isSessionOnlySetting(setting)) {
                 // ignore. session-only settings don't get preserved to db
             } else {
                 // update the db
@@ -776,7 +747,7 @@ export function convertStagesToSegments(stages: StandardStageDefinition[]): Prot
  * calculation so we can detect changes.
  */
 export async function calculateSettingsKeysHash() {
-    const qualifiedSettingsKeys = Object.values(AppSettings).filter((key) => !sessionOnlySettings.has(key));
+    const qualifiedSettingsKeys = Object.values(AppSettings).filter((setting) => !isSessionOnlySetting(setting));
     const keysString = JSON.stringify(qualifiedSettingsKeys.sort())
     const data = new TextEncoder().encode(keysString);
     const digest = await crypto.subtle.digest("SHA-1", data);

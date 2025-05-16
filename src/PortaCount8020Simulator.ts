@@ -7,13 +7,34 @@ import {SampleSource} from "./simple-protocol.ts";
 import {ExternalController} from "./external-control.ts";
 import {ControlSource} from "./control-source.ts";
 
+class SimulatorPort {
+    readable: ReadableStream;
+    writable: WritableStream;
+    connected: boolean = false;
+
+    constructor(readable: ReadableStream, writable: WritableStream) {
+        this.readable = readable;
+        this.writable = writable;
+    }
+
+    getInfo(): SerialPortInfo {
+        return {usbVendorId:-1337};
+    }
+
+    open(options: SerialOptions): Promise<void> {
+        console.debug(`todo: set simulator baud rate to ${options.baudRate}`)
+
+        this.connected = true
+        return Promise.resolve();
+    }
+}
+
 export class PortaCount8020Simulator {
     private readonly reader: ReadableStream<Uint8Array>;
     private _readerController: ReadableStreamDefaultController | undefined;
     private readonly writer: WritableStream<Uint8Array>;
     private readonly _port: SerialPortLike;
     private readonly _portaCountState: PortaCountState = new PortaCountState();
-    private baudRate: number = 0
     private readonly encoder: TextEncoder = new TextEncoder();
     private _started: boolean = false;
     private bias: number = 0; // how much to shift concentration values returned by simulator. as a percentage. + or -
@@ -21,23 +42,11 @@ export class PortaCount8020Simulator {
     private lastCommandTimeMs: number = 0;
     private targetMaskFF: number = 100;
 
+
     constructor() {
         this.reader = this.createReader();
         this.writer = this.createWriter();
-        this._port = {
-            readable: this.reader,
-            writable: this.writer,
-            connected: true,
-            getInfo(): SerialPortInfo {
-                return {};
-            },
-            open: (options: SerialOptions): Promise<void> => {
-                if(!this.baudRate) {
-                    this.baudRate = options.baudRate
-                }
-                return Promise.resolve();
-            }
-        }
+        this._port = new SimulatorPort(this.reader, this.writer);
     }
 
     get port(): SerialPortLike {
@@ -61,15 +70,16 @@ export class PortaCount8020Simulator {
          * - responses to commands should be enqueued on demand
          */
         const simulator = this as PortaCount8020Simulator;
-        // todo: have a way to stop and start the concentration generation. when a different source is connected, disconnect from this one.
-        // when there are no readers, or readers are not reading, stop generating concentrations
+        // todo: have a way to stop and start the concentration generation. when a different source is connected,
+        // disconnect from this one. when there are no readers, or readers are not reading, stop generating
+        // concentrations
         let intervalId: NodeJS.Timeout;
         let isPulling: boolean = false;
         return new ReadableStream({
             pull: (controller: ReadableStreamDefaultController<Uint8Array>) => {
                 // flag that pull was called
                 // restart interval if there is no interval
-                if(controller) {
+                if (controller) {
                     // do nothing
                 }
                 isPulling = true;
@@ -85,7 +95,7 @@ export class PortaCount8020Simulator {
                     if (simulator._started) {
                         const concentration = simulator.generateConcentration();
                         console.debug(`simulator loop: ${concentration}, isPulling? ${isPulling}`)
-                        if(isPulling) {
+                        if (isPulling) {
                             isPulling = false; // only enqueue if something wanted enqueuing
                             controller.enqueue(simulator.encoder.encode(`${concentration}\n`))
                         }
@@ -118,7 +128,8 @@ export class PortaCount8020Simulator {
                     const data: string = decoder.decode(chunk);
                     console.debug(`writer got ${data}`)
                     accumulator += data
-                    // todo: check for multiple lines. look for last match, split everything before the last match by newlinesRecexp
+                    // todo: check for multiple lines. look for last match, split everything before the last match by
+                    // newlinesRecexp
                     const match = newlineRegexp.exec(accumulator);
                     if (match) {
                         const command = accumulator.substring(0, match.index);
@@ -139,8 +150,8 @@ export class PortaCount8020Simulator {
         );
     }
 
-    private random():number {
-        if(Date.now() - this.lastCommandTimeMs > 3*60*1000) {
+    private random(): number {
+        if (Date.now() - this.lastCommandTimeMs > 3 * 60 * 1000) {
             // more than 3 minutes has elapsed since the last command. We can reset the start point
             this.baseConcentration = (1 + 5 * Math.random()) * 1000
             this.targetMaskFF = (10 + 300 * Math.random())
@@ -153,13 +164,13 @@ export class PortaCount8020Simulator {
 
     private randomize() {
         const maxBias = 30; // percentage points
-        this.bias = (Math.random() * maxBias - (maxBias/2))/100;
+        this.bias = (Math.random() * maxBias - (maxBias / 2)) / 100;
         this.lastCommandTimeMs = Date.now();
     }
 
     private executeCommand(command: string) {
         this.randomize()
-        switch(command) {
+        switch (command) {
             case ExternalController.SWITCH_VALVE_OFF: {
                 // switch to mask
                 this._portaCountState.sampleSource = SampleSource.MASK;
@@ -175,7 +186,7 @@ export class PortaCount8020Simulator {
                 break;
             }
             case ExternalController.INVOKE_EXTERNAL_CONTROL: {
-                if(this._portaCountState.controlSource === ControlSource.External) {
+                if (this._portaCountState.controlSource === ControlSource.External) {
                     this.sendResponse("EJ\n"); // already in external control mode
                 } else {
                     this._portaCountState.controlSource = ControlSource.External
