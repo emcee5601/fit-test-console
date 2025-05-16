@@ -1,12 +1,9 @@
 import {CellContext, RowData} from "@tanstack/react-table";
 import React, {useCallback, useEffect} from "react";
 import {useInView} from "react-intersection-observer";
-import {
-    numberInputClasses,
-    Unstable_NumberInput as NumberInput
-} from "@mui/base/Unstable_NumberInput";
+import {numberInputClasses, Unstable_NumberInput as NumberInput} from "@mui/base/Unstable_NumberInput";
 import {useTheme} from '@mui/system';
-import {MaskCreatableSelect} from "src/MaskCreatableSelect.tsx";
+import {SimpleMaskSelector} from "src/SimpleMaskSelector.tsx";
 
 declare module '@tanstack/react-table' {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -82,7 +79,7 @@ export function useEditableMaskColumn<T, V>({
 
 
     return (
-        <MaskCreatableSelect value={(value as string)??""} onChange={(v) => onChange(v)}/>
+        <SimpleMaskSelector value={(value as string)??""} onChange={(v) => onChange(v)} allowCreate={true}/>
     )
 }
 

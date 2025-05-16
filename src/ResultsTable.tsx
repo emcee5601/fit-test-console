@@ -228,7 +228,7 @@ export default function ResultsTable({
                     return `${record.ProtocolName} - ${record.TestController}`
                 },
                 header: 'Protocol',
-                size: 75,
+                size: 115,
             },
         ],
         [numExerciseColumns, selectedRows]

@@ -1,15 +1,25 @@
-import React from "react";
+import React, {RefObject} from "react";
 
-// A typical debounced input react component
+/**
+ *
+ * @param initialValue
+ * @param onChange
+ * @param debounce milliseconds
+ * @param ref
+ * @param props
+ * @constructor
+ */
 export function DebouncedInput({
-                                   value: initialValue,
-                                   onChange,
-                                   debounce = 500,
-                                   ...props
-                               }: {
+    value: initialValue,
+    onChange,
+    debounce = 500,
+    inputRef,
+    ...props
+}: {
     value: string | number
     onChange: (value: string | number) => void
     debounce?: number
+    inputRef?:RefObject<HTMLInputElement>
 } & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'>) {
     const [value, setValue] = React.useState(initialValue)
 
@@ -23,11 +33,12 @@ export function DebouncedInput({
         }, debounce)
 
         return () => clearTimeout(timeout)
-        // adding onChange and debounce here cause constant re-renders. The linter says to useCallback on them, then to memoize the deps of the callback, but suppressing is simpler for now since we don't actually want to do anything when those change
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        // adding onChange and debounce here cause constant re-renders. The linter says to useCallback on them, then to
+        // memoize the deps of the callback, but suppressing is simpler for now since we don't actually want to do
+        // anything when those change eslint-disable-next-line react-hooks/exhaustive-deps
     }, [value])
 
     return (
-        <input {...props} value={value} onChange={e => setValue(e.target.value)}/>
+        <input ref={inputRef} {...props} value={value} onChange={e => setValue(e.target.value)}/>
     )
 }

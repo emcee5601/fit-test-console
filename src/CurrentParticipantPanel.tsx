@@ -5,7 +5,7 @@ import {AppSettings} from "./app-settings.ts";
 import {deepCopy} from "json-2-csv/lib/utils";
 import {LabeledSection} from "./LabeledSection.tsx";
 import {useSetting} from "./use-setting.ts";
-import {MaskCreatableSelect} from "src/MaskCreatableSelect.tsx";
+import {SimpleMaskSelector} from "src/SimpleMaskSelector.tsx";
 
 export function CurrentParticipantPanel() {
     const [testTemplate, setTestTemplate] = useSetting<Partial<SimpleResultsDBRecord>>(AppSettings.TEST_TEMPLATE)
@@ -92,7 +92,7 @@ export function CurrentParticipantPanel() {
                     </fieldset>
                     <fieldset className={"info-box-compact"} style={{width: "25ch"}}>
                         <legend>Mask</legend>
-                        <MaskCreatableSelect value={testTemplate.Mask} onChange={(value) => updateCurrentMask(value)}/>
+                        <SimpleMaskSelector value={testTemplate.Mask} onChange={(value) => updateCurrentMask(value)} allowCreate={true}/>
                     </fieldset>
                     <fieldset className={"info-box-compact"} style={{width: "25ch"}}>
                         <legend>Notes</legend>

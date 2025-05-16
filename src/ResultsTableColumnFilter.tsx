@@ -2,7 +2,7 @@ import {Column} from "@tanstack/react-table";
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 import {DebouncedInput} from "./DebouncedInput.tsx";
 import DatePicker from "react-datepicker";
-import {MaskCreatableSelect} from "src/MaskCreatableSelect.tsx";
+import {SimpleMaskSelector} from "src/SimpleMaskSelector.tsx";
 
 export function ResultsTableColumnFilter<V>({column, dates}: {
     column: Column<SimpleResultsDBRecord, V>,
@@ -65,8 +65,8 @@ export function ResultsTableColumnFilter<V>({column, dates}: {
             ></DatePicker>
         }
         case 'mask': {
-            const curFilter = column.getFilterValue() as string;
-            return <MaskCreatableSelect value={curFilter} onChange={value => column.setFilterValue(value)}/>
+            const curFilter = column.getFilterValue() as string || "";
+            return <SimpleMaskSelector value={curFilter} onChange={value => column.setFilterValue(value)}/>
         }
         default:
             return <DebouncedInput
