@@ -66,7 +66,7 @@ export function ResultsTableColumnFilter<V>({column, dates}: {
         }
         case 'mask': {
             const curFilter = column.getFilterValue() as string || "";
-            return <SimpleMaskSelector value={curFilter} onChange={value => column.setFilterValue(value)}/>
+            return <SimpleMaskSelector value={curFilter} onChange={value => column.setFilterValue(value)} showClearControl={true}/>
         }
         default:
             return <DebouncedInput

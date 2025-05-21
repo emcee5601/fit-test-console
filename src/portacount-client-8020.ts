@@ -499,8 +499,8 @@ export class PortaCountClient8020 {
                 // todo: don't do this anymore? don't think there's been a case of these not being errors
                 // try again, but ignore the start of line matching. this is in case there were extraneous characters
                 // for some reason
-                console.debug(`retrying unparsed pattern: ${line}`)
-                this.processLine(line.toString(), true)
+                // console.debug(`retrying unparsed pattern: ${line}`)
+                // this.processLine(line.toString(), true)
             } else {
                 console.debug(`unparsed pattern remains unparsed: ${line}`)
             }
@@ -514,7 +514,9 @@ export class PortaCountClient8020 {
     public connect(port: SerialPortLike) {
         // todo: maybe break this out?
         console.debug(`portacount client connect(${JSON.stringify(port)})`)
-        if (port.connected) {
+        if (port.connected && port.readable) {
+            // webserial ports seem to be connected even if not opened.
+            // so also check that we have a readable here which indicates that we are opened.
             console.debug("portacount client connect, connected; setting up reader and writer")
             if (port.readable) {
                 this.monitor(port.readable.getReader());

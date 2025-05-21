@@ -2,6 +2,7 @@
 import ftdi from 'ftdi-js'
 import {logSource, PushSource} from "src/datasource-helper.ts";
 import ProlificUsbSerial from "pl2303"
+import CH34xUsbSerial, {PRODUCT_ID_CH340, PRODUCT_ID_CH341A, VENDOR_ID_QUINHENG} from "ch34x-webusb-serial-ts";
 
 export class UsbSerialPort {
     readonly device: USBDevice;
@@ -158,6 +159,50 @@ abstract class UsbSerialDriver extends PushSource {
 
 }
 
+class CH34xSerialDriver extends UsbSerialDriver {
+    private delegate: CH34xUsbSerial | undefined;
+
+    constructor() {
+        super([{
+            filters: [
+                {vendorId: VENDOR_ID_QUINHENG, productId: PRODUCT_ID_CH340},
+                {vendorId: VENDOR_ID_QUINHENG, productId: PRODUCT_ID_CH341A}
+            ]
+        }]);
+    }
+
+    async open(device: USBDevice, opts: { baudRate: number }) {
+        return new Promise<UsbSerialDriver>((resolve, reject) => {
+            this.delegate = new CH34xUsbSerial(device, opts)
+            this.delegate.addEventListener('data', (event) => {
+                const chunk: Uint8Array = (event as CustomEvent).detail;
+                // chunk is a Uint8Array so we can't just use + or +=
+                this.inboundDataQueue.push(chunk);
+            })
+            this.delegate.addEventListener('ready', () => {resolve(this)})
+            this.delegate.addEventListener('error', (event:Event) => {reject(event)})
+            this.delegate.addEventListener('disconnected', () => {
+                console.debug(`disconnected from ${JSON.stringify(device)}`)
+                this.closed = true
+            })
+            this.delegate.open(); // this isn't wired up properly, the ready event is what denotes a successful open()
+        })
+    }
+
+    override async closeImpl() {
+        return this.delegate?.close();
+    }
+
+    override async write(chunk: Uint8Array) {
+        if (this.delegate) {
+            return this.delegate.write(chunk);
+        }
+        return new Promise<USBOutTransferResult>((_resolve, reject) => {
+            reject("not yet initialized")
+        })
+    }
+}
+
 class ProlificSerialDriver extends UsbSerialDriver {
     private delegate: ProlificUsbSerial | undefined;
 
@@ -236,7 +281,7 @@ class FtdiSerialDriver extends UsbSerialDriver {
 }
 
 export class UsbSerialDrivers {
-    static readonly supportedDrivers: UsbSerialDriver[] = [new FtdiSerialDriver(), new ProlificSerialDriver()];
+    static readonly supportedDrivers: UsbSerialDriver[] = [new FtdiSerialDriver(), new ProlificSerialDriver(), new CH34xSerialDriver()];
 
     static async getPorts(): Promise<UsbSerialPort[]> {
         const ports: UsbSerialPort[] = []

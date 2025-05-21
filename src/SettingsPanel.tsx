@@ -11,6 +11,9 @@ import {SpeechVoiceSelectorWidget} from "./SpeechVoiceSelectorWidget.tsx";
 import {DebouncedInput} from "./DebouncedInput.tsx";
 import DatePicker from "react-datepicker";
 import {AppContext} from "src/app-context.ts";
+import {InfoBox} from "src/InfoBox.tsx";
+import {PortaCountListener} from "src/portacount-client-8020.ts";
+import {ExternalController} from "src/external-control.ts";
 
 export function SettingsPanel() {
     const appContext = useContext(AppContext)
@@ -22,6 +25,18 @@ export function SettingsPanel() {
     const [dataToDownload, setDataToDownload] = useState<string>("all-raw-data")
     const [minutesPerParticipant, setMinutesPerParticipant] = useSetting<number>(AppSettings.MINUTES_ALLOTTED_PER_PARTICIPANT)
     const [eventEndDate, setEventEndDate] = useState<Date>(appContext.settings.eventEndTime)
+    const [pulseStatus, setPulseStatus] = useState<string>("?")
+    const [batteryStatus, setBatteryStatus] = useState<string>("?")
+    const [serialNumber, setSerialNumber] = useState<string>("?")
+    const [lastServiceDate, setLastServiceDate] = useState<string>("?")
+    const [runTimeSinceService, setRunTimeSinceService] = useState<string>("?")
+    const [stateCS, setStateCS] = useState<string>("?")
+    const [stateCB, setStateCB] = useState<string>("?")
+    const [stateCT, setStateCT] = useState<string>("?")
+    const [stateCC, setStateCC] = useState<string>("?")
+    const [stateCL, setStateCL] = useState<string>("?")
+    const [stateCP, setStateCP] = useState<string>("?")
+    const [stateCD, setStateCD] = useState<string>("?")
 
     function downloadFileFormatChanged(event: ChangeEvent<HTMLSelectElement>) {
         setDataToDownload(event.target.value);
@@ -77,8 +92,73 @@ export function SettingsPanel() {
         appContext.settings.getActualSetting(AppSettings.EVENT_END_HHMM).then(() => {
             setEventEndDate(appContext.settings.eventEndTime);
         })
+
+        const portaCountListener: PortaCountListener = {
+            lineReceived(line: string) {
+                processPortaCountLine(line)
+            }
+        }
+        appContext.portaCountClient.addListener(portaCountListener);
+        return () => {
+            appContext.portaCountClient.removeListener(portaCountListener);
+        }
     }, []);
 
+    function processPortaCountLine(line: string) {
+        const batteryPulse = /^R(?<battery>[GB])(?<pulse>[GB])/.exec(line);
+        if (batteryPulse && batteryPulse.groups) {
+            const {battery, pulse} = batteryPulse.groups
+            setBatteryStatus(battery)
+            setPulseStatus(pulse)
+        }
+        const settings = /^S(T(PA(?<ambientPurgeTime>.+)|A(?<ambientSampleTime>.+)|PM(?<maskPurgeTime>.+)|M(?<exerciseNumber>..)(?<maskSampleTime>.+))|P(?<memoryLocation>\s+..)(?<fitFactorPassLevel>.+)|S(?<serialNumber>.+)|R(?<runTimeSinceFactoryService>.+)|D(?<dateLastServiced>.+))$/.exec(line)
+        if (settings && settings.groups) {
+            const {dateLastServiced, serialNumber, runTimeSinceFactoryService} = settings.groups
+            if (dateLastServiced) {
+                setLastServiceDate(dateLastServiced)
+            }
+            if(serialNumber) {
+                setSerialNumber(serialNumber)
+            }
+            if(runTimeSinceFactoryService) {
+                setRunTimeSinceService(runTimeSinceFactoryService)
+            }
+        }
+        const voltageInfo = /^C(S(?<cs>.+)|B(?<cb>.+)|T(?<ct>.+)|C(?<cc>.+)|L(?<cl>.+)|P(?<cp>.+)|D(?<cd>.+))/.exec(line)
+        if(voltageInfo && voltageInfo.groups) {
+            const {cs, cb, ct, cc ,cl, cp, cd} = voltageInfo.groups
+            if(cs) {
+                setStateCS(cs)
+            }
+            if(cb) {
+                setStateCB(cb)
+            }
+            if(ct) {
+                setStateCT(ct)
+            }
+            if(cc) {
+                setStateCC(cc)
+            }
+            if(cl) {
+                setStateCL(cl)
+            }
+            if(cp) {
+                setStateCP(cp)
+            }
+            if(cd) {
+                setStateCD(cd)
+            }
+        }
+    }
+
+
+    function runDiagnostics() {
+        const externalController = appContext.portaCountClient.externalController;
+        externalController.assumeManualControl()
+        externalController.requestRuntimeStatus()
+        externalController.sendCommand(ExternalController.REQUEST_VOLTAGE_INFO)
+        externalController.requestSettings()
+    }
 
     return (
         <div id="settings-panel">
@@ -157,6 +237,7 @@ export function SettingsPanel() {
                             <BooleanSettingToggleButton setting={AppSettings.USE_COMPACT_UI}/>
                             <BooleanSettingToggleButton
                                 setting={AppSettings.KEEP_SCREEN_AWAKE}/>
+                            <BooleanSettingToggleButton setting={AppSettings.ENABLE_WEB_SERIAL_DRIVERS}/>
                             <BooleanSettingToggleButton
                                 setting={AppSettings.ENABLE_AUTO_CONNECT}/>
                             <BooleanSettingToggleButton
@@ -173,6 +254,22 @@ export function SettingsPanel() {
                                    onClick={() => localStorage.clear()}/>
                         </fieldset>}
                     </section>
+                    <fieldset id={"diagnostics"}>
+                        <legend>Diagnostics</legend>
+                        <button onClick={runDiagnostics}>Run Diagnostics</button>
+                        <InfoBox label={"Battery"}>{batteryStatus}</InfoBox>
+                        <InfoBox label={"Pulse"}>{pulseStatus}</InfoBox>
+                        <InfoBox label={"CS"}>{stateCS}</InfoBox>
+                        <InfoBox label={"CB"}>{stateCB}</InfoBox>
+                        <InfoBox label={"CT"}>{stateCT}</InfoBox>
+                        <InfoBox label={"CC"}>{stateCC}</InfoBox>
+                        <InfoBox label={"CL"}>{stateCL}</InfoBox>
+                        <InfoBox label={"CP"}>{stateCP}</InfoBox>
+                        <InfoBox label={"CD"}>{stateCD}</InfoBox>
+                        <InfoBox label={"Serial Number"}>{serialNumber}</InfoBox>
+                        <InfoBox label={"Last Service Date"}>{lastServiceDate}</InfoBox>
+                        <InfoBox label={"Run Time Since Service"}>{runTimeSinceService}</InfoBox>
+                    </fieldset>
                 </section>
             </fieldset>
         </div>)

@@ -359,5 +359,6 @@ export class ProtocolExecutor {
 
 export function calculateSegmentConcentration(segment: ProtocolSegment): number {
     // don't round this here
-    return segment.data.reduce((sum, currentValue: ParticleConcentrationEvent) => sum + currentValue.concentration, 0) / segment.data.length;
+    // portacount seems to return a minimum value of 0.01 here, so we'll do the same
+    return Math.max(0.01, segment.data.reduce((sum, currentValue: ParticleConcentrationEvent) => sum + currentValue.concentration, 0) / segment.data.length);
 }

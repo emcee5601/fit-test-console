@@ -58,6 +58,9 @@ export class ExternalController {
         [ExternalController.DISABLE_CONTINUOUS_DATA_TRANSMISSION, ExternalControlResponsePatterns.DATA_TRANSMISSION_DISABLED],
         [ExternalController.ENABLE_CONTINUOUS_DATA_TRANSMISSION, ExternalControlResponsePatterns.DATA_TRANSMISSION_ENABLED],
         [ExternalController.TURN_POWER_OFF, ExternalControlResponsePatterns.TURN_POWER_OFF],
+        [ExternalController.REQUEST_VOLTAGE_INFO, /^C/],
+        [ExternalController.REQUEST_SETTINGS, /^S/],
+        [ExternalController.REQUEST_RUNTIME_STATUS_OF_BATTERY_AND_SIGNAL_PULSE, /^R/],
         // todo: add the rest of the patterns. both sides probably need to be regexp
     ]);
 
@@ -112,7 +115,7 @@ export class ExternalController {
                         this.writer!.write(chunk) // catch and reject?
                     }
                     const setUpRetry = (): void => {
-                        timerId = setTimeout(retryHandler, 1000) // 1 second to respond
+                        timerId = setTimeout(retryHandler, 3000) // 1 second to respond
                     }
                     const retryHandler = (): void => {
                         if (gotExpectedResponse) {
@@ -145,7 +148,9 @@ export class ExternalController {
             };
             if (this.commandChain) {
                 console.debug(`chaining command ${command}`)
-                this.commandChain = this.commandChain.then(fun);
+                this.commandChain = this.commandChain.then(fun).catch(() => {
+                    // ignore
+                });
             } else {
                 this.commandChain = fun()
             }

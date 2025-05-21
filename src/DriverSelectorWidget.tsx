@@ -45,6 +45,7 @@ export function DriverSelectorWidget({compact = false}: { compact?: boolean }) {
     const [dataSource, setDataSource] = useSetting<DataSource>(AppSettings.SELECTED_DATA_SOURCE)
     const [connectionStatus, setConnectionStatus] = useState(portaCountClient.state.connectionStatus)
     const [, setConnectionStatusInView] = useSetting(AppSettings.CONNECTION_STATUS_IN_VIEW)
+    const [enableWebSerialDrivers] = useSetting(AppSettings.ENABLE_WEB_SERIAL_DRIVERS)
     const {ref, inView} = useInView()
 
     useEffect(() => {
@@ -164,14 +165,18 @@ export function DriverSelectorWidget({compact = false}: { compact?: boolean }) {
 
     const options = [
         {
-            value: DataSource.WebSerial,
-            label: "Computer drivers (webserial)"
-        },
-        {
             value: DataSource.WebUsbSerial,
             label: "App drivers (webusb serial)"
-        },
-    ];
+        }
+    ]
+    if (enableWebSerialDrivers) {
+        options.push(
+            {
+                value: DataSource.WebSerial,
+                label: "Computer drivers (webserial)"
+            },
+        )
+    }
     if (enableSimulator) {
         options.push(
             {
@@ -186,7 +191,7 @@ export function DriverSelectorWidget({compact = false}: { compact?: boolean }) {
     }
 
     const compactWidget = <ActionMenuWidget options={options}
-                                            onChange={(value) => handleWidgetSelection(value)} >
+                                            onChange={(value) => handleWidgetSelection(value)}>
         {connectionStatus === ConnectionStatus.DISCONNECTED && <HiLinkSlash color={"red"}/>}
         {connectionStatus === ConnectionStatus.WAITING && <MdOutlinePending color={"orange"}/>}
         {connectionStatus === ConnectionStatus.RECEIVING && <HiLink color={"green"}/>}
@@ -204,10 +209,7 @@ export function DriverSelectorWidget({compact = false}: { compact?: boolean }) {
                             value={dataSource}
                             onChange={(event) => setDataSource(event.target.value as DataSource)}
                             disabled={portaCountClient.state.connectionStatus !== ConnectionStatus.DISCONNECTED}>
-                        <option value={DataSource.WebSerial}>Computer drivers (webserial)</option>
-                        <option value={DataSource.WebUsbSerial}>App drivers (webusb serial)</option>
-                        {enableSimulator && <option value={DataSource.SimulatorFile}>Simulator (file)</option>}
-                        {enableSimulator && <option value={DataSource.Simulator}>Simulator</option>}
+                        {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                     </select>
                     {dataSource === DataSource.SimulatorFile &&
                         <div style={{display: "inline-block"}}>

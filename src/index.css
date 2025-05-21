@@ -159,6 +159,20 @@ div.editable-table-cell {
     height: inherit;
     width: auto;
 }
+.selector-value:hover {
+}
+.cancel-hover-control {
+    visibility: hidden;
+}
+.cancel-hover-control:hover {
+    visibility: visible;
+}
+.selector-value:hover ~ .cancel-hover-control {
+    visibility: visible;
+}
+.selector-input:hover ~ .cancel-hover-control {
+    visibility: visible;
+}
 
 textarea.table-cell-input {
     border: none;
@@ -325,7 +339,7 @@ td.results {
 }
 @container nav-bar-container (52em <= width < 62em) {
     .wide-nav-links {
-        display: block;
+        display: flex;
     }
     .wide-time-trackers {
         display: none;
@@ -339,7 +353,7 @@ td.results {
 }
 @container nav-bar-container (width >= 62em) {
     .wide-nav-links {
-        display: block;
+        display: flex;
     }
     .wide-time-trackers {
         display: block;

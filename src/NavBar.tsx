@@ -1,4 +1,4 @@
-import {NavLink, To, useLocation, useNavigate} from "react-router";
+import {NavLink, useLocation, useNavigate} from "react-router";
 import {useWakeLock} from "./use-wake-lock.ts";
 import {EventTimeWidget} from "src/EventTimeWidget.tsx";
 import {CurrentParticipantTimeWidget} from "src/CurrentParticipantTimeWidget.tsx";
@@ -9,6 +9,11 @@ import {SampleSourceWidget} from "src/SampleSourceWidget.tsx";
 import {ControlSourceWidget} from "src/ControlSourceWidget.tsx";
 import {PortaCountCommandWidget} from "src/PortaCountCommandWidget.tsx";
 import {DriverSelectorWidget} from "src/DriverSelectorWidget.tsx";
+import {ActionMenuWidget, SelectOption} from "src/ActionMenuWidget.tsx";
+import {RxDropdownMenu} from "react-icons/rx";
+import {ReactNode} from "react";
+
+
 
 export function NavBar() {
     const [showParticipantTime] = useSetting<boolean>(AppSettings.SHOW_ELAPSED_PARTICIPANT_TIME)
@@ -19,37 +24,68 @@ export function NavBar() {
 
     useWakeLock()
 
-    function itemSelected(event: { target: { value: To; }; }) {
-        console.debug(`itemSelected: ${JSON.stringify(event.target.value)}`)
-        navigate(event.target.value);
-    }
-
+    const navLinks:SelectOption[] = [
+        {
+            label: "Home",
+            value: "/"
+        },
+        {
+            label: "Results",
+            value: "/view-results"
+        },
+        {
+            label: "Estimate",
+            value: "/estimate"
+        },
+        {
+            label: "Settings",
+            value: "/settings"
+        },
+        {
+            label: "Protocols",
+            value: "/protocols"
+        },
+        {
+            label: "Stats",
+            value: "/stats"
+        },
+        {
+            label: "Raw Data",
+            value: "/raw-data"
+        },
+        {
+            label: "QR Code",
+            value: "/qrscanner"
+        },
+    ];
     return (
         <>
-            <div id="nav-bar" style={{display: "flex", justifyContent: "space-between", height:"100%"}}>
+            <div id="nav-bar" style={{display: "flex", justifyContent: "space-between", height: "100%"}}>
                 <CurrentParticipantTimeWidget style={{visibility: showParticipantTime ? "visible" : "hidden"}}/>
-                <div className={"inline-flex"} style={{width: 'fit-content', gap:"0.5em", alignItems:"center", height:"inherit"}} >
-                    {compactUi && <DriverSelectorWidget compact={true}/>}<ControlSourceWidget/><SampleSourceWidget/>{compactUi && <PortaCountCommandWidget compact={true}/>}
-                </div>
-                <select className="narrow-nav-links" onChange={itemSelected} value={location.pathname}>
-                    <option value={"/"}>Home</option>
-                    <option value={"/estimate"}>Estimate</option>
-                    <option value={"/view-results"}>Results</option>
-                    <option value={"/settings"}>Settings</option>
-                    <option value={"/protocols"}>Protocols</option>
-                    <option value={"/raw-data"}>Raw&nbsp;Data</option>
-                    <option value={"/stats"}>Stats</option>
-                    <option value={"/qrscanner"}>QR Scanner</option>
-                </select>
-                <div className="wide-nav-links">
-                    <NavLink to={"/"}>Home</NavLink>
-                    | <NavLink to={"/view-results"}>Results</NavLink>
-                    | <NavLink to={"/raw-data"}>Raw&nbsp;Data</NavLink>
-                    | <NavLink to={"/settings"}>Settings</NavLink>
-                    | <NavLink to={"/protocols"}>Protocols</NavLink>
-                    | <NavLink to={"/stats"}>Stats</NavLink>
-                    | <NavLink to={"/estimate"}>Estimate</NavLink>
-                    {<>| <NavLink to={"/qrscanner"}>QR Scanner</NavLink></>}
+                <div className={"inline-flex"} style={{gap: "0.3em"}}>
+                    <div className={"inline-flex"}
+                         style={{width: 'fit-content', gap: "0.3em", alignItems: "center", height: "inherit"}}>
+                        {compactUi && <DriverSelectorWidget
+                            compact={true}/>}<ControlSourceWidget/><SampleSourceWidget/>{compactUi &&
+                        <PortaCountCommandWidget compact={true}/>}
+                    </div>
+                    <div className={"narrow-nav-links"}>
+                        <ActionMenuWidget
+                            options={navLinks}
+                            value={location.pathname}
+                            onChange={(destination) => navigate(destination)}>
+                            <RxDropdownMenu/></ActionMenuWidget>
+                    </div>
+                    <div className="wide-nav-links" style={{gap:"0.1em"}}>
+                        {navLinks.reduce((result:ReactNode[], option) => {
+                            if(result.length > 0) {
+                                result.push("|")
+                            }
+                            result.push(<NavLink key={option.label} to={option.value}>{option.label}</NavLink>)
+                            return result;
+                        }, [])}
+                    </div>
+                    <div/>
                 </div>
                 <EventTimeWidget style={{visibility: showEventTime ? "visible" : "hidden"}}/>
                 {/*<NewSettingsNotifier/> this interferes with browser detection redirect, since this also redirects*/}

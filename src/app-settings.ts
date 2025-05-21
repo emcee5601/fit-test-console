@@ -47,6 +47,7 @@ export enum AppSettings {
     AUTO_CREATE_FAST_PROTOCOLS = "auto-create-fast-protocols",
     LAST_KNOWN_SETTINGS_KEYS_HASH = "last-known-settings-keys-hash", // hash of sorted settings keys
     USE_COMPACT_UI = "use-compact-ui",
+    ENABLE_WEB_SERIAL_DRIVERS = "enable-webserial-drivers",
 
     // session only settings (these start with "so-". todo: can we merge these from another enum into this?
     STATS_FIRST_DATE = "so-stats-first-date",
@@ -143,6 +144,7 @@ const AppSettingsDefaults = {
     "auto-create-fast-protocols": false,
     "last-known-settings-keys-hash": "",
     "use-compact-ui": true,
+    "enable-webserial-drivers": false, // I don't normally use this so disable by default.
     "so-stats-first-date": new Date(0), // epoch, sentinel value
     "so-stats-last-date": new Date(), // today
     "so-results-table-filter": [],

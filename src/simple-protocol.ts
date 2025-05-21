@@ -58,7 +58,7 @@ export enum SampleSource {
 export const ProtocolDefaults = {
     defaultAmbientPurgeDuration: 4,
     defaultAmbientSampleDuration: 5,
-    defaultMaskPurgeDuration: 4,
+    defaultMaskPurgeDuration: 4, // todo: this should be calibrated for each device
     defaultMaskSampleDuration: 40,
 }
 

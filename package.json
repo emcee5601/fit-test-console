@@ -1,7 +1,7 @@
 {
   "name": "fit-test-console",
   "private": true,
-  "version": "1.3.9",
+  "version": "1.3.10",
   "homepage": "https://emcee5601.github.io/fit-test-console",
   "type": "module",
   "scripts": {
@@ -21,6 +21,7 @@
     "@types/node": "^22.10.0",
     "@types/w3c-web-usb": "^1.0.10",
     "@yudiel/react-qr-scanner": "^2.3.1",
+    "ch34x-webusb-serial-ts": "https://github.com/emcee5601/ch34x-webusb-serial-ts",
     "echarts": "^5.5.1",
     "echarts-for-react": "^3.0.2",
     "export-to-csv": "^1.4.0",

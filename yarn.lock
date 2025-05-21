@@ -3598,6 +3598,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"ch34x-webusb-serial-ts@https://github.com/emcee5601/ch34x-webusb-serial-ts":
+  version: 0.0.0
+  resolution: "ch34x-webusb-serial-ts@https://github.com/emcee5601/ch34x-webusb-serial-ts.git#commit=92ec4f75caf67e794a42ed8048720edf6ae98d3e"
+  dependencies:
+    "@types/w3c-web-usb": "npm:^1.0.10"
+  checksum: 10c0/60d9e984afce85b816f26a0e1a777fff2cc1d97105014bf7d786f5134fa247f6625d8939038c93bf6281c7dd10b312d61708535e524f13acaad76184e3eed9e5
+  languageName: node
+  linkType: hard
+
 "chai@npm:^5.1.2":
   version: 5.1.2
   resolution: "chai@npm:5.1.2"
@@ -4798,6 +4807,7 @@ __metadata:
     "@types/w3c-web-usb": "npm:^1.0.10"
     "@vitejs/plugin-react": "npm:^4.3.3"
     "@yudiel/react-qr-scanner": "npm:^2.3.1"
+    ch34x-webusb-serial-ts: "https://github.com/emcee5601/ch34x-webusb-serial-ts"
     echarts: "npm:^5.5.1"
     echarts-for-react: "npm:^3.0.2"
     eslint: "npm:^9.13.0"

@@ -1,6 +1,5 @@
 import React, {useContext, useEffect, useState} from "react";
 import {AppContext} from "./app-context.ts";
-import {scrollToBottom} from "./utils.ts";
 import {DataCollectorListener} from "./data-collector.ts";
 
 export function DataCollectorPanel() {
@@ -16,25 +15,25 @@ export function DataCollectorPanel() {
     useEffect(() => {
         // initial values
         setRawConsoleData(() => context.dataCollector.rawLines)
-        scrollToBottom(rawConsoleDataTextAreaRef)
+        // scrollToBottom(rawConsoleDataTextAreaRef)
         setLogData(context.dataCollector.logLines)
-        scrollToBottom(logDataTextAreaRef)
+        // scrollToBottom(logDataTextAreaRef)
         setProcessedData(context.dataCollector.processedData);
-        scrollToBottom(processedDataTextAreaRef)
+        // scrollToBottom(processedDataTextAreaRef)
 
         const dataCollectorListener: DataCollectorListener = {
             logRawLine() {
                 setRawConsoleData(() => context.dataCollector.rawLines)
-                scrollToBottom(rawConsoleDataTextAreaRef)
+                // scrollToBottom(rawConsoleDataTextAreaRef)
             },
             logMessage(message: string) {
                 setLogData((prev) => prev + message)
-                scrollToBottom(logDataTextAreaRef)
+                // scrollToBottom(logDataTextAreaRef)
             },
             logProcessedData(data: string) {
                 const timestamp = new Date().toISOString(); // todo: want the timestamp to match up, so need to get it externally
                 setProcessedData((prev) => prev + `${timestamp} ${data}`);
-                scrollToBottom(processedDataTextAreaRef)
+                // scrollToBottom(processedDataTextAreaRef)
             },
         }
 

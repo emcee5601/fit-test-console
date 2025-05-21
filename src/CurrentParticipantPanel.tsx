@@ -92,7 +92,7 @@ export function CurrentParticipantPanel() {
                     </fieldset>
                     <fieldset className={"info-box-compact"} style={{width: "25ch"}}>
                         <legend>Mask</legend>
-                        <SimpleMaskSelector value={testTemplate.Mask} onChange={(value) => updateCurrentMask(value)} allowCreate={true}/>
+                        <SimpleMaskSelector value={testTemplate.Mask} onChange={(value) => updateCurrentMask(value)} allowCreate={true} showClearControl={true}/>
                     </fieldset>
                     <fieldset className={"info-box-compact"} style={{width: "25ch"}}>
                         <legend>Notes</legend>
