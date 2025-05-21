@@ -4936,11 +4936,11 @@ __metadata:
 
 "ftdi-js@https://github.com/emcee5601/ftdi-js":
   version: 0.4.1
-  resolution: "ftdi-js@https://github.com/emcee5601/ftdi-js.git#commit=42791b7387a95c429b9c51ff4ab813563c372c54"
+  resolution: "ftdi-js@https://github.com/emcee5601/ftdi-js.git#commit=4cc787bf45da4b53663d123da319db29143c7886"
   dependencies:
     core-js: "npm:2.6.12"
     usb: "npm:2.11.0"
-  checksum: 10c0/5deccd1b63a5de94c06e05c88754dd6a051d56251d27d5244e282abb0c6bc467820d5857f6d5e2c8a2e94c749819b09a36202b313c60a81c0e5c3187d21e83b9
+  checksum: 10c0/0d8a6884fa15644f304e7997f434e8563f823fc2aa580e6c9c6c9cc32fe52cada95665d72fc8ea7c31a7f89351d45fa5652d37f0cb9c6e3f85da0e3933b973b1
   languageName: node
   linkType: hard
 
@@ -6518,7 +6518,7 @@ __metadata:
 
 "pl2303@https://github.com/emcee5601/pl2303":
   version: 0.1.0
-  resolution: "pl2303@https://github.com/emcee5601/pl2303.git#commit=252a6c8baf776b5dbb2c83490b3cb03e6b2de56b"
+  resolution: "pl2303@https://github.com/emcee5601/pl2303.git#commit=1b9271aa73f8754464383fb3c3282ffffadd5e10"
   dependencies:
     "@eslint/js": "npm:^9.16.0"
     "@types/node": "npm:^22.10.1"
@@ -6528,7 +6528,7 @@ __metadata:
     typescript: "npm:^5.7.2"
     typescript-eslint: "npm:^8.17.0"
     usb: "npm:2.11.0"
-  checksum: 10c0/774d91054571500aa7fc764fee95afaa12a49ab55c72b7adab6e325ab9e027ab85e53cdb802fd8043fb6a897f6f5c5e7c28cb206d52d17ea45c6fdafc6274dd1
+  checksum: 10c0/40013c0c19cbc2764e48b3608ca3176e22ed24b9dd392e0dbaf0d97301c3a7bc6aa505619ea63ce7fd38d21504247543b6fd6409690d82c47cba722e6002c0c2
   languageName: node
   linkType: hard
 
