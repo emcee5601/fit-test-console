@@ -39,13 +39,13 @@ export default defineConfig({
                         "sizes": "192x192"
                     }
                 ],
-                "start_url": "/fit-test-console",
+                "start_url": "./",
                 "display": "standalone",
                 theme_color: "#dddddd"
             }
         }),
     ],
-    base: "/fit-test-console",
+    base: "./",
     define: {
         __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
     }

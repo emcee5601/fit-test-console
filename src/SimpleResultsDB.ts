@@ -1,5 +1,7 @@
 import AbstractDB from "./abstract-db.ts";
+import {SampleSource} from "src/simple-protocol.ts";
 
+type ParticleCount = {type: SampleSource, count: number}
 export interface SimpleResultsDBRecord {
     ID: number,
     Time: string,
@@ -14,11 +16,16 @@ export interface SimpleResultsDBRecord {
     "Ex 6"?: number,
     "Ex 7"?: number,
     "Ex 8"?: number,
+    "Ex 9"?: number,
+    "Ex 10"?: number,
+    "Ex 11"?: number,
+    "Ex 12"?: number,
     Final?: number,
     ProtocolName?: string,
     TestController?: string,
     DataSource?: string,
-    [key: string]: string | number | undefined,
+    ParticleCounts?: ParticleCount[],
+    [key: string]: string | number | undefined | ParticleCount[],
 }
 
 class SimpleResultsDB extends AbstractDB {

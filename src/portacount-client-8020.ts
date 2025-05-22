@@ -461,7 +461,7 @@ export class PortaCountClient8020 {
             this.state.activity = Activity.Counting
             const concentration = match.groups?.concentration;
             if (concentration) {
-                this.dispatch(new ParticleConcentrationEvent(Number(concentration), SampleSource.AMBIENT, ControlSource.Internal));
+                this.dispatch(new ParticleConcentrationEvent(Number(concentration), SampleSource.MASK, ControlSource.Internal));
             }
         } else if ((match = line.match(Patterns.FIT_FACTOR))) {
             this.state.activity = Activity.Testing

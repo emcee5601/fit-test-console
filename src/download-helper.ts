@@ -113,7 +113,7 @@ export type CsvAbleType = {
     [key: number | string]: AcceptedData,
 };
 
-function generateCsvPayload<T extends CsvAbleType>(table: Table<T>) {
+function generateCsvPayload<T>(table: Table<T>) {
     const csvConfig = mkConfig({
         fieldSeparator: ',',
         filename: `fit-test-results-${new Date().toISOString().replace(/[:.]/g,"_")}`,
@@ -122,12 +122,13 @@ function generateCsvPayload<T extends CsvAbleType>(table: Table<T>) {
         columnHeaders: table.getAllColumns().map(col => col.id)
     });
     const rows = table.getSortedRowModel().rows
-    const rowData = rows.map((row) => row.original)
+    // the cast here should be fine since generateCsv seems to ignore unsupported types
+    const rowData = rows.map((row) => row.original as CsvAbleType)
     const csv = generateCsv(csvConfig)(rowData)
     return {csvConfig, csv};
 }
 
-export function exportToCsv<T extends CsvAbleType>(table: Table<T>) {
+export function exportToCsv<T>(table: Table<T>) {
     const {csvConfig, csv} = generateCsvPayload(table);
     download(csvConfig)(csv)
 }

@@ -58,7 +58,7 @@ export function SimpleMaskSelector({value, onChange, allowCreate = false, showCl
         // textAreaRef.current.style.display = "block";
     }
 
-    function handleOnClick() {
+    function handleClearButtonOnClick() {
         handleOnChange("") // clear selection
     }
 
@@ -98,7 +98,7 @@ export function SimpleMaskSelector({value, onChange, allowCreate = false, showCl
                 width: "fit-content",
                 alignContent: "center"
             }}>
-                <div className={"svg-container"} onClick={handleOnClick}>
+                <div className={"svg-container"} onClick={handleClearButtonOnClick}>
                     <GiCancel/>
                 </div>
             </div>}

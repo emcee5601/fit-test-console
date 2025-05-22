@@ -14,7 +14,6 @@ import {RxDropdownMenu} from "react-icons/rx";
 import {ReactNode} from "react";
 
 
-
 export function NavBar() {
     const [showParticipantTime] = useSetting<boolean>(AppSettings.SHOW_ELAPSED_PARTICIPANT_TIME)
     const [showEventTime] = useSetting<boolean>(AppSettings.SHOW_REMAINING_EVENT_TIME)
@@ -24,7 +23,7 @@ export function NavBar() {
 
     useWakeLock()
 
-    const navLinks:SelectOption[] = [
+    const navLinks: SelectOption[] = [
         {
             label: "Home",
             value: "/"
@@ -62,8 +61,8 @@ export function NavBar() {
         <>
             <div id="nav-bar" style={{display: "flex", justifyContent: "space-between", height: "100%"}}>
                 <CurrentParticipantTimeWidget style={{visibility: showParticipantTime ? "visible" : "hidden"}}/>
-                <div className={"inline-flex"} style={{gap: "0.3em"}}>
-                    <div className={"inline-flex"}
+                <div id={"nav-links-container"} className={"inline-flex"} style={{gap: "0.3em"}}>
+                    <div id="compact-ui" className={"inline-flex"}
                          style={{width: 'fit-content', gap: "0.3em", alignItems: "center", height: "inherit"}}>
                         {compactUi && <DriverSelectorWidget
                             compact={true}/>}<ControlSourceWidget/><SampleSourceWidget/>{compactUi &&
@@ -76,15 +75,16 @@ export function NavBar() {
                             onChange={(destination) => navigate(destination)}>
                             <RxDropdownMenu/></ActionMenuWidget>
                     </div>
-                    <div className="wide-nav-links" style={{gap:"0.1em"}}>
-                        {navLinks.reduce((result:ReactNode[], option) => {
-                            if(result.length > 0) {
+                    <div className="wide-nav-links" style={{gap: "0.1em"}}>
+                        {navLinks.reduce((result: ReactNode[], option) => {
+                            if (result.length > 0) {
                                 result.push("|")
                             }
                             result.push(<NavLink key={option.label} to={option.value}>{option.label}</NavLink>)
                             return result;
                         }, [])}
                     </div>
+                    <div>v{__APP_VERSION__}</div>
                     <div/>
                 </div>
                 <EventTimeWidget style={{visibility: showEventTime ? "visible" : "hidden"}}/>

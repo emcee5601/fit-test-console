@@ -434,24 +434,28 @@ export class DataCollector {
         particleConcentrationReceived: (event: ParticleConcentrationEvent) => {
             // handle realtime
             // if we're in the middle of a test, ignore
-            if (this.currentTestData) {
-                // in the middle of a test. If it's a mask concentration, we're probably in a purge phase.
-                if (event.sampleSource === SampleSource.MASK) {
-                    // todo: we don't technically need this.
-                    // this.setInstructions("Breathe normally");
+            const fun = () => {
+                if (this.currentTestData) {
+                    if (event.controlSource === ControlSource.Internal) {
+                        // we got the mask or ambient concentration for a segment. record it.
+                        if (!this.currentTestData.ParticleCounts) {
+                            this.currentTestData.ParticleCounts = []
+                        }
+                        this.currentTestData.ParticleCounts.push({type: event.sampleSource, count: event.concentration})
+                        this.updateCurrentRowInDatabase()
+                    }
+                    return
                 }
-                // no need to further process concentration.
-                // TODO: if we're in custom protocol mode, we'd need to keep track
-                return
-            }
-            const concentration = event.concentration;
-            const timestamp = event.timestamp;
-            if (this.controlSource === ControlSource.External) {
-                this.appendToProcessedData(`${this.sampleSource}: ${concentration}\n`)
-            }
+                const concentration = event.concentration;
+                const timestamp = event.timestamp;
+                if (this.controlSource === ControlSource.External) {
+                    this.appendToProcessedData(`${this.sampleSource}: ${concentration}\n`)
+                }
 
-            // TODO: timestamp should always be present. check this
-            this.fitFactorEstimator.processConcentration(concentration, timestamp ? new Date(timestamp) : new Date())
+                // TODO: timestamp should always be present. check this
+                this.fitFactorEstimator.processConcentration(concentration, timestamp ? new Date(timestamp) : new Date())
+            }
+            this.chain(fun)
         }
     }
 
