@@ -84,7 +84,7 @@ export function NavBar() {
                             return result;
                         }, [])}
                     </div>
-                    <div>v{__APP_VERSION__}</div>
+                    <div>v{__APP_VERSION__}{import.meta.env.MODE[0]}</div>
                     <div/>
                 </div>
                 <EventTimeWidget style={{visibility: showEventTime ? "visible" : "hidden"}}/>

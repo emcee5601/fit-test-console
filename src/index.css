@@ -334,7 +334,7 @@ td.results {
     container-name: nav-bar-container;
 }
 
-@container nav-bar-container (width < 52em) {
+@container nav-bar-container (width < 53em) {
     .wide-nav-links {
         display: none;
     }
@@ -348,7 +348,7 @@ td.results {
         display: block;
     }
 }
-@container nav-bar-container (52em <= width < 62em) {
+@container nav-bar-container (53em <= width < 63em) {
     .wide-nav-links {
         display: flex;
     }
@@ -362,7 +362,7 @@ td.results {
         display: block;
     }
 }
-@container nav-bar-container (width >= 62em) {
+@container nav-bar-container (width >= 63em) {
     .wide-nav-links {
         display: flex;
     }
