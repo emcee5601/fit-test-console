@@ -1,5 +1,12 @@
 #!/usr/bin/env bash -ex
 
+# make sure we're not in an "old" version directory to prevent accidentally pushing to the old version repo
+if pwd | grep -e '-old$'
+then
+  echo "Releasing from an old version directory is not permitted."
+  exit 1
+fi
+
 # make sure we're on main
 if [ "$(git branch --show-current)" != "main" ]
 then
