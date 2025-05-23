@@ -2,8 +2,6 @@ name: Deploy MFTC when a version tag is pushed
 run-name: ${{ github.actor }} deploying MFTC at ${{ github.ref }}
 on:
   push:
-    branches:
-      - main
     tags:
       - v*
 jobs:
