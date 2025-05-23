@@ -52,6 +52,9 @@ export function useEditableExerciseResultColumn<T extends SimpleResultsDBRecord,
             onBlur();
         }
     }, [inView, onBlur]);
+    useEffect(() => {
+        onBlur()
+    }, [value]);
 
     const fitFactor = Number(value);
     const efficiencyPercentage = convertFitFactorToFiltrationEfficiency(fitFactor);
@@ -59,13 +62,13 @@ export function useEditableExerciseResultColumn<T extends SimpleResultsDBRecord,
     const editable = row.original.TestController === ControlSource.Manual
 
     return (
-        <div className={classes} style={{width:"100%", display:"inline-flex", flexDirection:"column"}} ref={ref}>
+        <div className={classes} style={{width: "100%", display: "inline-flex", flexDirection: "column"}} ref={ref}>
             {editable
                 ? <DebouncedInput style={{minWidth: 0, minHeight: 0, width: "calc(100% - 0.3em)"}}
-                         value={value ? value as string : ""}
-                         onChange={value => setValue(value as V)}
-                         onBlur={onBlur}
-                         placeholder={`Click to add ${id}`}
+                                  value={value ? value as string : ""}
+                                  onChange={value => setValue(value as V)}
+                                  onBlur={onBlur}
+                                  placeholder={`Click to add ${id}`}
                 />
                 : <div>{fitFactor}</div>
             }
