@@ -1,0 +1,28 @@
+name: Deploy MFTC when a version tag is pushed
+run-name: ${{ github.actor }} deploying MFTC at ${{ github.ref }}
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - v*
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: checkout this repo
+        uses: actions/checkout@v4
+      - name: enable corepack
+        run: corepack enable
+      - name: install dependencies
+        run: yarn install
+      - name: build
+        run: yarn build
+      - name: Deploy with gh-pages
+        run: |
+          git remote set-url origin https://git:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
+          npx gh-pages -d dist -u "github-actions-bot <support+actions@github.com>"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

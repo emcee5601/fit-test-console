@@ -10,7 +10,8 @@
     "deploy": "gh-pages -d dist",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "release": "./scripts/release.sh"
   },
   "dependencies": {
     "@emotion/styled": "^11.13.5",

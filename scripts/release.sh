@@ -45,5 +45,5 @@ git push
 # push the tag so versions are easier to find
 git push origin "${TAG}"
 
-# remember to deploy
-echo Next step: deploy: yarn run deploy
+# remember to deploy. (github actions now deploys when a version tag is pushed)
+#echo Next step: deploy: yarn run deploy
