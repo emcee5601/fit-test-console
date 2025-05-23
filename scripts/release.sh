@@ -47,3 +47,5 @@ git push origin "${TAG}"
 
 # remember to deploy. (github actions now deploys when a version tag is pushed)
 #echo Next step: deploy: yarn run deploy
+echo Check workflow here: https://github.com/emcee5601/fit-test-console/actions
+echo Check deployment here: https://github.com/emcee5601/fit-test-console/deployments
