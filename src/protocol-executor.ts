@@ -210,7 +210,7 @@ export class ProtocolExecutor {
         this.segments = segments;
         const startTime = new Date();
         this.protocolStartTime = startTime.getTime()
-        await this.dataCollector.recordTestStart(startTime.toLocaleString(), ControlSource.External)
+        await this.dataCollector.recordTestStart(ControlSource.External, startTime.toLocaleString())
         this.executeSegment(0)
         this.controller.beep()
     }

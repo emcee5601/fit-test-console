@@ -1,5 +1,7 @@
 import AbstractDB from "./abstract-db.ts";
 import {SampleSource} from "src/simple-protocol.ts";
+import {ControlSource} from "src/control-source.ts";
+import {DataSource} from "src/data-source.ts";
 
 type ParticleCount = {type: SampleSource, count: number}
 export interface SimpleResultsDBRecord {
@@ -22,7 +24,7 @@ export interface SimpleResultsDBRecord {
     "Ex 12"?: number,
     Final?: number,
     ProtocolName?: string,
-    TestController?: string,
+    TestController?: ControlSource,
     DataSource?: string,
     ParticleCounts?: ParticleCount[],
     [key: string]: string | number | undefined | ParticleCount[],
@@ -55,7 +57,7 @@ class SimpleResultsDB extends AbstractDB {
      * Inserts an empty record into the database. This generates a new ID for the record.
      * Return the json representation of the data that was inserted. Includes the generated primary key.
      */
-    async createNewTest(timestamp: string, protocolName: string, testController: string, dataSource: string): Promise<SimpleResultsDBRecord> {
+    async createNewTest(timestamp: string, protocolName: string, testController: ControlSource, dataSource: DataSource): Promise<SimpleResultsDBRecord> {
         const transaction = this.openTransactionClassic("readwrite");
         if (!transaction) {
             console.log("database not ready");

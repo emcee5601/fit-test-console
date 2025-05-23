@@ -4,6 +4,10 @@ import {useInView} from "react-intersection-observer";
 import {numberInputClasses, Unstable_NumberInput as NumberInput} from "@mui/base/Unstable_NumberInput";
 import {useTheme} from '@mui/system';
 import {SimpleMaskSelector} from "src/SimpleMaskSelector.tsx";
+import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
+import {convertFitFactorToFiltrationEfficiency, getFitFactorCssClass} from "src/utils.ts";
+import {DebouncedInput} from "src/DebouncedInput.tsx";
+import {ControlSource} from "src/control-source.ts";
 
 declare module '@tanstack/react-table' {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -18,13 +22,64 @@ declare module '@tanstack/react-table' {
     }
 }
 
+export function useEditableExerciseResultColumn<T extends SimpleResultsDBRecord, V extends string | number | boolean>({
+    getValue,
+    row,
+    column: {id},
+    table
+}: CellContext<T, V>) {
+    const {index} = row;
+    const initialValue = getValue()
+    // We need to keep and update the state of the cell normally
+    const [value, setValue] = React.useState<V>(initialValue)
+    const {ref, inView} = useInView()
+
+    // When the input is blurred, we'll call our table meta's updateData function
+    const onBlur = useCallback(() => {
+        if (value != initialValue) {
+            // only update if changed
+            table.options.meta?.updateData(index, id, value)
+        }
+    }, [value, id, index, table.options.meta, initialValue])
+
+    // If the initialValue is changed external, sync it up with our state
+    React.useEffect(() => {
+        setValue(initialValue)
+    }, [initialValue])
+    useEffect(() => {
+        // console.log(`inview is now ${inView}`)
+        if (!inView) {
+            onBlur();
+        }
+    }, [inView, onBlur]);
+
+    const fitFactor = Number(value);
+    const efficiencyPercentage = convertFitFactorToFiltrationEfficiency(fitFactor);
+    const classes = getFitFactorCssClass(fitFactor)
+    const editable = row.original.TestController === ControlSource.Manual
+
+    return (
+        <div className={classes} style={{width:"100%", display:"inline-flex", flexDirection:"column"}} ref={ref}>
+            {editable
+                ? <DebouncedInput style={{minWidth: 0, minHeight: 0, width: "calc(100% - 0.3em)"}}
+                         value={value ? value as string : ""}
+                         onChange={value => setValue(value as V)}
+                         onBlur={onBlur}
+                         placeholder={`Click to add ${id}`}
+                />
+                : <div>{fitFactor}</div>
+            }
+            {fitFactor > 0 && <span className={"efficiency"}>{efficiencyPercentage}%</span>}
+        </div>
+    )
+}
 
 export function useEditableColumn<T, V>({
-                                            getValue,
-                                            row: {index},
-                                            column: {id},
-                                            table
-                                        }: CellContext<T, V | unknown>) {
+    getValue,
+    row: {index},
+    column: {id},
+    table
+}: CellContext<T, V | unknown>) {
     const initialValue = getValue()
     // We need to keep and update the state of the cell normally
     const [value, setValue] = React.useState<V | unknown>(initialValue)
@@ -69,7 +124,7 @@ export function useEditableMaskColumn<T, V>({
     // We need to keep and update the state of the cell normally
     const [value, setValue] = React.useState<V>(initialValue)
 
-    const onChange = useCallback((newValue:string) => {
+    const onChange = useCallback((newValue: string) => {
         if (newValue != initialValue) {
             // only update if changed
             table.options.meta?.updateData(index, id, newValue)
@@ -79,7 +134,7 @@ export function useEditableMaskColumn<T, V>({
 
 
     return (
-        <SimpleMaskSelector value={(value as string)??""} onChange={(v) => onChange(v)} allowCreate={true}/>
+        <SimpleMaskSelector value={(value as string) ?? ""} onChange={(v) => onChange(v)} allowCreate={true}/>
     )
 }
 
@@ -237,11 +292,11 @@ function Styles() {
 }
 
 export function useEditableNumberColumn<T>({
-                                               getValue,
-                                               row: {index},
-                                               column: {id},
-                                               table
-                                           }: CellContext<T, string| number | undefined>) {
+    getValue,
+    row: {index},
+    column: {id},
+    table
+}: CellContext<T, string | number | undefined>) {
     const initialValue = getValue() as number
     // We need to keep and update the state of the cell normally
     const [value, setValue] = React.useState<number | null | undefined>(initialValue as number)

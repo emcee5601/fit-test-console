@@ -190,7 +190,7 @@ export class DataCollector {
     }
 
     // todo:
-    async recordTestStart(timestamp = new Date().toLocaleString(), controlSource: ControlSource) {
+    async recordTestStart(controlSource: ControlSource, timestamp = new Date().toLocaleString()) {
         if (!this.resultsDatabase) {
             console.log("database not ready");
             return;
@@ -397,7 +397,7 @@ export class DataCollector {
         testStarted: (timestamp: number) => {
             this.appendToProcessedData(`\nStarting a new test. ${new Date(timestamp).toLocaleString()}\n`);
             this.setInstructionsForExercise(1);
-            this.inProgressTestPromiseChain = this.recordTestStart(new Date(timestamp).toLocaleString(), ControlSource.Internal);
+            this.inProgressTestPromiseChain = this.recordTestStart(ControlSource.Internal, new Date(timestamp).toLocaleString());
         },
 
         controlSourceChanged: (source: ControlSource) => {

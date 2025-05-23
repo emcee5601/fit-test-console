@@ -7,4 +7,5 @@ export enum DataSource {
     SimulatorFile = "Simulator-file",
     WebSerial = "WebSerial",
     WebUsbSerial = "WebUsbSerial",
+    Manual = "Manual", // a human typed it in
 }

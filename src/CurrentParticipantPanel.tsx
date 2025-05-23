@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react";
+import React, {useContext, useEffect, useState} from "react";
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 import {DebouncedTextArea} from "./DebouncedTextArea.tsx";
 import {AppSettings} from "./app-settings.ts";
@@ -6,8 +6,11 @@ import {deepCopy} from "json-2-csv/lib/utils";
 import {LabeledSection} from "./LabeledSection.tsx";
 import {useSetting} from "./use-setting.ts";
 import {SimpleMaskSelector} from "src/SimpleMaskSelector.tsx";
+import {AppContext} from "src/app-context.ts";
+import {ControlSource} from "src/control-source.ts";
 
 export function CurrentParticipantPanel() {
+    const appContext = useContext(AppContext);
     const [testTemplate, setTestTemplate] = useSetting<Partial<SimpleResultsDBRecord>>(AppSettings.TEST_TEMPLATE)
     const [currentParticipant, setCurrentParticipant] = useState<string>(testTemplate.Participant ?? "")
 
@@ -62,16 +65,18 @@ export function CurrentParticipantPanel() {
 
     useEffect(() => {
         console.debug(`testTemplate updated (via useEffect): ${JSON.stringify(testTemplate)}`)
-        setCurrentParticipant(testTemplate.Participant??"")
+        setCurrentParticipant(testTemplate.Participant ?? "")
     }, [testTemplate]);
+
+
+    function manualEntry() {
+        appContext.dataCollector.recordTestStart(ControlSource.Manual)
+    }
 
     return (
         <div id="current-test-results">
             <LabeledSection>
-                <legend>Current Participant
-                    <input id={"next-participant-button"} type={"button"} value={"Next participant"}
-                           onClick={nextParticipant}/>
-                    <input id={"next-mask-button"} type={"button"} value={"Next mask"} onClick={nextMask}/></legend>
+                <legend>Current Participant <button onClick={() => manualEntry()}>Manual Entry</button></legend>
                 <div style={{
                     display: "flex",
                     textAlign: "start",
@@ -79,11 +84,11 @@ export function CurrentParticipantPanel() {
                     flexWrap: "wrap",
                     justifySelf: "center"
                 }}>
-                    {/*{showRemainingEventTime && <EventTimeWidget/>}*/}
-                    {/*{showElapsedParticipantTime && <CurrentParticipantTimeWidget/>}*/}
-
                     <fieldset className={"info-box-compact"}>
-                        <legend>Participant</legend>
+                        <legend>Participant <input id={"next-participant-button"} type={"button"}
+                                                   value={"Next participant"}
+                                                   onClick={nextParticipant}/>
+                        </legend>
                         <DebouncedTextArea className="table-cell-input" placeholder={"Click to add Participant"}
                                            value={currentParticipant}
                                            onChange={(value) => updateCurrentParticipant(value)}
@@ -91,8 +96,11 @@ export function CurrentParticipantPanel() {
                         />
                     </fieldset>
                     <fieldset className={"info-box-compact"} style={{width: "25ch"}}>
-                        <legend>Mask</legend>
-                        <SimpleMaskSelector value={testTemplate.Mask} onChange={(value) => updateCurrentMask(value)} allowCreate={true} showClearControl={true}/>
+                        <legend>Mask <input id={"next-mask-button"} type={"button"} value={"Next mask"}
+                                            onClick={nextMask}/>
+                        </legend>
+                        <SimpleMaskSelector value={testTemplate.Mask} onChange={(value) => updateCurrentMask(value)}
+                                            allowCreate={true} showClearControl={true}/>
                     </fieldset>
                     <fieldset className={"info-box-compact"} style={{width: "25ch"}}>
                         <legend>Notes</legend>

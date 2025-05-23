@@ -6,7 +6,6 @@ import React, {Dispatch, SetStateAction, useContext, useEffect, useState} from '
 import './index.css'
 
 import {
-    CellContext,
     ColumnDef,
     ColumnFiltersState,
     flexRender,
@@ -21,9 +20,12 @@ import './ResultsTable.css'
 
 import {useVirtualizer} from '@tanstack/react-virtual'
 import "react-datepicker/dist/react-datepicker.css";
-import {useEditableColumn, useEditableMaskColumn} from "./use-editable-column-hook.tsx";
+import {
+    useEditableColumn,
+    useEditableExerciseResultColumn,
+    useEditableMaskColumn
+} from "./use-editable-column-hook.tsx";
 import {useSkipper} from "./use-skipper-hook.ts";
-import {convertFitFactorToFiltrationEfficiency, getFitFactorCssClass} from "./utils.ts";
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 import {AppSettings, calculateNumberOfExercises} from "./app-settings.ts";
 import {AppContext} from "./app-context.ts";
@@ -68,16 +70,6 @@ export default function ResultsTable({
         year: "numeric"
     })
 
-    function getExerciseResultCell(info: CellContext<SimpleResultsDBRecord, string | number|boolean>) {
-        const fitFactor = info.getValue<number>();
-
-        const efficiencyPercentage = convertFitFactorToFiltrationEfficiency(fitFactor);
-        const classes = getFitFactorCssClass(fitFactor)
-        return <span className={classes}>{fitFactor}<br/>{fitFactor > 0 && <span
-            className={"efficiency"}>{efficiencyPercentage}%</span>}
-        </span>
-    }
-
     // todo: make this a useCallback?
     function createExerciseResultColumn(exerciseNum: number) {
         return createExerciseResultColumnBase(`Ex ${exerciseNum}`)
@@ -86,7 +78,7 @@ export default function ResultsTable({
     function createExerciseResultColumnBase(exercise: string) {
         return {
             accessorKey: exercise,
-            cell: getExerciseResultCell,
+            cell: useEditableExerciseResultColumn,
             enableColumnFilter: false,
             sortUndefined: undefined,
             sortingFn: compareNumericString,
