@@ -33,10 +33,6 @@ export function NavBar() {
             value: "/view-results"
         },
         {
-            label: "Estimate",
-            value: "/estimate"
-        },
-        {
             label: "Settings",
             value: "/settings"
         },

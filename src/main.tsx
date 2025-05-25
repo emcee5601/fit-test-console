@@ -10,7 +10,7 @@ import {StatsPanel} from "src/StatsPanel.tsx";
 import {UnsupportedBrowser} from './UnsupportedBrowser.tsx';
 import MainLayout from "src/MainLayout.tsx";
 import {ResultViewer} from "src/ResultViewer.tsx";
-import {EstimatedFitFactorPanel, QRScanner, SimpleFitTestProtocolPanel} from "src/lazy-components.ts";
+import {QRScanner, SimpleFitTestProtocolPanel} from "src/lazy-components.ts";
 
 // add this to prompt for a refresh
 const updateSW = registerSW({
@@ -35,7 +35,6 @@ createRoot(document.getElementById('root')!).render(
                         <Route path="settings" element={<SettingsPanel/>}/>
                         <Route path="protocols" element={<SimpleFitTestProtocolPanel/>}/>
                         <Route path="raw-data" element={<DataCollectorPanel/>}/>
-                        <Route path={"estimate"} element={<EstimatedFitFactorPanel/>}/>
                         <Route path={"stats"} element={<StatsPanel/>}/>
                         <Route path={"qrscanner"} element={<QRScanner/>}/>
                         <Route path={"unsupported-browser"} element={<UnsupportedBrowser/>}/>
