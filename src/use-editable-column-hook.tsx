@@ -1,5 +1,5 @@
 import {CellContext, RowData} from "@tanstack/react-table";
-import React, {useCallback, useEffect} from "react";
+import React, {useCallback, useContext, useEffect} from "react";
 import {useInView} from "react-intersection-observer";
 import {numberInputClasses, Unstable_NumberInput as NumberInput} from "@mui/base/Unstable_NumberInput";
 import {useTheme} from '@mui/system';
@@ -8,6 +8,9 @@ import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
 import {convertFitFactorToFiltrationEfficiency, getFitFactorCssClass} from "src/utils.ts";
 import {DebouncedInput} from "src/DebouncedInput.tsx";
 import {ControlSource} from "src/control-source.ts";
+import {AppContext} from "src/app-context.ts";
+import {ResizingTextArea} from "src/ResizingTextArea.tsx";
+import {SampleSource} from "src/simple-protocol.ts";
 
 declare module '@tanstack/react-table' {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -28,6 +31,7 @@ export function useEditableExerciseResultColumn<T extends SimpleResultsDBRecord,
     column: {id},
     table
 }: CellContext<T, V>) {
+    const appContext = useContext(AppContext)
     const {index} = row;
     const initialValue = getValue()
     // We need to keep and update the state of the cell normally
@@ -59,19 +63,24 @@ export function useEditableExerciseResultColumn<T extends SimpleResultsDBRecord,
     const fitFactor = Number(value);
     const efficiencyPercentage = convertFitFactorToFiltrationEfficiency(fitFactor);
     const classes = getFitFactorCssClass(fitFactor)
-    const editable = row.original.TestController === ControlSource.Manual
+    const {exerciseNum} = id.match(/.*?(?<exerciseNum>[0-9]+)$/)?.groups ?? {exerciseNum: 0}
+    const protocolHasThisManyExercises = row.original.ProtocolName && appContext.settings.numExercisesForProtocol[row.original.ProtocolName] >= Number(exerciseNum) || false;
+    const editable = row.original.TestController === ControlSource.Manual && protocolHasThisManyExercises
+    const maskConcentration = (row.original.ParticleCounts ?? []).filter((particleCount) => particleCount.type === SampleSource.MASK).at(Number(exerciseNum) - 1)?.count ?? 0
 
     return (
         <div className={classes} style={{width: "100%", display: "inline-flex", flexDirection: "column"}} ref={ref}>
-            {editable
-                ? <DebouncedInput style={{minWidth: 0, minHeight: 0, width: "calc(100% - 0.3em)"}}
-                                  value={value ? value as string : ""}
-                                  onChange={value => setValue(value as V)}
-                                  onBlur={onBlur}
-                                  placeholder={`Click to add ${id}`}
-                />
-                : <div>{fitFactor}</div>
-            }
+            <div className={"inline-flex"}>
+                {editable
+                    ? <DebouncedInput style={{minWidth: 0, minHeight: 0, width: "calc(100% - 0.3em)"}}
+                                      value={value ? value as string : ""}
+                                      onChange={value => setValue(value as V)}
+                                      onBlur={onBlur}
+                                      placeholder={`Click to add ${id}`}
+                    />
+                    : <div>{value}</div>
+                }{(value && row.original.ParticleCounts && maskConcentration === 0) && "*"}
+            </div>
             {fitFactor > 0 && <span className={"efficiency"}>{efficiencyPercentage}%</span>}
         </div>
     )
@@ -85,7 +94,7 @@ export function useEditableColumn<T, V>({
 }: CellContext<T, V | unknown>) {
     const initialValue = getValue()
     // We need to keep and update the state of the cell normally
-    const [value, setValue] = React.useState<V | unknown>(initialValue)
+    const [value, setValue] = React.useState<V>(initialValue as V)
     const {ref, inView} = useInView()
 
     // When the input is blurred, we'll call our table meta's updateData function
@@ -98,7 +107,7 @@ export function useEditableColumn<T, V>({
 
     // If the initialValue is changed external, sync it up with our state
     React.useEffect(() => {
-        setValue(initialValue)
+        setValue(initialValue as V)
     }, [initialValue])
     useEffect(() => {
         // console.log(`inview is now ${inView}`)
@@ -107,13 +116,19 @@ export function useEditableColumn<T, V>({
         }
     }, [inView, onBlur]);
 
+    function handleOnChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+        setValue(e.target.value as V);
+    }
+
     return (
-        <textarea ref={ref} style={{height: "auto", width: "100%", border: "none"}}
-                  value={value ? value as string : ""}
-                  onChange={e => setValue(e.target.value)}
-                  onBlur={onBlur}
-                  placeholder={`Click to add ${id}`}
-        />
+        <ResizingTextArea
+            className={"table-cell-input"}
+            textAreaRef={ref}
+            value={value ? value as string : ""}
+            onChange={e => handleOnChange(e)}
+            onBlur={onBlur}
+            placeholder={`Click to add ${id}`}
+        ></ResizingTextArea>
     )
 }
 

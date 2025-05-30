@@ -1,4 +1,4 @@
-import React, {useContext, useEffect, useState} from "react";
+import {useContext, useEffect, useState} from "react";
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 import {DebouncedTextArea} from "./DebouncedTextArea.tsx";
 import {AppSettings} from "./app-settings.ts";
@@ -51,13 +51,6 @@ export function CurrentParticipantPanel() {
         updateTestTemplate();
     }
 
-    function updateHeight(event: React.FormEvent<HTMLTextAreaElement>) {
-        const textArea = event.target as HTMLTextAreaElement
-        textArea.style.height = "auto";
-        textArea.style.height = textArea.scrollHeight + "px";
-        // console.log(`updateHeight, set to ${event.target.style.height}, should be ${event.target.scrollHeight}`)
-    }
-
     function updateTestTemplate() {
         console.debug(`updateTestTemplate -> ${JSON.stringify(testTemplate)}`);
         setTestTemplate(deepCopy(testTemplate)) // copy to force React to see the update
@@ -92,7 +85,6 @@ export function CurrentParticipantPanel() {
                         <DebouncedTextArea className="table-cell-input" placeholder={"Click to add Participant"}
                                            value={currentParticipant}
                                            onChange={(value) => updateCurrentParticipant(value)}
-                                           onInput={updateHeight}
                         />
                     </fieldset>
                     <fieldset className={"info-box-compact"} style={{width: "25ch"}}>
@@ -107,7 +99,7 @@ export function CurrentParticipantPanel() {
                         <DebouncedTextArea className="table-cell-input" placeholder={"Click to add Notes"}
                                            value={testTemplate.Notes as string}
                                            onChange={(value) => updateCurrentNotes(value)}
-                                           onInput={updateHeight}/>
+                        />
                     </fieldset>
                 </div>
             </LabeledSection>

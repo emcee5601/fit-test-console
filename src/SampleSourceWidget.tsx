@@ -11,7 +11,6 @@ export function SampleSourceWidget() {
     const appContext = useContext(AppContext)
     const client: PortaCountClient8020 = appContext.portaCountClient
     const [sampleSource, setSampleSource] = useState(client.state.sampleSource)
-    const [sampleSourceInView] = useSetting<boolean>(AppSettings.SAMPLE_SOURCE_IN_VIEW)
     const [useCompactControls] = useSetting<boolean>(AppSettings.USE_COMPACT_UI);
     const [showExternalControl] = useSetting<boolean>(AppSettings.SHOW_EXTERNAL_CONTROL)
 
@@ -32,7 +31,7 @@ export function SampleSourceWidget() {
     }
 
     return (
-        showExternalControl && (!sampleSourceInView || useCompactControls) ? <div id={"sample-source-widget"} onClick={toggleSetting} className={"svg-container"}>
+        showExternalControl && useCompactControls ? <div id={"sample-source-widget"} onClick={toggleSetting} className={"svg-container"}>
             {sampleSource === SampleSource.AMBIENT && <BsWind/>}
             {sampleSource === SampleSource.MASK && <PiFaceMask/>}
         </div> : null

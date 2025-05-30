@@ -200,6 +200,10 @@ export class PortaCount8020Simulator {
                 this.sendResponse("G\n")
                 break;
             }
+            default: {
+                console.debug(`echoing back: ${command}`)
+                this.sendResponse(`${command}\n`)
+            }
         }
     }
 

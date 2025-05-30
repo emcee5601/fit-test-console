@@ -171,6 +171,8 @@ export function SettingsPanel() {
                     <section id={"basic-controls"}>
                         <fieldset>
                             <legend>Basic</legend>
+                            <BooleanSettingToggleButton
+                                setting={AppSettings.KEEP_SCREEN_AWAKE}/>
                             <EnableSpeechSwitch/>
                             <BooleanSettingToggleButton
                                 setting={AppSettings.SAY_PARTICLE_COUNT}/>
@@ -234,10 +236,12 @@ export function SettingsPanel() {
                             <BooleanSettingToggleButton trueLabel={"Verbose speech"} setting={AppSettings.VERBOSE}/>
                             <BooleanSettingToggleButton
                                 setting={AppSettings.SHOW_EXTERNAL_CONTROL}/>
+                            <BooleanSettingToggleButton setting={AppSettings.ENABLE_TEST_INSTRUCTIONS_ZOOM}/>
                             <BooleanSettingToggleButton setting={AppSettings.USE_COMPACT_UI}/>
-                            <BooleanSettingToggleButton
-                                setting={AppSettings.KEEP_SCREEN_AWAKE}/>
                             <BooleanSettingToggleButton setting={AppSettings.ENABLE_WEB_SERIAL_DRIVERS}/>
+                            <BooleanSettingToggleButton setting={AppSettings.ENABLE_PROTOCOL_EDITOR}/>
+                            <BooleanSettingToggleButton setting={AppSettings.ENABLE_QR_CODE_SCANNER}/>
+                            <BooleanSettingToggleButton setting={AppSettings.ENABLE_STATS}/>
                             <BooleanSettingToggleButton
                                 setting={AppSettings.ENABLE_AUTO_CONNECT}/>
                             <BooleanSettingToggleButton

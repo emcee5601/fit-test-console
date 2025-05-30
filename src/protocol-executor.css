@@ -117,12 +117,3 @@
     opacity: 80%;
 }
 
-.blue-bg {
-    background-color: #d9eeff;
-}
-
-.thin-border {
-    border: 1px solid black;
-    padding-inline: 0.2em;
-    box-shadow: lightgrey 2px 2px 2px;
-}

@@ -438,11 +438,7 @@ export class DataCollector {
                 if (this.currentTestData) {
                     if (event.controlSource === ControlSource.Internal) {
                         // we got the mask or ambient concentration for a segment. record it.
-                        if (!this.currentTestData.ParticleCounts) {
-                            this.currentTestData.ParticleCounts = []
-                        }
-                        this.currentTestData.ParticleCounts.push({type: event.sampleSource, count: event.concentration})
-                        this.updateCurrentRowInDatabase()
+                        this.recordParticleCount(event);
                     }
                     return
                 }
@@ -457,6 +453,17 @@ export class DataCollector {
             }
             this.chain(fun)
         }
+    }
+
+    recordParticleCount(event: ParticleConcentrationEvent) {
+        if(!this.currentTestData) {
+            return
+        }
+        if (!this.currentTestData.ParticleCounts) {
+            this.currentTestData.ParticleCounts = []
+        }
+        this.currentTestData.ParticleCounts.push({type: event.sampleSource, count: event.concentration})
+        this.updateCurrentRowInDatabase()
     }
 
     setPortaCountClient(portaCountClient: PortaCountClient8020) {

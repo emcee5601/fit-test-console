@@ -5,6 +5,7 @@ import {SampleSource} from "./simple-protocol.ts";
 import {ControlSource} from "./control-source.ts";
 import {StringLike, StringLikeWithMatchesIgnoringLineStart} from "./string-like.ts";
 import {ConnectionStatus} from "src/connection-status.ts";
+import {Activity} from "src/activity.ts";
 
 
 class Patterns {
@@ -131,24 +132,27 @@ class ConnectionStatusChangedEvent extends PortaCountEvent {
     }
 }
 
+class ActivityChangedEvent extends PortaCountEvent {
+    public readonly activity: Activity;
+
+    constructor(activity: Activity) {
+        super();
+        this.activity = activity;
+    }
+}
+
 export enum DataTransmissionState {
     Paused = "Paused",
     Transmitting = "Transmitting",
 }
 
-export enum Activity {
-    Idle = "Idle",
-    Testing = "Testing",
-    Counting = "Counting",
-    Disconnected = "Disconnected",
-}
 
 export class PortaCountState {
     private _connectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED;
     private _controlSource: ControlSource = ControlSource.Internal;
     private _sampleSource: SampleSource = SampleSource.MASK;
     private _dataTransmissionState: DataTransmissionState = DataTransmissionState.Transmitting;
-    private _activity: Activity = Activity.Idle;
+    private _activity: Activity = Activity.Disconnected;
     private _lastLine: string = "";
 
     get connectionStatus(): ConnectionStatus {
@@ -214,22 +218,15 @@ export type SerialPortLike = {
 
 export interface PortaCountListener {
     lineReceived?(line: string): void;
-
     sampleSourceChanged?(source: SampleSource): void;
-
     dataTransmissionStateChanged?(dataTransmissionState: DataTransmissionState): void;
-
     controlSourceChanged?(source: ControlSource): void;
-
     testStarted?(timestamp: number): void;
-
     fitFactorResultsReceived?(results: FitFactorResultsEvent): void;
-
     testTerminated?(): void;
-
     particleConcentrationReceived?(concentrationEvent: ParticleConcentrationEvent): void;
-
     connectionStatusChanged?(connectionStatus: ConnectionStatus): void;
+    activityChanged?(activity: Activity): void;
 }
 
 export class PortaCountClient8020 {
@@ -273,6 +270,11 @@ export class PortaCountClient8020 {
         this._state = value;
     }
 
+    private setActivity(activity: Activity): void {
+        this.state.activity = activity;
+        this.dispatch(new ActivityChangedEvent(activity));
+    }
+
     private readonly stateUpdatingListener: PortaCountListener = {
         connectionStatusChanged: (connectionStatus: ConnectionStatus) => {
             this.state.connectionStatus = connectionStatus;
@@ -290,13 +292,13 @@ export class PortaCountClient8020 {
             this.updateActivity(concentrationEvent);
         },
         testTerminated: () => {
-            this.state.activity = Activity.Idle;
+            this.setActivity(Activity.Idle);
         },
         testStarted: () => {
-            this.state.activity = Activity.Testing;
+            this.setActivity(Activity.Testing);
         },
         fitFactorResultsReceived: () => {
-            this.state.activity = Activity.Testing
+            this.setActivity(Activity.Testing);
         },
         lineReceived: (line: string) => {
             this.state.lastLine = line;
@@ -313,7 +315,7 @@ export class PortaCountClient8020 {
         this.state.controlSource = concentrationEvent.controlSource;
         if (concentrationEvent.controlSource === ControlSource.Internal) {
             if (this.state.sampleSource === SampleSource.AMBIENT) {
-                this.state.activity = Activity.Testing
+                this.setActivity(Activity.Testing)
             } else {
                 // if source is mask, we don't know if it's testing or counting. probably need to have an indicator
             }
@@ -336,7 +338,7 @@ export class PortaCountClient8020 {
                 this.processLine(line);
             }
         }
-        this.state.activity = Activity.Disconnected
+        this.setActivity(Activity.Disconnected)
         this.dispatch(new ConnectionStatusChangedEvent(ConnectionStatus.DISCONNECTED))
         console.log("monitor reached end of reader");
     }
@@ -360,6 +362,12 @@ export class PortaCountClient8020 {
         this.listeners.forEach((listener) => {
             // console.debug(`dispatch event ${event.constructor.name}`)
             switch (event.constructor.name) {
+                case ActivityChangedEvent.name: {
+                    if (listener.activityChanged) {
+                        listener.activityChanged((event as ActivityChangedEvent).activity)
+                    }
+                    break;
+                }
                 case ParticleConcentrationEvent.name: {
                     if (listener.particleConcentrationReceived) {
                         listener.particleConcentrationReceived((event as ParticleConcentrationEvent))
@@ -368,7 +376,7 @@ export class PortaCountClient8020 {
                 }
                 case TestTerminatedEvent.name: {
                     if (listener.testTerminated) {
-                        this.state.activity = Activity.Idle
+                        this.setActivity(Activity.Idle)
                         listener.testTerminated();
                     }
                     break;
@@ -381,7 +389,7 @@ export class PortaCountClient8020 {
                 }
                 case TestStartedEvent.name: {
                     if (listener.testStarted) {
-                        this.state.activity = Activity.Testing;
+                        this.setActivity(Activity.Testing);
                         listener.testStarted(event.timestamp)
                     }
                     break;
@@ -449,36 +457,36 @@ export class PortaCountClient8020 {
         } else if (line.match(ExternalControlResponsePatterns.INTERNAL_CONTROL)) {
             this.dispatch(new ControlSourceChangedEvent(ControlSource.Internal))
         } else if ((match = line.match(Patterns.NEW_TEST))) {
-            this.state.activity = Activity.Testing
+            this.setActivity(Activity.Testing)
             this.dispatch(new TestStartedEvent());
         } else if ((match = line.match(Patterns.AMBIENT_READING))) {
-            this.state.activity = Activity.Counting
+            this.setActivity(Activity.Counting)
             const concentration = match.groups?.concentration;
             if (concentration) {
                 this.dispatch(new ParticleConcentrationEvent(Number(concentration), SampleSource.AMBIENT, ControlSource.Internal));
             }
         } else if ((match = line.match(Patterns.MASK_READING))) {
-            this.state.activity = Activity.Counting
+            this.setActivity(Activity.Counting)
             const concentration = match.groups?.concentration;
             if (concentration) {
                 this.dispatch(new ParticleConcentrationEvent(Number(concentration), SampleSource.MASK, ControlSource.Internal));
             }
         } else if ((match = line.match(Patterns.FIT_FACTOR))) {
-            this.state.activity = Activity.Testing
+            this.setActivity(Activity.Testing)
             const ff = Number(match.groups?.fitFactor);
             const exerciseNum = Number(match.groups?.exerciseNumber || -1);
             const result = match.groups?.result || "unknown";
             this.dispatch(new FitFactorResultsEvent(ff, exerciseNum, result));
         } else if ((match = line.match(Patterns.OVERALL_FIT_FACTOR))) {
-            this.state.activity = Activity.Idle
+            this.setActivity(Activity.Idle)
             const ff = Number(match.groups?.fitFactor);
             const result: string = match.groups?.result || "";
             this.dispatch(new FitFactorResultsEvent(ff, "Final", result))
         } else if ((match = line.match(Patterns.TEST_TERMINATED))) {
-            this.state.activity = Activity.Idle
+            this.setActivity(Activity.Idle)
             this.dispatch(new TestTerminatedEvent());
         } else if ((match = line.match(Patterns.COUNT_READING) || line.match(ExternalControlResponsePatterns.PARTICLE_COUNT))) {
-            this.state.activity = Activity.Counting
+            this.setActivity(Activity.Counting)
             const concentration = Number(match.groups?.concentration);
             const source = this.state.sampleSource
             const controlSource = line.match(ExternalControlResponsePatterns.PARTICLE_COUNT) ? ControlSource.External : ControlSource.Internal

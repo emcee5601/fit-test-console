@@ -4,6 +4,7 @@ import {enCaseInsensitiveCollator} from "src/utils.ts";
 import {DebouncedInput} from "src/DebouncedInput.tsx";
 import {useEffect, useRef} from "react";
 import {GiCancel} from "react-icons/gi";
+import {ResizingTextArea} from "src/ResizingTextArea.tsx";
 
 export function SimpleMaskSelector({value, onChange, allowCreate = false, showClearControl = false}: {
     value?: string,
@@ -12,7 +13,7 @@ export function SimpleMaskSelector({value, onChange, allowCreate = false, showCl
     onChange?: (value: string) => void
 }) {
     const [maskList, setMaskList] = useSetting<string[]>(AppSettings.MASK_LIST)
-    const textAreaRef = useRef<HTMLTextAreaElement>(null);
+    const displayRef = useRef<HTMLTextAreaElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -32,20 +33,22 @@ export function SimpleMaskSelector({value, onChange, allowCreate = false, showCl
     }
 
     function onTextAreaFocus() {
-        if (!textAreaRef.current || !inputRef.current) {
+        if (!displayRef.current || !inputRef.current) {
             return
         }
-        textAreaRef.current.style.display = "none";
+        // displayRef.current.style.display = "none";
+        displayRef.current.style.visibility = "hidden";
         inputRef.current.style.display = "block";
         inputRef.current?.showPicker();
         inputRef.current?.focus();
     }
 
     function onBlur(event: React.FocusEvent<HTMLInputElement>) {
-        if (!textAreaRef.current || !inputRef.current) {
+        if (!displayRef.current || !inputRef.current) {
             return
         }
-        textAreaRef.current.style.display = "block";
+        displayRef.current.style.display = "block";
+        displayRef.current.style.visibility = "visible";
         inputRef.current.style.display = "none";
         updateMaskList(event.target.value)
     }
@@ -62,13 +65,17 @@ export function SimpleMaskSelector({value, onChange, allowCreate = false, showCl
         handleOnChange("") // clear selection
     }
 
+
     // is in effect, it could otherwise remove the row mid-edit
     return (
         <div style={{width: "100%", height: "inherit", display: "flex", flexDirection: "row", position: "relative"}}>
             <DebouncedInput
                 style={{
                     fontFamily: "monospace",
-                    width: "calc(100% - 4px)"
+                    width: "calc(100% - 4px)",
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
                 }} // match the textarea default font family
                 inputRef={inputRef}
                 className={"simple-mask-selector selector-input"} list={"masklist"} name={"mask-list"}
@@ -81,15 +88,18 @@ export function SimpleMaskSelector({value, onChange, allowCreate = false, showCl
                 {/*using datalist means on mobile these will appear as keyboard autocompletions*/}
                 {maskList.map((maskName) => <option key={maskName} value={maskName}/>)}
             </datalist>
-            <textarea className={"selector-value"}
-                      readOnly={true} value={value} onFocus={onTextAreaFocus} ref={textAreaRef}
+            <ResizingTextArea className={"selector-value"}
+                      textAreaRef={displayRef}
+                      onFocus={onTextAreaFocus}
+                      value={value}
                       style={{
                           width: "calc(100% - 4px)",
                           height: "calc(100% - 4px)",
                           borderWidth: 0,
                           resize: "none"
                       }}
-                      placeholder={"Click to add mask"}/>
+                      placeholder={"Click to add mask"}
+            ></ResizingTextArea>
             {showClearControl && <div className={"cancel-hover-control"} style={{
                 position: "absolute",
                 top: 0,

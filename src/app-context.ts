@@ -1,17 +1,22 @@
 import {createContext} from "react";
-import {ParticleConcentrationEvent, PortaCountClient8020} from "./portacount-client-8020.ts";
+import {
+    ParticleConcentrationEvent,
+    PortaCountClient8020,
+    PortaCountListener
+} from "./portacount-client-8020.ts";
 import {APP_SETTINGS_CONTEXT, AppSettings} from "./app-settings.ts";
 import {DataCollector, DataCollectorListener} from "./data-collector.ts";
 import {SPEECH} from "./speech.ts";
 import {RESULTS_DB} from "./SimpleResultsDB.ts";
 import {RAW_DB} from "./database.ts";
-import {ProtocolExecutor} from "./protocol-executor.ts";
-import {PortaCount8020Simulator} from "./PortaCount8020Simulator.ts";
+import {ProtocolExecutor, ProtocolExecutorListener} from "./protocol-executor.ts";
+import {PortaCount8020Simulator} from "./porta-count-8020-simulator.ts";
 import {ControlSource} from "./control-source.ts";
 import {UsbSerialDrivers} from "./web-usb-serial-drivers.ts";
 import {DataSource} from "./data-source.ts";
 import {timingSignal} from "src/timing-signal.ts";
 import {enCaseInsensitiveCollator} from "src/utils.ts";
+import {Activity} from "src/activity.ts";
 
 /**
  * Global context.
@@ -135,6 +140,36 @@ function initPortaCountClient() {
     portaCountClient.syncOnConnect = settings.getSetting(AppSettings.SYNC_DEVICE_STATE_ON_CONNECT)
 }
 
+function initCurrentActivityListener() {
+    let _protocolExecutorRunning = false;
+    let _activity = Activity.Disconnected
+    function updateActivity({executorRunning, activity} : {executorRunning?: boolean, activity?: Activity}) {
+        if(executorRunning !== undefined) {
+            _protocolExecutorRunning = executorRunning
+        }
+        if(activity !== undefined) {
+            _activity = activity
+        }
+        settings.saveSetting(AppSettings.ACTIVITY, _protocolExecutorRunning ? Activity.Testing : _activity)
+    }
+    const combinedListener: ProtocolExecutorListener&PortaCountListener = {
+        started() {
+            updateActivity({executorRunning: true})
+        },
+        cancelled() {
+            updateActivity({executorRunning: false})
+        },
+        completed() {
+            updateActivity({executorRunning: false})
+        },
+        activityChanged(activity: Activity) {
+            updateActivity({activity})
+        }
+    }
+    portaCountClient.addListener(combinedListener);
+    protocolExecutor.addListener(combinedListener)
+}
+
 async function init() {
     await settings.loadAllSettings()
     await RESULTS_DB.open() // start init process
@@ -145,9 +180,10 @@ async function init() {
     await initMaskList();
     initPortaCountListener();
     initSelectedProtocol();
+    initCurrentActivityListener();
     timingSignal.start();
 
-    if (await settings.getActualSetting<boolean>(AppSettings.ENABLE_AUTO_CONNECT)) {
+    if (settings.getSetting<boolean>(AppSettings.ENABLE_AUTO_CONNECT)) {
         // auto-connect is enabled
         await autoConnect();
     }

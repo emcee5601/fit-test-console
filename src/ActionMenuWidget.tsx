@@ -31,7 +31,6 @@ export function ActionMenuWidget({options, children, onChange, value}: PropsWith
             value={value ? {value:value, label:value}: null}
             styles={{
                 control: () => ({
-                    lineHeight: 0,
                     height: "inherit",
                 }),
                 container: () => ({
@@ -56,7 +55,7 @@ export function ActionMenuWidget({options, children, onChange, value}: PropsWith
 
                 menu: (baseStyles) => ({
                     ...baseStyles,
-                    zIndex: 2,
+                    zIndex: 10,
                     width: "max-content",
                     textAlign: "left",
                 }),
