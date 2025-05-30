@@ -27,7 +27,7 @@ import {
 } from "./use-editable-column-hook.tsx";
 import {useSkipper} from "./use-skipper-hook.ts";
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
-import {AppSettings, calculateNumberOfExercises} from "./app-settings.ts";
+import {AppSettings} from "./app-settings.ts";
 import {AppContext} from "./app-context.ts";
 import {DataCollector, DataCollectorListener} from "./data-collector.ts";
 import {ResultsTableColumnFilter} from "./ResultsTableColumnFilter.tsx";
@@ -296,13 +296,7 @@ export default function ResultsTable({
      */
     function dynamicallyAdjustNumExerciseColumns() {
         const filteredRowModel = table.getFilteredRowModel();
-        const numExercises: { [key: string]: number } = {}
-        // load protocols dynamically
-        const protocolInstructionSets = appContext.settings.protocolDefinitions;
-        for (const protocolName of Object.keys(protocolInstructionSets)) {
-            const protocolInstructionSet = protocolInstructionSets[protocolName];
-            numExercises[protocolName] = calculateNumberOfExercises(protocolInstructionSet);
-        }
+        const numExercises = appContext.settings.numExercisesForProtocol
         const protocolsShownInTable: string[] = []
         filteredRowModel.rows.forEach((row) => {
             const protocolName = row.original.ProtocolName as string;
@@ -311,13 +305,16 @@ export default function ResultsTable({
             }
         });
 
-        // default to 4. before the protocol column was added, num exercises was hardcoded to 4
-        let maxExercises = Math.max(minExercisesToShow, protocolsShownInTable.length, 4)
+        let maxExercises = Math.max(minExercisesToShow, protocolsShownInTable.length)
         protocolsShownInTable.forEach((protocol) => {
             if (protocol in numExercises && numExercises[protocol] > maxExercises) {
                 maxExercises = numExercises[protocol];
             }
         })
+        if(maxExercises === 0) {
+            // default to 4. before the protocol column was added, num exercises was hardcoded to 4
+            maxExercises = 4
+        }
         setNumExerciseColumns(maxExercises);
     }
 

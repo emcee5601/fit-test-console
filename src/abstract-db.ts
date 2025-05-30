@@ -19,7 +19,7 @@ export default abstract class AbstractDB {
      * @param keep boolean function returning true if the element should be returned, defaults to return everything
      * @protected
      */
-    protected async getDataFromDataSource<T>(dataStoreName: string, keep:(item:T) => boolean = ()=>true): Promise<T[]> {
+    protected async getDataFromDataSource<T>(dataStoreName: string, keep: (item: T) => boolean = () => true): Promise<T[]> {
         return new Promise<T[]>((resolve, reject) => {
             const transaction = this.openTransactionClassic("readonly");
             const allRecords: T[] = [];
@@ -41,7 +41,7 @@ export default abstract class AbstractDB {
                 if (cursor) {
                     // console.log(`got key ${cursor.key}`);
 
-                    if(keep(cursor.value)) {
+                    if (keep(cursor.value)) {
                         allRecords.push(cursor.value);
                     }
                     cursor.continue();
@@ -78,7 +78,7 @@ export default abstract class AbstractDB {
                 console.warn(`${this.dbName} transaction error ${event}`);
             }
             return transaction;
-        }catch(error) {
+        } catch (error) {
             console.error(`${this.dbName} error opening transaction: ${error}`);
             return;
         }
@@ -107,7 +107,7 @@ export default abstract class AbstractDB {
         })
     }
 
-    async get<T>(objectStore: string, key: string):Promise<T> {
+    async get<T>(objectStore: string, key: string): Promise<T> {
         return new Promise<T>((resolve, reject) => {
             this.openTransaction("readonly").then((transaction) => {
                 const request = transaction.objectStore(objectStore).get(key);
@@ -157,19 +157,20 @@ export default abstract class AbstractDB {
                         console.error(errorMessage);
                         reject(errorMessage);
                     }
-                } catch(error) {
+                } catch (error) {
                     reject(`${error}, key: ${key}`);
                 }
             });
         });
     }
 
-    async open():Promise<IDBDatabase> {
-        if(this.openPromise) {
+    async open(): Promise<IDBDatabase> {
+        console.debug(`open called on ${this.dbName}`);
+        if (this.openPromise) {
             // open in progress
             return this.openPromise;
         }
-        if(this.db) {
+        if (this.db) {
             // already opened
             return this.db as IDBDatabase;
         }
@@ -185,7 +186,9 @@ export default abstract class AbstractDB {
             };
             request.onupgradeneeded = () => {
                 this.onUpgradeNeeded(request)
-                resolve(request.result);
+                // no need to resolve here. onUpgradeNeeded should be calling createObjectStore, which in turn calls
+                // request.onsuccess() which will resolve (see above). easiest to check in incognito mode
+                // resolve(request.result);
             };
         });
         return this.openPromise;

@@ -18,6 +18,7 @@ export default function MainLayout() {
                         top: "0.1rem",
                         height: "100%",
                         overflow: "auto",
+                        backgroundColor: "white",
                     }}>
                         <Outlet/>
                     </div>

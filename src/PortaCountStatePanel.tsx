@@ -4,7 +4,7 @@ import {AppContext} from "./app-context.ts";
 import {PortaCountControlSourceWidget} from "./PortaCountControlSourceWidget.tsx";
 import {PortaCountSampleSourceWidget} from "./PortaCountSampleSourceWidget.tsx";
 import {PortaCountConnectionStatusWidget} from "./PortaCountConnectionStatusWidget.tsx";
-import {PortaCountCurrentActivityWidget} from "./PortaCountCurrentActivityWidget.tsx";
+import {CurrentActivityWidget} from "./CurrentActivityWidget.tsx";
 import {PortaCountLastLineWidget} from "./PortaCountLastLineWidget.tsx";
 import {PortaCountDataTransmissionWidget} from "./PortaCountDataTransmissionWidget.tsx";
 
@@ -57,7 +57,7 @@ export function PortaCountStatePanel() {
             <PortaCountConnectionStatusWidget/>
             <PortaCountControlSourceWidget/>
             <PortaCountSampleSourceWidget/>
-            <PortaCountCurrentActivityWidget/>
+            <CurrentActivityWidget/>
             <PortaCountDataTransmissionWidget/>
             <PortaCountLastLineWidget/>
         </div>

@@ -11,7 +11,6 @@ export function ControlSourceWidget() {
     const appContext = useContext(AppContext)
     const client: PortaCountClient8020 = appContext.portaCountClient
     const [controlSource, setControlSource] = useState(client.state.controlSource)
-    const [controlSourceInView] = useSetting<boolean>(AppSettings.CONTROL_SOURCE_IN_VIEW)
     const [showCompactControls] = useSetting<boolean>(AppSettings.USE_COMPACT_UI);
     const [showExternalControl] = useSetting<boolean>(AppSettings.SHOW_EXTERNAL_CONTROL)
 
@@ -32,7 +31,7 @@ export function ControlSourceWidget() {
     }
 
     return (
-        showExternalControl && (!controlSourceInView || showCompactControls)? <div id={"control-source-widget"} onClick={toggleSetting} className={"svg-container"}>
+        showExternalControl && showCompactControls? <div id={"control-source-widget"} onClick={toggleSetting} className={"svg-container"}>
             {controlSource === ControlSource.External && <FaLaptop/>}
             {controlSource === ControlSource.Internal && <TfiTablet/>}
         </div> : null

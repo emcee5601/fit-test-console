@@ -19,6 +19,7 @@ export interface ProtocolExecutorListener {
     // new data.
     segmentDataUpdated?(segment: ProtocolSegment): void;
     segmentChanged?(segment: ProtocolSegment | undefined): void;
+    started?(): void;
     cancelled?(): void;
     completed?(): void;
 }
@@ -48,6 +49,9 @@ class SegmentDataUpdatedEvent extends ProtocolExecutorEvent {
         super();
         this.segment = segment;
     }
+}
+
+class ProtocolStartedEvent extends ProtocolExecutorEvent {
 }
 
 class ProtocolAbortedEvent extends ProtocolExecutorEvent {
@@ -213,6 +217,7 @@ export class ProtocolExecutor {
         await this.dataCollector.recordTestStart(ControlSource.External, startTime.toLocaleString())
         this.executeSegment(0)
         this.controller.beep()
+        this.dispatch(new ProtocolStartedEvent());
     }
 
     private dispatch(event: ProtocolExecutorEvent) {
@@ -227,6 +232,12 @@ export class ProtocolExecutor {
                 case CurrentSegmentChanged.name: {
                     if (listener.segmentChanged) {
                         listener.segmentChanged((event as CurrentSegmentChanged).newSegment)
+                    }
+                    break;
+                }
+                case ProtocolStartedEvent.name: {
+                    if(listener.started) {
+                        listener.started();
                     }
                     break;
                 }
@@ -283,7 +294,11 @@ export class ProtocolExecutor {
         }
 
         if (segment.duration > 0) {
-            this.dataCollector.setInstructions(segment.instructions ?? "rest")
+            if(segment.exerciseNumber) {
+                this.dataCollector.setInstructions(`Perform exercise ${segment.exerciseNumber}: ${segment.stage.instructions}`)
+            } else {
+                this.dataCollector.setInstructions("Breathe normally")
+            }
         }
     }
 
@@ -314,9 +329,11 @@ export class ProtocolExecutor {
     private closeSegment(segment: ProtocolSegment) {
         if (segment.source === SampleSource.AMBIENT) {
             if (segment.state === SegmentState.SAMPLE) {
+                const segmentConcentration = calculateSegmentConcentration(segment);
+                this.dataCollector.recordParticleCount(new ParticleConcentrationEvent(segmentConcentration, segment.source, ControlSource.External))
                 if (this.lastAmbientSegment) {
                     // we're closing the 2nd ambient for some mask samples.
-                    const averageAmbient = avg(calculateSegmentConcentration(this.lastAmbientSegment), calculateSegmentConcentration(segment))
+                    const averageAmbient = avg(calculateSegmentConcentration(this.lastAmbientSegment), segmentConcentration)
 
                     // look at all mask segments between this at the previous ambient segments and (re)calculate their
                     // results using the average of this and the previous ambient segment.
@@ -340,11 +357,12 @@ export class ProtocolExecutor {
             }
         } else if (segment.source === SampleSource.MASK) {
             if (segment.state === SegmentState.SAMPLE) {
-                // todo: if next segment is ambient, wait for the next ambient and use an average before+after ambient
+                const segmentConcentration = calculateSegmentConcentration(segment);
+                this.dataCollector.recordParticleCount(new ParticleConcentrationEvent(segmentConcentration, segment.source, ControlSource.External))
                 if (this.lastAmbientSegment) {
                     // todo: set a max on the FF based on the ambient reading. So we don't get to infinite FF with 0
                     // concentration in the current segment
-                    segment.calculatedScore = calculateSegmentConcentration(this.lastAmbientSegment) / calculateSegmentConcentration(segment)
+                    segment.calculatedScore = calculateSegmentConcentration(this.lastAmbientSegment) / segmentConcentration
                     this.dataCollector.recordExerciseResult(segment.exerciseNumber ?? 0, segment.calculatedScore)
                     this.controller.beep()
                 } else {

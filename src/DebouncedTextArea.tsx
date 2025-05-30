@@ -1,4 +1,5 @@
 import React, {useRef} from "react";
+import {ResizingTextArea} from "src/ResizingTextArea.tsx";
 
 // based on DebouncedInput
 export function DebouncedTextArea({
@@ -21,10 +22,6 @@ export function DebouncedTextArea({
     React.useEffect(() => {
         const timeout = setTimeout(() => {
             console.debug(`debouncedTextArea applying change: ${initialValue} -> ${value}`)
-            if(textAreaRef.current) {
-                textAreaRef.current.style.height = "auto";
-                textAreaRef.current.style.height = textAreaRef.current.scrollHeight + "px";
-            }
             onChange(value)
         }, debounce)
 
@@ -43,6 +40,6 @@ export function DebouncedTextArea({
 
 
     return (
-        <textarea ref={textAreaRef} {...props} value={value} onChange={e => setValue(e.target.value)}/>
+        <ResizingTextArea textAreaRef={textAreaRef} {...props} value={value} onChange={e => setValue(e.target.value)}/>
     )
 }

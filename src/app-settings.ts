@@ -1,10 +1,12 @@
 import {JSONContent} from "vanilla-jsoneditor";
 import {
-    standardizeProtocolDefinitions,
+    ProtocolDefaults,
     ProtocolDefinitions,
     SampleSource,
     StageDefinition,
-    StandardizedProtocolDefinitions, ProtocolDefaults, StandardStageDefinition
+    StandardizedProtocolDefinitions,
+    standardizeProtocolDefinitions,
+    StandardStageDefinition
 } from "./simple-protocol.ts";
 import {ColumnFiltersState, SortingState} from "@tanstack/react-table";
 import AbstractDB from "./abstract-db.ts";
@@ -13,6 +15,7 @@ import stringifyDeterministically from "json-stringify-deterministic";
 import {DataSource} from "./data-source.ts";
 import {SegmentState} from "./protocol-executor.ts";
 import {ParticleConcentrationEvent} from "./portacount-client-8020.ts";
+import {Activity} from "src/activity.ts";
 
 /**
  * this is for convenience. code outside of this module should use AppSettings enum.
@@ -48,6 +51,9 @@ export enum AppSettings {
     LAST_KNOWN_SETTINGS_KEYS_HASH = "last-known-settings-keys-hash", // hash of sorted settings keys
     USE_COMPACT_UI = "use-compact-ui",
     ENABLE_WEB_SERIAL_DRIVERS = "enable-webserial-drivers",
+    ENABLE_PROTOCOL_EDITOR = "enable-protocol-editor",
+    ENABLE_QR_CODE_SCANNER = "enable-qr-code-scanner",
+    ENABLE_STATS = "enable-stats",
 
     // session only settings (these start with "so-". todo: can we merge these from another enum into this?
     STATS_FIRST_DATE = "so-stats-first-date",
@@ -58,6 +64,8 @@ export enum AppSettings {
     CONTROL_SOURCE_IN_VIEW = "so-control-source-in-view",
     SAMPLE_SOURCE_IN_VIEW = "so-sample-source-in-view",
     CONNECTION_STATUS_IN_VIEW = "so-connection-status-in-view",
+    ACTIVITY = "so-activity",
+    ENABLE_TEST_INSTRUCTIONS_ZOOM = "enable-test-instructions-zoom",
 
     // these are deprecated:
     DEFAULT_TO_PREVIOUS_PARTICIPANT = "default-to-previous-participant",
@@ -105,7 +113,7 @@ const AppSettingsDefaults = {
     "auto-estimate-fit-factor": false,
     "say-estimated-fit-factor": false,
     "show-external-control": false,
-    "baud-rate": 1200, // todo: make this a number
+    "baud-rate": 1200,
     "protocol-instruction-sets": {
         "json": {
             "w1": [
@@ -124,6 +132,72 @@ const AppSettingsDefaults = {
                     "his friends say he is looking for the pot of gold at the end of the rainbow."
                 ].join(" "),
                 "Head movement. Look up, down, left, and right. Repeat."
+            ],
+            "Modified CNC Fit Protocol (B)": [
+                {
+                    "instructions": "prep",
+                    "ambient_purge": 4,
+                    "ambient_sample": 20,
+                    "mask_purge": 0,
+                    "mask_sample": 0
+                },
+                {
+                    "instructions": "Bending over. Bend at the waist as if going to touch your toes. Inhale 2 times at the bottom.",
+                    "ambient_purge": 0,
+                    "ambient_sample": 0,
+                    "mask_purge": 4,
+                    "mask_sample": 30
+                },
+                {
+                    "instructions": ["Talking.",
+                        "Talk out loud slowly and loud enough to be head by the test administrator.",
+                        "Count backwards from 100,",
+                        "or read the Rainbow Passage:",
+                        "When the sunlight strikes raindrops in the air, they act as a prism and form a rainbow.",
+                        "The rainbow is a division of white light into many beautiful colors.",
+                        "These take the shape of a long round arch, with its path high above,",
+                        "and its two ends apparently beyond the horizon.",
+                        "There is, according to legend, a boiling pot of gold at one end.",
+                        "People look, but no one ever finds it.",
+                        "When a man looks for something beyond his reach,",
+                        "his friends say he is looking for the pot of gold at the end of the rainbow."
+                    ].join(" "),
+                    "ambient_purge": 0,
+                    "ambient_sample": 0,
+                    "mask_purge": 4,
+                    "mask_sample": 30
+                },
+                {
+                    "instructions": "Head side-to-side. Slowly turn head from side to side. Inhale 2 times at each extreme.",
+                    "ambient_purge": 0,
+                    "ambient_sample": 0,
+                    "mask_purge": 4,
+                    "mask_sample": 30
+                },
+                {
+                    "instructions": "Head up-and-down. Slowly move head up and down. Inhale 2 times at each extreme.",
+                    "ambient_purge": 0,
+                    "ambient_sample": 0,
+                    "mask_purge": 4,
+                    "mask_sample": 30
+                },
+                {
+                    "instructions": "finalize",
+                    "ambient_purge": 4,
+                    "ambient_sample": 9,
+                    "mask_purge": 0,
+                    "mask_sample": 0
+                }
+            ],
+            "osha": [
+                "Normal breathing. In a normal standing position, without talking, the subject shall breathe normally",
+                "Deep breathing. In a normal standing position, the subject shall breathe slowly and deeply, taking caution so as not to hyperventilate",
+                "Turning head side to side. Standing in place, the subject shall slowly turn his/her head from side to side between the extreme positions on each side. The head shall be held at each extreme momentarily so the subject can inhale at each side.",
+                "Moving head up and down. Standing in place, the subject shall slowly move his/her head up and down. The subject shall be instructed to inhale in the up position (i.e., when looking toward the ceiling).",
+                "Talking. The subject shall talk out loud slowly and loud enough so as to be heard clearly by the test conductor. The subject can read from a prepared text such as the Rainbow Passage, count backward from 100, or recite a memorized poem or song.",
+                "Grimace. The test subject shall grimace by smiling or frowning. (This applies only to QNFT testing; it is not performed for QLFT)",
+                "Bending over. The test subject shall bend at the waist as if he/she were to touch his/her toes. Jogging in place shall be substituted for this exercise in those test environments such as shroud type QNFT or QLFT units that do not permit bending over at the waist.",
+                "Normal breathing. Same as exercise (1)."
             ],
         }
     },
@@ -145,6 +219,11 @@ const AppSettingsDefaults = {
     "last-known-settings-keys-hash": "",
     "use-compact-ui": true,
     "enable-webserial-drivers": false, // I don't normally use this so disable by default.
+    "enable-protocol-editor": false,
+    "enable-qr-code-scanner": false,
+    "enable-stats": false,
+    "enable-test-instructions-zoom": false,
+
     "so-stats-first-date": new Date(0), // epoch, sentinel value
     "so-stats-last-date": new Date(), // today
     "so-results-table-filter": [],
@@ -153,6 +232,7 @@ const AppSettingsDefaults = {
     "so-control-source-in-view": true,
     "so-sample-source-in-view": true,
     "so-connection-status-in-view": true,
+    "so-activity": Activity.Disconnected,
 
     "default-to-previous-participant": false, // deprecated
     "show-protocol-editor": false, // deprecated
@@ -224,11 +304,10 @@ export function calculateNumberOfExercises(stages: StandardStageDefinition[]) {
 // todo: rename this to phase? so we don't share the same first letter as Stage
 export type ProtocolSegment = {
     index: number, // segment index
+    stage: StageDefinition,
     stageIndex: number,
     exerciseNumber: number | null, // this is usually stageIndex+1 (to be 1-based), but sometimes it's shifted by some
                                    // amount, in order to skip 0-duration stages
-    instructions: string | null, // what the participant should be doing during this segment, null if this segment is
-                                 // not sampling from mask
     state: SegmentState,
     source: SampleSource,
     protocolStartTimeOffsetSeconds: number, // to help with pointer
@@ -255,6 +334,7 @@ class AppSettingsContext {
     private readonly listeners: SettingsListener[] = [];
     private _protocolStages: StageDefinition[] = []; // kept in sync with selected protocol
     private _protocolSegments: ProtocolSegment[] = []; // kept in sync with protocol stages
+    readonly numExercisesForProtocol: { [key: string]: number } = {}
 
     constructor() {
         this.addListener({
@@ -460,7 +540,8 @@ class AppSettingsContext {
                                 instructions: baseStage.instructions,
                                 ambient_purge: 0,
                                 ambient_sample: 0,
-                                mask_purge: 4, // it takes about 4 seconds to clear the counting chamber. the tube takes about 0.1 sec to clear
+                                mask_purge: 4, // it takes about 4 seconds to clear the counting chamber. the tube
+                                               // takes about 0.1 sec to clear
                                 // todo: make min and reduction ratio configurable
                                 mask_sample: Math.min(baseStage.mask_sample, Math.max(20, baseStage.mask_sample * 0.75)),
                             })
@@ -560,12 +641,19 @@ class AppSettingsContext {
 
     /**
      * load all known settings into the cache
+     * todo: rename this to init()
      * @private
      */
     public async loadAllSettings() {
         const enumKeys = Object.keys(AppSettingsDefaults) // todo: can this be taken from AppSettings?
         for (const key of enumKeys) {
             await this.loadSetting(key as ValidSettings);
+        }
+
+        const protocolInstructionSets = this.protocolDefinitions;
+        for (const protocolName of Object.keys(protocolInstructionSets)) {
+            const protocolInstructionSet = protocolInstructionSets[protocolName];
+            this.numExercisesForProtocol[protocolName] = calculateNumberOfExercises(protocolInstructionSet);
         }
     }
 
@@ -660,7 +748,7 @@ export function convertStagesToSegments(stages: StandardStageDefinition[]): Prot
     let numExercisesSeen: number | null = null;
     let currentOffset: number = 0
 
-    stages.forEach((stage: StandardStageDefinition, stageIndex) => {
+    stages.forEach((stage: StandardStageDefinition, stageIndex: number) => {
         if (stage.mask_sample > 0) {
             // increment the exercise number if this stage has a mask sample segment
             numExercisesSeen = (numExercisesSeen ?? 0) + 1; // increment; 1-based
@@ -676,9 +764,9 @@ export function convertStagesToSegments(stages: StandardStageDefinition[]): Prot
         if (stage.ambient_purge > 0) {
             const ambientPurgeSegment: ProtocolSegment = {
                 index: segments.length,
+                stage: stage,
                 stageIndex: stageIndex,
                 exerciseNumber: thisStageExerciseNum,
-                instructions: null,
                 source: SampleSource.AMBIENT,
                 state: SegmentState.PURGE,
                 protocolStartTimeOffsetSeconds: currentOffset,
@@ -692,9 +780,9 @@ export function convertStagesToSegments(stages: StandardStageDefinition[]): Prot
         if (stage.ambient_sample > 0) {
             const ambientSampleSegment: ProtocolSegment = {
                 index: segments.length,
+                stage: stage,
                 stageIndex: stageIndex,
                 exerciseNumber: thisStageExerciseNum,
-                instructions: null,
                 source: SampleSource.AMBIENT,
                 state: SegmentState.SAMPLE,
                 protocolStartTimeOffsetSeconds: currentOffset,
@@ -709,9 +797,9 @@ export function convertStagesToSegments(stages: StandardStageDefinition[]): Prot
         if (stage.mask_purge > 0) {
             const maskPurgeSegment: ProtocolSegment = {
                 index: segments.length,
+                stage: stage,
                 stageIndex: stageIndex,
                 exerciseNumber: thisStageExerciseNum,
-                instructions: null,
                 source: SampleSource.MASK,
                 state: SegmentState.PURGE,
                 protocolStartTimeOffsetSeconds: currentOffset,
@@ -725,9 +813,9 @@ export function convertStagesToSegments(stages: StandardStageDefinition[]): Prot
         if (stage.mask_sample > 0) {
             const maskSampleSegment: ProtocolSegment = {
                 index: segments.length,
+                stage: stage,
                 stageIndex: stageIndex,
                 exerciseNumber: thisStageExerciseNum,
-                instructions: stage.instructions,
                 source: SampleSource.MASK,
                 state: SegmentState.SAMPLE,
                 protocolStartTimeOffsetSeconds: currentOffset,

@@ -17,6 +17,7 @@ import {DataCollectorListener} from "src/data-collector.ts";
 import {BsWind} from "react-icons/bs";
 import {PiFaceMask, PiWatch} from "react-icons/pi";
 import {IoGlassesOutline} from "react-icons/io5";
+import {IconType} from "react-icons";
 
 /**
  * Helper type. Maps from stage indexes or segment indexes to durations
@@ -24,12 +25,14 @@ import {IoGlassesOutline} from "react-icons/io5";
 type IndexedDurations = { [key: number]: number };
 
 type IconTextProps = {
-    icon?: any,
+    icon?: IconType,
     text?: string
 }
 
 /**
  * Renders svg icons and text together. Makes sure svg takes up full the height of the line.
+ * @param icon
+ * @param text
  * @param children
  * @constructor
  */
@@ -37,7 +40,7 @@ function IconText({icon, text, children}: PropsWithChildren<IconTextProps>) {
     return (<div className={"icon-text svg-container thin-border blue-bg number-field"}
                  style={{display: "inline-flex", gap: "0.2em"}}>
         <div className={"wide-display"}>{text}</div>
-        <div className={"narrow-display"}>{icon ? icon() : null}</div>
+        <div className={"narrow-display"}>{icon ? icon({}) : null}</div>
         {children}
     </div>)
 }
@@ -190,6 +193,7 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
             },
             segmentChanged(segment: ProtocolSegment) {
                 updateSegment(segment)
+                // if segment.index == 0, we've started the protocol
             },
             cancelled() {
                 if (protocolPosPointerRef.current) {
