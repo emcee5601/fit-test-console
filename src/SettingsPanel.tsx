@@ -1,6 +1,6 @@
 import {SettingsSelect} from "./Settings.tsx";
 import {EnableSpeechSwitch} from "./speech-voice-selector.tsx";
-import {ChangeEvent, useContext, useEffect, useState} from "react";
+import {ChangeEvent, useCallback, useContext, useEffect, useState} from "react";
 import {downloadData} from "./download-helper.ts";
 import {RESULTS_DB} from "./SimpleResultsDB.ts";
 import {RAW_DB} from "./database.ts";
@@ -10,13 +10,17 @@ import {useSetting} from "./use-setting.ts";
 import {SpeechVoiceSelectorWidget} from "./SpeechVoiceSelectorWidget.tsx";
 import {DebouncedInput} from "./DebouncedInput.tsx";
 import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import {AppContext} from "src/app-context.ts";
 import {InfoBox} from "src/InfoBox.tsx";
-import {PortaCountListener} from "src/portacount-client-8020.ts";
 import {ExternalController} from "src/external-control.ts";
+import {formatDuration} from "src/utils.ts";
+import {PortaCountListener} from "src/portacount-client-8020.ts";
 
 export function SettingsPanel() {
     const appContext = useContext(AppContext)
+    const portaCountState = appContext.portaCountClient.state;
+    const portaCountSettings = appContext.portaCountClient.settings
     const [baudRate, setBaudRate] = useSetting<number>(AppSettings.BAUD_RATE)
     const [showAdvancedControls] = useSetting<boolean>(AppSettings.ADVANCED_MODE);
     const [showRemainingEventTime] = useSetting<boolean>(AppSettings.SHOW_REMAINING_EVENT_TIME)
@@ -25,18 +29,11 @@ export function SettingsPanel() {
     const [dataToDownload, setDataToDownload] = useState<string>("all-raw-data")
     const [minutesPerParticipant, setMinutesPerParticipant] = useSetting<number>(AppSettings.MINUTES_ALLOTTED_PER_PARTICIPANT)
     const [eventEndDate, setEventEndDate] = useState<Date>(appContext.settings.eventEndTime)
-    const [pulseStatus, setPulseStatus] = useState<string>("?")
-    const [batteryStatus, setBatteryStatus] = useState<string>("?")
-    const [serialNumber, setSerialNumber] = useState<string>("?")
-    const [lastServiceDate, setLastServiceDate] = useState<string>("?")
-    const [runTimeSinceService, setRunTimeSinceService] = useState<string>("?")
-    const [stateCS, setStateCS] = useState<string>("?")
-    const [stateCB, setStateCB] = useState<string>("?")
-    const [stateCT, setStateCT] = useState<string>("?")
-    const [stateCC, setStateCC] = useState<string>("?")
-    const [stateCL, setStateCL] = useState<string>("?")
-    const [stateCP, setStateCP] = useState<string>("?")
-    const [stateCD, setStateCD] = useState<string>("?")
+
+    const [, helpUpdateState] = useState({})
+    const updateState = useCallback(() => {
+        helpUpdateState({})
+    }, []);
 
     function downloadFileFormatChanged(event: ChangeEvent<HTMLSelectElement>) {
         setDataToDownload(event.target.value);
@@ -94,65 +91,19 @@ export function SettingsPanel() {
         })
 
         const portaCountListener: PortaCountListener = {
-            lineReceived(line: string) {
-                processPortaCountLine(line)
+            stateChanged() {
+                updateState()
+            },
+            settingsChanged() {
+                updateState()
             }
         }
         appContext.portaCountClient.addListener(portaCountListener);
-        return () => {
-            appContext.portaCountClient.removeListener(portaCountListener);
-        }
+        return () => { appContext.portaCountClient.removeListener(portaCountListener); };
     }, []);
 
-    function processPortaCountLine(line: string) {
-        const batteryPulse = /^R(?<battery>[GB])(?<pulse>[GB])/.exec(line);
-        if (batteryPulse && batteryPulse.groups) {
-            const {battery, pulse} = batteryPulse.groups
-            setBatteryStatus(battery)
-            setPulseStatus(pulse)
-        }
-        const settings = /^S(T(PA(?<ambientPurgeTime>.+)|A(?<ambientSampleTime>.+)|PM(?<maskPurgeTime>.+)|M(?<exerciseNumber>..)(?<maskSampleTime>.+))|P(?<memoryLocation>\s+..)(?<fitFactorPassLevel>.+)|S(?<serialNumber>.+)|R(?<runTimeSinceFactoryService>.+)|D(?<dateLastServiced>.+))$/.exec(line)
-        if (settings && settings.groups) {
-            const {dateLastServiced, serialNumber, runTimeSinceFactoryService} = settings.groups
-            if (dateLastServiced) {
-                setLastServiceDate(dateLastServiced)
-            }
-            if(serialNumber) {
-                setSerialNumber(serialNumber)
-            }
-            if(runTimeSinceFactoryService) {
-                setRunTimeSinceService(runTimeSinceFactoryService)
-            }
-        }
-        const voltageInfo = /^C(S(?<cs>.+)|B(?<cb>.+)|T(?<ct>.+)|C(?<cc>.+)|L(?<cl>.+)|P(?<cp>.+)|D(?<cd>.+))/.exec(line)
-        if(voltageInfo && voltageInfo.groups) {
-            const {cs, cb, ct, cc ,cl, cp, cd} = voltageInfo.groups
-            if(cs) {
-                setStateCS(cs)
-            }
-            if(cb) {
-                setStateCB(cb)
-            }
-            if(ct) {
-                setStateCT(ct)
-            }
-            if(cc) {
-                setStateCC(cc)
-            }
-            if(cl) {
-                setStateCL(cl)
-            }
-            if(cp) {
-                setStateCP(cp)
-            }
-            if(cd) {
-                setStateCD(cd)
-            }
-        }
-    }
 
-
-    function runDiagnostics() {
+    function fetchSettingsAndStateInfo() {
         const externalController = appContext.portaCountClient.externalController;
         externalController.assumeManualControl()
         externalController.requestRuntimeStatus()
@@ -167,7 +118,13 @@ export function SettingsPanel() {
             </fieldset>
             <fieldset>
                 <legend>Settings</legend>
-                <section id="settings" style={{alignItems: "center", display: "flex", flexDirection: "column"}}>
+                <section id="settings" style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    justifyContent: "center",
+                    alignItems: "stretch",
+                }}>
                     <section id={"basic-controls"}>
                         <fieldset>
                             <legend>Basic</legend>
@@ -187,8 +144,6 @@ export function SettingsPanel() {
                                 <input className="button" type="button" value="Download!" id="download-button"
                                        onClick={downloadButtonClickHandler}/>
                             </div>
-                            <BooleanSettingToggleButton trueLabel={"Advanced settings"}
-                                                        setting={AppSettings.ADVANCED_MODE}/>
                         </fieldset>
                     </section>
                     <section id={"event settings"}>
@@ -219,38 +174,42 @@ export function SettingsPanel() {
                             </div>}
                         </fieldset>
                     </section>
-                    <section id={"advanced-controls"} style={{display: showAdvancedControls ? "inline-block" : "none"}}>
+                    <section id={"advanced-controls"}>
                         <fieldset>
-                            <legend>Advanced</legend>
-                            <SettingsSelect label={"Baud Rate"} value={baudRate.toString()}
-                                            setValue={(value) => setBaudRate(Number(value))}
-                                // todo: make these values numbers
-                                            options={[
-                                                {"300": "300"},
-                                                {"600": "600"},
-                                                {"1200": "1200"},
-                                                {"2400": "2400"},
-                                                {"9600": "9600"}
-                                            ]}/>
-                            <SpeechVoiceSelectorWidget/>
-                            <BooleanSettingToggleButton trueLabel={"Verbose speech"} setting={AppSettings.VERBOSE}/>
-                            <BooleanSettingToggleButton
-                                setting={AppSettings.SHOW_EXTERNAL_CONTROL}/>
-                            <BooleanSettingToggleButton setting={AppSettings.ENABLE_TEST_INSTRUCTIONS_ZOOM}/>
-                            <BooleanSettingToggleButton setting={AppSettings.USE_COMPACT_UI}/>
-                            <BooleanSettingToggleButton setting={AppSettings.ENABLE_WEB_SERIAL_DRIVERS}/>
-                            <BooleanSettingToggleButton setting={AppSettings.ENABLE_PROTOCOL_EDITOR}/>
-                            <BooleanSettingToggleButton setting={AppSettings.ENABLE_QR_CODE_SCANNER}/>
-                            <BooleanSettingToggleButton setting={AppSettings.ENABLE_STATS}/>
-                            <BooleanSettingToggleButton
-                                setting={AppSettings.ENABLE_AUTO_CONNECT}/>
-                            <BooleanSettingToggleButton
-                                setting={AppSettings.SYNC_DEVICE_STATE_ON_CONNECT}/>
-                            <BooleanSettingToggleButton setting={AppSettings.AUTO_CREATE_FAST_PROTOCOLS}/>
-                            <BooleanSettingToggleButton
-                                setting={AppSettings.ENABLE_SIMULATOR}/>
-                            <BooleanToggleButton trueLabel={"Show Danger Zone"} value={showDangerZoneSettings}
-                                                 setValue={setShowDangerZoneSettings}/>
+                            <legend><BooleanSettingToggleButton trueLabel={"Advanced settings"}
+                                                                setting={AppSettings.ADVANCED_MODE}/>
+                            </legend>
+                            <div style={{display: showAdvancedControls ? "inline-block" : "none"}}>
+                                <SettingsSelect label={"Baud Rate"} value={baudRate.toString()}
+                                                setValue={(value) => setBaudRate(Number(value))}
+                                    // todo: make these values numbers
+                                                options={[
+                                                    {"300": "300"},
+                                                    {"600": "600"},
+                                                    {"1200": "1200"},
+                                                    {"2400": "2400"},
+                                                    {"9600": "9600"}
+                                                ]}/>
+                                <SpeechVoiceSelectorWidget/>
+                                <BooleanSettingToggleButton trueLabel={"Verbose speech"} setting={AppSettings.VERBOSE}/>
+                                <BooleanSettingToggleButton
+                                    setting={AppSettings.SHOW_EXTERNAL_CONTROL}/>
+                                <BooleanSettingToggleButton setting={AppSettings.ENABLE_TEST_INSTRUCTIONS_ZOOM}/>
+                                <BooleanSettingToggleButton setting={AppSettings.USE_COMPACT_UI}/>
+                                <BooleanSettingToggleButton setting={AppSettings.ENABLE_WEB_SERIAL_DRIVERS}/>
+                                <BooleanSettingToggleButton setting={AppSettings.ENABLE_PROTOCOL_EDITOR}/>
+                                <BooleanSettingToggleButton setting={AppSettings.ENABLE_QR_CODE_SCANNER}/>
+                                <BooleanSettingToggleButton setting={AppSettings.ENABLE_STATS}/>
+                                <BooleanSettingToggleButton
+                                    setting={AppSettings.ENABLE_AUTO_CONNECT}/>
+                                <BooleanSettingToggleButton
+                                    setting={AppSettings.SYNC_DEVICE_STATE_ON_CONNECT}/>
+                                <BooleanSettingToggleButton setting={AppSettings.AUTO_CREATE_FAST_PROTOCOLS}/>
+                                <BooleanSettingToggleButton
+                                    setting={AppSettings.ENABLE_SIMULATOR}/>
+                                <BooleanToggleButton trueLabel={"Show Danger Zone"} value={showDangerZoneSettings}
+                                                     setValue={setShowDangerZoneSettings}/>
+                            </div>
                         </fieldset>
                         {showDangerZoneSettings && <fieldset>
                             <legend>Danger Zone</legend>
@@ -258,21 +217,35 @@ export function SettingsPanel() {
                                    onClick={() => localStorage.clear()}/>
                         </fieldset>}
                     </section>
-                    <fieldset id={"diagnostics"}>
-                        <legend>Diagnostics</legend>
-                        <button onClick={runDiagnostics}>Run Diagnostics</button>
-                        <InfoBox label={"Battery"}>{batteryStatus}</InfoBox>
-                        <InfoBox label={"Pulse"}>{pulseStatus}</InfoBox>
-                        <InfoBox label={"CS"}>{stateCS}</InfoBox>
-                        <InfoBox label={"CB"}>{stateCB}</InfoBox>
-                        <InfoBox label={"CT"}>{stateCT}</InfoBox>
-                        <InfoBox label={"CC"}>{stateCC}</InfoBox>
-                        <InfoBox label={"CL"}>{stateCL}</InfoBox>
-                        <InfoBox label={"CP"}>{stateCP}</InfoBox>
-                        <InfoBox label={"CD"}>{stateCD}</InfoBox>
-                        <InfoBox label={"Serial Number"}>{serialNumber}</InfoBox>
-                        <InfoBox label={"Last Service Date"}>{lastServiceDate}</InfoBox>
-                        <InfoBox label={"Run Time Since Service"}>{runTimeSinceService}</InfoBox>
+                    <fieldset id={"settings-state"}>
+                        <legend>Settings & State</legend>
+                        <button onClick={fetchSettingsAndStateInfo}>Fetch settings & state info</button>
+                        <InfoBox label={"Serial Number"}>{portaCountSettings.serialNumber}</InfoBox>
+                        <InfoBox
+                            label={"Last Service Date"}>{portaCountSettings.lastServiceDate.toISOString()}</InfoBox>
+                        <InfoBox
+                            label={"Run Time Since Service"}>{formatDuration(1000 * portaCountSettings.runTimeSinceFactoryServiceSeconds)}</InfoBox>
+                        <InfoBox label={"Num Exercises"}>{portaCountSettings.numExercises}</InfoBox>
+                        <InfoBox
+                            label={"Ambient Purge"}>{formatDuration(1000 * portaCountSettings.ambientPurge)}</InfoBox>
+                        <InfoBox
+                            label={"Ambient Sample"}>{formatDuration(1000 * portaCountSettings.ambientSample)}</InfoBox>
+                        <InfoBox label={"Mask Purge"}>{formatDuration(1000 * portaCountSettings.maskPurge)}</InfoBox>
+                        {/*mask sample*/}
+                        {
+                            [...portaCountSettings.maskSample.entries()].map(([index, value]) => <InfoBox key={index} label={`Ex ${String(index)} sample`}>{formatDuration(1000*value)}</InfoBox>)
+                        }
+
+                        {/*ff pass levels*/}
+                        {
+                            [...portaCountSettings.fitFactorPassLevel.entries()].map(([index, value]) => <InfoBox key={index} label={`FF pass level ${String(index)}`}>{value}</InfoBox>)
+                        }
+
+                        <InfoBox label={"Battery"}>{portaCountState.batteryStatus}</InfoBox>
+                        <InfoBox label={"Pulse"}>{portaCountState.pulseStatus}</InfoBox>
+                        {
+                            [...portaCountState.componentVoltages.entries()].map(([component, value]) => <InfoBox key={component} label={`${component} voltage`}>{value}</InfoBox>)
+                        }
                     </fieldset>
                 </section>
             </fieldset>

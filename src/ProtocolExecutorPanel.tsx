@@ -1,11 +1,17 @@
-import {SampleSource} from "./simple-protocol.ts";
+import {SampleSource, StandardProtocolDefinition} from "./simple-protocol.ts";
 import {calculateSegmentConcentration, ProtocolExecutorListener, SegmentState} from "./protocol-executor.ts";
 import {HTMLAttributes, PropsWithChildren, ReactElement, useContext, useEffect, useRef, useState} from "react";
-import {AppContext} from "./app-context.ts";
+import {AppContext, createDeviceSynchronizedProtocol} from "./app-context.ts";
 import {formatDuration, formatFitFactor} from "./utils.ts";
-import {AppSettings, calculateProtocolDuration, isThisAnExerciseSegment, ProtocolSegment} from "./app-settings.ts";
+import {
+    AppSettings,
+    calculateProtocolDuration,
+    convertStagesToSegments,
+    isThisAnExerciseSegment,
+    ProtocolSegment
+} from "./app-settings.ts";
 import {ControlSource} from "./control-source.ts";
-import {PortaCountListener} from "./portacount-client-8020.ts";
+import {FitFactorResultsEvent, PortaCountListener} from "./portacount-client-8020.ts";
 import "./protocol-executor.css"
 import {useAnimationFrame} from "./assets/use-animation-frame.ts";
 import {ProtocolSelectorWidget0} from "./ProtocolSelectorWidget0.tsx";
@@ -57,14 +63,17 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
     const [currentSegment, setCurrentSegment] = useState<ProtocolSegment | undefined>()
     const [segmentStartTimeMs, setSegmentStartTimeMs] = useState(Date.now())
     // todo: save running state this to db so we can continue if the app reloads or navigating between tabs
-    const [protocolRunning, setProtocolRunning] = useState<boolean>(false)
-    const [selectedProtocol] = useSetting(AppSettings.SELECTED_PROTOCOL)
+    const [isProtocolRunning, setIsProtocolRunning] = useState<boolean>(false)
+    const [selectedProtocolName] = useSetting<string>(AppSettings.SELECTED_PROTOCOL)
     const [currentTestData, setCurrentTestData] = useState<SimpleResultsDBRecord>({} as SimpleResultsDBRecord)
     const [uiUpdateNeeded, setUiUpdateNeeded] = useState<boolean>(true)
+    const [segments, setSegments] = useState<ProtocolSegment[]>([])
+    const [stages, setStages] = useState<StandardProtocolDefinition>([])
+    const [deviceTestInProgress, setDeviceTestInProgress] = useState<boolean>(false)
 
     function shouldEnableStartButton(controlSource: ControlSource): boolean {
         // todo: protocol executor should emit events for "isInProgress" state changed
-        return controlSource === ControlSource.External && !protocolRunning
+        return controlSource === ControlSource.External && !isProtocolRunning
     }
 
     const [enableStartButton, setEnableStartButton] = useState(shouldEnableStartButton(portaCountClient.state.controlSource))
@@ -112,8 +121,6 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
         const stageExerciseNum: (null | number)[] = [] // the exercise num of the stage, or null if the stage is not an
                                                        // exercise stage
         // protocolExecutor does not set segments or stages until execution starts.
-        const stages = appContext.settings.protocolStages;
-        const segments = appContext.settings.protocolSegments;
         const protocolTime: number = calculateProtocolDuration(segments)
         segments.forEach((segment: ProtocolSegment) => {
             // console.debug("rebuilding segment divs")
@@ -166,7 +173,7 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
         }
         setCurrentSegment(segment);
         setSegmentStartTimeMs(segment.segmentStartTimeMs || Date.now())
-        setProtocolRunning(true)
+        setIsProtocolRunning(true) // in case the component is reloaded mid-protocol
     }
 
     /**
@@ -181,12 +188,54 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
     }
 
     useEffect(() => {
+        const deviceTestObserver: PortaCountListener = {
+            testStarted(timestamp: number) {
+                setDeviceTestInProgress(true)
+                setCurrentSegment(segments[0])
+                setSegmentStartTimeMs(timestamp)
+            },
+            fitFactorResultsReceived(results: FitFactorResultsEvent) {
+                if (results.exerciseNum === "Final") {
+                    // done
+                    setDeviceTestInProgress(false)
+                    setCurrentSegment(undefined)
+                } else {
+                    // got results. figure out the next segment.
+                    const nextSegment = segments.reduce((result:ProtocolSegment|null, candidate, index, segments) => {
+                        if(result) {
+                            return result; // found
+                        }
+                        if(candidate.exerciseNumber === results.exerciseNum as number +1) {
+                            return segments[index]
+                        }
+                        return null;
+                    }, null)
+                    console.debug(`next segment is`, nextSegment, "segments:", segments)
+                    setCurrentSegment(nextSegment|| undefined)
+                    setSegmentStartTimeMs(results.timestamp)
+                }
+            },
+        }
+        portaCountClient.addListener(deviceTestObserver)
+        return () => {portaCountClient.removeListener(deviceTestObserver)}
+    }, [segments]);
+
+    useEffect(() => {
         const portaCountListener: PortaCountListener = {
             controlSourceChanged(source: ControlSource) {
                 setEnableStartButton(shouldEnableStartButton(source))
-            }
+                updateProtocol({source: source})
+            },
+            testTerminated() {
+                // test aborted
+                setDeviceTestInProgress(false)
+                setCurrentSegment(undefined)
+            },
         }
         const protocolExecutorListener: ProtocolExecutorListener = {
+            started() {
+                setIsProtocolRunning(true)
+            },
             segmentDataUpdated() {
                 // todo: implement me
                 // tick()
@@ -200,11 +249,11 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
                     // todo: consolidate this call with the above
                     protocolPosPointerRef.current.classList.replace("in-progress", "paused")
                 }
-                setProtocolRunning(false)
+                setIsProtocolRunning(false)
                 setCurrentSegment(undefined)
             },
             completed() {
-                setProtocolRunning(false)
+                setIsProtocolRunning(false)
                 setCurrentSegment(undefined)
                 // todo: display the final result
             },
@@ -231,18 +280,32 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
 
     useEffect(() => {
         setCurrentTestData({} as SimpleResultsDBRecord)
+        updateProtocol({protocolName: selectedProtocolName})
         setUiUpdateNeeded(true)
-    }, [selectedProtocol]);
+    }, [selectedProtocolName]);
 
     useEffect(() => {
-        if (protocolRunning) {
+        if (isProtocolRunning) {
             protocolExecutorPanelRef.current?.classList.replace("idle", "in-progress")
         } else {
             protocolExecutorPanelRef.current?.classList.replace("in-progress", "idle")
         }
-    }, [protocolRunning]);
+    }, [isProtocolRunning]);
 
     useTimingSignal(updateUi)
+
+    function updateProtocol({protocolName = selectedProtocolName, source}: {
+        protocolName?: string,
+        source?: ControlSource
+    }) {
+        // todo: look at control source
+        const protocol = source === ControlSource.External
+            ? appContext.settings.protocolDefinitions[protocolName] // external control
+            : createDeviceSynchronizedProtocol(protocolName) // internal control
+        setStages(protocol);
+        setSegments(convertStagesToSegments(protocol))
+        setUiUpdateNeeded(true)
+    }
 
     function updateUi() {
         if (uiUpdateNeeded || currentSegment && currentSegment.state && currentSegment.state !== SegmentState.IDLE) {
@@ -254,34 +317,30 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
         }
     }
 
-    function calculateProtocolElapsedTimeMs(segmentDurationMs: number) {
+    function calculateProtocolElapsedTimeMs(segmentDurationMs: number, capped:boolean = true) {
         const segmentElapsedTimeMs = Date.now() - segmentStartTimeMs;
         const cappedSegmentElapsedTimeMs = Math.min(segmentElapsedTimeMs, segmentDurationMs)
-        return currentSegment ? currentSegment.protocolStartTimeOffsetSeconds * 1000 + cappedSegmentElapsedTimeMs : 0;
+        return currentSegment ? currentSegment.protocolStartTimeOffsetSeconds * 1000 + (capped?cappedSegmentElapsedTimeMs:segmentElapsedTimeMs) : 0;
     }
 
     useAnimationFrame(() => {
-        if (!protocolExecutor.isInProgress()) {
+        if (!isProtocolRunning && !deviceTestInProgress) {
             return;
         }
         // we don't care how far along the animation is. we just care that the pointer is at the right place vs the
         // time we started the segment/protocol
         if (protocolPosPointerRef.current) {
-            if (protocolExecutor.protocolStartTime) {
-                const segmentDurationMs = 1000 * (currentSegment?.duration ?? 0);
-                const protocolElapsedTimeMs = calculateProtocolElapsedTimeMs(segmentDurationMs)
-                // if we're capped, change the style of the pointer
-                const segmentElapsedTimeMs = Date.now() - segmentStartTimeMs;
-                if (segmentElapsedTimeMs >= segmentDurationMs) {
-                    // we seem to be at the end of the segment
-                    protocolPosPointerRef.current.classList.replace("in-progress", "paused")
-                } else {
-                    protocolPosPointerRef.current.classList.replace("paused", "in-progress")
-                }
-                protocolPosPointerRef.current.style.right = `${100 - 0.1 * protocolElapsedTimeMs / protocolDuration}%`
+            const segmentDurationMs = 1000 * (currentSegment?.duration ?? 0);
+            const protocolElapsedTimeMs = calculateProtocolElapsedTimeMs(segmentDurationMs, !deviceTestInProgress)
+            // if we're capped, change the style of the pointer
+            const segmentElapsedTimeMs = Date.now() - segmentStartTimeMs;
+            if (segmentElapsedTimeMs >= segmentDurationMs) {
+                // we seem to be at the end of the segment
+                protocolPosPointerRef.current.classList.replace("in-progress", "paused")
             } else {
-                // protocol hasn't started
+                protocolPosPointerRef.current.classList.replace("paused", "in-progress")
             }
+            protocolPosPointerRef.current.style.right = `${100 - 0.1 * protocolElapsedTimeMs / protocolDuration}%`
         }
     }, [protocolDuration, segmentStartTimeMs])
 
@@ -317,19 +376,19 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
     return (
         <section id="custom-control-panel" {...props}>
             <fieldset id={"protocol-executor-panel-main"} ref={protocolExecutorPanelRef} className={"idle"}
-                      style={{minWidth: 0, overflow: "auto", paddingBottom:"0.2em"}}>
+                      style={{minWidth: 0, overflow: "auto", paddingBottom: "0.2em"}}>
                 <legend style={{
                     textAlign: "start",
                     display: "inline-flex",
                     flexWrap: "wrap",
                     paddingInline: "0.5rem",
                 }}>Protocol <ProtocolSelectorWidget0/>
-                    <button disabled={!enableStartButton || protocolRunning} className={"start"}
-                            onClick={() => protocolExecutor.executeProtocol(appContext.settings.protocolSegments)}>Start <ImPlay2/>
+                    <button disabled={!enableStartButton || isProtocolRunning} className={"start"}
+                            onClick={() => protocolExecutor.executeProtocol(segments)}>Start <ImPlay2/>
                     </button>
-                    <button disabled={!protocolRunning} onClick={() => handleStopButtonClick()}
+                    <button disabled={!isProtocolRunning} onClick={() => handleStopButtonClick()}
                             className={"stop"}>Stop <ImStop/></button>
-                    <div style={{display:"inline-flex"}}>
+                    <div style={{display: "inline-flex"}}>
                         <IconText icon={PiWatch}
                                   text="Time:">{formattedProtocolElapsedTime} / {formatDuration(protocolDuration * 1000)}</IconText>
                         <IconText icon={BsWind} text={"Ambient:"}>{getAmbientConcentrationFormatted()}</IconText>

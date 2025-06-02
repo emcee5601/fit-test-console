@@ -3,32 +3,54 @@ import {ReadableStreamDefaultReader} from "node:stream/web";
 import {ExternalController, ExternalControlResponsePatterns} from "./external-control.ts";
 import {SampleSource} from "./simple-protocol.ts";
 import {ControlSource} from "./control-source.ts";
-import {StringLike, StringLikeWithMatchesIgnoringLineStart} from "./string-like.ts";
 import {ConnectionStatus} from "src/connection-status.ts";
 import {Activity} from "src/activity.ts";
+import {formatDuration} from "src/utils.ts";
 
 
-class Patterns {
-    static PORTACOUNT_VERSION = /^PORTACOUNT\s+PLUS\S+PROM\S+(?<version>.+)/i; // PORTACOUNT PLUS PROM V1.7
-    static COPYRIGHT = /^COPYRIGHT.+/i; // COPYRIGHT(c)1992 TSI INC
-    static LICENSE = /^ALL\s+RIGHTS\s+RESERVED/i; // ALL RIGHTS RESERVED
-    static SERIAL_NUMBER = /^Serial\s+Number\s+(?<serialNumber>\d+)/i; // Serial Number 17754
-    static PASS_LEVEL = /^FF\s+pass\s+level\s+(?<passLevel>\d+)/i; // FF pass level = 100
-    static NUM_EXERCISES = /^No\.\s+of\s+exers\s*=\s*(?<numExercises>\d+)/i; // No. of exers  = 4
-    static AMBIENT_PURGE = /^Ambt\s+purge\s*=\s*(?<ambientPurgeTime>\d+)/i; // Ambt purge   = 4 sec.
-    static AMBIENT_SAMPLE = /^Ambt\s+sample\s*=\s*(?<ambientSampleTime>\d+)/i; // Ambt sample  = 5 sec.
-    static MASK_PURGE = /^Mask\s+purge\s*=\s*(?<maskPurgeTime>\d+)/i; // Mask purge  = 11 sec.
-    static MASK_SAMPLE = /^Mask\s+sample\s+(?<exerciseNumber>\d+)\s*=\s*(?<maskSampleTime>\d+)/i; // Mask sample 1 = 40
-                                                                                                  // sec.
-    static DIP_SWITCH = /^DIP\s+switch\s+=\s+(?<dipSwitchBits>\d+)/i; // DIP switch  = 10111111
-    static COUNT_READING = /^(?<timestamp>\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d.\d{3}Z)?\s*Conc\.\s+(?<concentration>[\d.]+)/i; // Conc.      0.00 #/cc
-    static NEW_TEST = /^NEW\s+TEST\s+PASS\s*=\s*(?<passLevel>\d+)/i; // NEW TEST PASS =  100
-    static AMBIENT_READING = /^Ambient\s+(?<concentration>[\d.]+)/i; // Ambient   2290 #/cc
-    static MASK_READING = /^Mask\s+(?<concentration>[\d+.]+)/i; // Mask    5.62 #/cc
-    static FIT_FACTOR = /^FF\s+(?<exerciseNumber>\d+)\s+(?<fitFactor>[\d.]+)\s+(?<result>.+)/; // FF  1    352 PASS
-    static TEST_TERMINATED = /^Test\s+Terminated/i; // Test Terminated
-    static OVERALL_FIT_FACTOR = /^Overall\s+FF\s+(?<fitFactor>[\d.]+)\s+(?<result>.+)/i; // Overall FF    89 FAIL
-    static LOW_PARTICLE_COUNT = /^(?<concentration>\d+)\/cc\s+Low\s+Particle\s+Count/i; // 970/cc Low Particle Count
+const Patterns = class {
+    // some of these seem only available on bootup, eg. num exercises
+    // PORTACOUNT PLUS PROM V1.7
+    static readonly PORTACOUNT_VERSION = /^PORTACOUNT\s+PLUS\S+PROM\S+(?<version>.+)/i;
+    static readonly COPYRIGHT = /^COPYRIGHT.+/i; // COPYRIGHT(c)1992 TSI INC
+    static readonly LICENSE = /^ALL\s+RIGHTS\s+RESERVED/i; // ALL RIGHTS RESERVED
+    static readonly SERIAL_NUMBER = /^Serial\s+Number\s+(?<serialNumber>\d+)/i; // Serial Number 17754
+    static readonly PASS_LEVEL = /^FF\s+pass\s+level\s+(?<passLevel>\d+)/i; // FF pass level = 100
+    static readonly NUM_EXERCISES = /^No\.\s+of\s+exers\s*=\s*(?<num_exercises>\d+)/i; // No. of exers  = 4
+    static readonly AMBIENT_PURGE = /^Ambt\s+purge\s*=\s*(?<ambientPurgeTime>\d+)/i; // Ambt purge   = 4 sec.
+    static readonly AMBIENT_SAMPLE = /^Ambt\s+sample\s*=\s*(?<ambientSampleTime>\d+)/i; // Ambt sample  = 5 sec.
+    static readonly MASK_PURGE = /^Mask\s+purge\s*=\s*(?<maskPurgeTime>\d+)/i; // Mask purge  = 11 sec.
+    // Mask sample 1 = 40 sec.
+    static readonly MASK_SAMPLE = /^Mask\s+sample\s+(?<exerciseNumber>\d+)\s*=\s*(?<maskSampleTime>\d+)/i;
+    static readonly DIP_SWITCH = /^DIP\s+switch\s+=\s+(?<dipSwitchBits>\d+)/i; // DIP switch  = 10111111
+
+    // Conc.      0.00 #/cc
+    static readonly COUNT_READING = /^(?<timestamp>\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d.\d{3}Z)?\s*Conc\.\s+(?<concentration>[\d.]+)/i;
+    static readonly NEW_TEST = /^NEW\s+TEST\s+PASS\s*=\s*(?<passLevel>\d+)/i; // NEW TEST PASS =  100
+    static readonly AMBIENT_READING = /^Ambient\s+(?<concentration>[\d.]+)/i; // Ambient   2290 #/cc
+    static readonly MASK_READING = /^Mask\s+(?<concentration>[\d+.]+)/i; // Mask    5.62 #/cc
+    // FF  1    352 PASS
+    static readonly FIT_FACTOR = /^FF\s+(?<exerciseNumber>\d+)\s+(?<fitFactor>[\d.]+)\s+(?<result>.+)/;
+    static readonly TEST_TERMINATED = /^Test\s+Terminated/i; // Test Terminated
+    // Overall FF    89 FAIL
+    static readonly OVERALL_FIT_FACTOR = /^Overall\s+FF\s+(?<fitFactor>[\d.]+)\s+(?<result>.+)/i;
+    // 970/cc Low Particle Count
+    static readonly LOW_PARTICLE_COUNT = /^(?<concentration>\d+)\/cc\s+Low\s+Particle\s+Count/i;
+    static readonly BATTERY_AND_PULSE_STATUS = /^R(?<battery>.)(?<pulse>.)$/;  // RGG
+    static readonly VOLTAGE_INFO = /^(?<component>C[SBTCLPD])(?<value>.+)$/;
+
+    static readonly Setting = class {
+        static readonly Timing = class {
+            static readonly AMBIENT_PURGE = /^STPA\s+(?<duration>\d+)/i; // STPA 000vv
+            static readonly MASK_PURGE = /^STPM\s+(?<duration>\d+)/i; // STPM 000vv
+            static readonly AMBIENT_SAMPLE = /^STA\s+(?<duration>\d+)/i // STA  000vv
+            static readonly MASK_SAMPLE = /^STM(?<exercise_num>\d\d)(?<duration>\d+)/i; // STMxx000vv
+        }
+        static readonly FF_PASS_LEVEL = /^SP\s+(?<index>\d\d)(?<score>\d+)/i;  // SP xxvvvvv
+        static readonly SERIAL_NUMBER = /^SS\s+(?<serial_number>\d+)/i; // SS vvvvv
+        static readonly RUN_TIME_SINCE_FACTORY_SERVICE = /^SR\s+(?<runtime>\d+)/i; // SR vvvvv
+        static readonly LAST_SERVICE_DATE = /^SD\s+0(?<month>\d\d)(?<year>\d\d)/i; // SD 0MMYY
+    }
 }
 
 abstract class PortaCountEvent {
@@ -141,19 +163,77 @@ class ActivityChangedEvent extends PortaCountEvent {
     }
 }
 
+class SettingsChangedEvent extends PortaCountEvent {
+    public readonly settings: PortaCountSettings
+
+    constructor(settings: PortaCountSettings) {
+        super();
+        this.settings = settings;
+    }
+}
+
+class StateChangedEvent extends PortaCountEvent {
+    public readonly state: PortaCountState;
+
+    constructor(state: PortaCountState) {
+        super();
+        this.state = state;
+    }
+}
+
 export enum DataTransmissionState {
     Paused = "Paused",
     Transmitting = "Transmitting",
 }
 
+type MatchGroups = { [key: string]: string }
+type GoodBad = "Good" | "Bad" | "?"
+
+export class PortaCountSettings {
+    numExercises: number = 4;
+    ambientPurge: number = 0;
+    maskPurge: number = 0;
+    ambientSample: number = 0;
+    maskSample: Map<number, number> = new Map(); // exercise number -> duration
+    fitFactorPassLevel: Map<number, number> = new Map(); // index -> score
+    serialNumber: string = "?";
+    runTimeSinceFactoryServiceSeconds: number = 0; // convert this from 10 second increments to seconds
+    lastServiceDate: Date = new Date(0); // convert this to a Date
+}
 
 export class PortaCountState {
     private _connectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED;
     private _controlSource: ControlSource = ControlSource.Internal;
     private _sampleSource: SampleSource = SampleSource.MASK;
     private _dataTransmissionState: DataTransmissionState = DataTransmissionState.Transmitting;
-    private _activity: Activity = Activity.Disconnected;
+
+    private _batteryStatus: GoodBad = "?";
+    private _pulseStatus: GoodBad = "?";
+    private _componentVoltages: Map<string, number> = new Map()
+
+    // derived
     private _lastLine: string = "";
+    private _activity: Activity = Activity.Disconnected;
+
+    get componentVoltages(): Map<string, number> {
+        return this._componentVoltages;
+    }
+
+    get batteryStatus(): GoodBad {
+        return this._batteryStatus;
+    }
+
+    set batteryStatus(value: GoodBad) {
+        this._batteryStatus = value;
+    }
+
+    get pulseStatus(): GoodBad {
+        return this._pulseStatus;
+    }
+
+    set pulseStatus(value: GoodBad) {
+        this._pulseStatus = value;
+    }
 
     get connectionStatus(): ConnectionStatus {
         return this._connectionStatus;
@@ -193,6 +273,7 @@ export class PortaCountState {
 
     set activity(value: Activity) {
         this._activity = value;
+        // console.debug(`activity is now ${value}`)
     }
 
     get lastLine(): string {
@@ -227,12 +308,15 @@ export interface PortaCountListener {
     particleConcentrationReceived?(concentrationEvent: ParticleConcentrationEvent): void;
     connectionStatusChanged?(connectionStatus: ConnectionStatus): void;
     activityChanged?(activity: Activity): void;
+    stateChanged?(state: PortaCountState): void;
+    settingsChanged?(settings: PortaCountSettings): void;
 }
 
 export class PortaCountClient8020 {
     private readonly _externalController: ExternalController
     private readonly listeners: PortaCountListener[] = [];
     private _state: PortaCountState = new PortaCountState()
+    private _settings: PortaCountSettings = new PortaCountSettings()
     private _baudRate: number = 1200;
     private _syncOnConnect: boolean = false;
 
@@ -262,12 +346,12 @@ export class PortaCountClient8020 {
         return this._externalController;
     }
 
-    get state(): PortaCountState {
-        return this._state;
+    get settings(): PortaCountSettings {
+        return this._settings;
     }
 
-    set state(value: PortaCountState) {
-        this._state = value;
+    get state(): PortaCountState {
+        return this._state;
     }
 
     private setActivity(activity: Activity): void {
@@ -276,6 +360,7 @@ export class PortaCountClient8020 {
     }
 
     private readonly stateUpdatingListener: PortaCountListener = {
+        // TODO: refactor this. listening to self is kinda weird.
         connectionStatusChanged: (connectionStatus: ConnectionStatus) => {
             this.state.connectionStatus = connectionStatus;
         },
@@ -288,39 +373,8 @@ export class PortaCountClient8020 {
         dataTransmissionStateChanged: (dataTransmissionState: DataTransmissionState) => {
             this.state.dataTransmissionState = dataTransmissionState;
         },
-        particleConcentrationReceived: (concentrationEvent: ParticleConcentrationEvent) => {
-            this.updateActivity(concentrationEvent);
-        },
-        testTerminated: () => {
-            this.setActivity(Activity.Idle);
-        },
-        testStarted: () => {
-            this.setActivity(Activity.Testing);
-        },
-        fitFactorResultsReceived: () => {
-            this.setActivity(Activity.Testing);
-        },
         lineReceived: (line: string) => {
             this.state.lastLine = line;
-        }
-    }
-
-    /**
-     * This will update the control source based on where the concentration event came from.
-     * @param concentrationEvent
-     * @private
-     */
-    private updateActivity(concentrationEvent: ParticleConcentrationEvent) {
-        this.state.sampleSource = concentrationEvent.sampleSource;
-        this.state.controlSource = concentrationEvent.controlSource;
-        if (concentrationEvent.controlSource === ControlSource.Internal) {
-            if (this.state.sampleSource === SampleSource.AMBIENT) {
-                this.setActivity(Activity.Testing)
-            } else {
-                // if source is mask, we don't know if it's testing or counting. probably need to have an indicator
-            }
-        } else {
-            // external control mode. we need something else to determine if we're testing or just counting
         }
     }
 
@@ -375,8 +429,8 @@ export class PortaCountClient8020 {
                     break;
                 }
                 case TestTerminatedEvent.name: {
+                    this.setActivity(Activity.Idle)
                     if (listener.testTerminated) {
-                        this.setActivity(Activity.Idle)
                         listener.testTerminated();
                     }
                     break;
@@ -389,7 +443,6 @@ export class PortaCountClient8020 {
                 }
                 case TestStartedEvent.name: {
                     if (listener.testStarted) {
-                        this.setActivity(Activity.Testing);
                         listener.testStarted(event.timestamp)
                     }
                     break;
@@ -426,92 +479,216 @@ export class PortaCountClient8020 {
                     }
                     break;
                 }
+                case StateChangedEvent.name: {
+                    if (listener.stateChanged) {
+                        listener.stateChanged((event as StateChangedEvent).state);
+                    }
+                    break;
+                }
+                case SettingsChangedEvent.name: {
+                    if (listener.settingsChanged) {
+                        listener.settingsChanged((event as SettingsChangedEvent).settings)
+                    }
+                    break;
+                }
                 default: {
-                    console.debug(`unsupported event: ${JSON.stringify(event)}`)
+                    console.error(`unsupported event: ${JSON.stringify(event)}`)
                 }
             }
         })
     }
 
+    /**
+     * handles incoming particle concentrations
+     * @param matchGroups
+     * @param controlSource
+     * @private
+     */
+    private processConcentration(matchGroups: MatchGroups, controlSource: ControlSource) {
+        if (this.state.activity !== Activity.Testing) {
+            // in internal control mode, we get concentration readings used for each exercise
+            this.setActivity(Activity.Counting)
+        }
+        const concentration = Number(matchGroups.concentration);
+        const sampleSource = this.state.sampleSource
+        const event = new ParticleConcentrationEvent(concentration, sampleSource, controlSource);
+        const timestamp = matchGroups.timestamp;
+        if (timestamp) {
+            event.asOf(Date.parse(timestamp))
+        }
+        this.dispatch(event);
+    }
+
+    private readonly orderedLineProcessors: [RegExp, (matchGroups: MatchGroups) => void][] = [
+        // order these with most frequent patterns first
+        // external particle counts are every second
+        [ExternalControlResponsePatterns.PARTICLE_COUNT, (matchGroups) => {
+            this.processConcentration(matchGroups, ControlSource.External)
+        }],
+        // internal particle counts are every 2 seconds
+        [Patterns.COUNT_READING, (matchGroups) => {
+            this.processConcentration(matchGroups, ControlSource.Internal)
+        }],
+        // ambient, mask, and ff are about the same. one per exercise.
+        [Patterns.AMBIENT_READING, (matchGroups) => {
+            const concentration = matchGroups.concentration;
+            if (concentration) {
+                this.dispatch(new ParticleConcentrationEvent(Number(concentration), SampleSource.AMBIENT, ControlSource.Internal));
+            }
+        }],
+        [Patterns.MASK_READING, (matchGroups) => {
+            const concentration = matchGroups.concentration;
+            if (concentration) {
+                this.dispatch(new ParticleConcentrationEvent(Number(concentration), SampleSource.MASK, ControlSource.Internal));
+            }
+        }],
+        [Patterns.FIT_FACTOR, (matchGroups) => {
+            // internally driven exercise results received.
+            this.setActivity(Activity.Testing)
+            const ff = Number(matchGroups.fitFactor);
+            const exerciseNum = Number(matchGroups.exerciseNumber);
+            const result = matchGroups.result;
+            this.dispatch(new FitFactorResultsEvent(ff, exerciseNum, result));
+            if (this._settings.numExercises < exerciseNum) {
+                // auto-detect num exercises since it's only available on boot
+                this._settings.numExercises = exerciseNum;
+                // maybe need a NumExercisesChangedEvent?
+                this.dispatch(new SettingsChangedEvent(this._settings))
+            }
+        }],
+        // one of these per test
+        [Patterns.NEW_TEST, () => {
+            this.setActivity(Activity.Testing)
+            this.dispatch(new TestStartedEvent())
+        }],
+        [Patterns.TEST_TERMINATED, () => {
+            this.setActivity(Activity.Idle)
+            this.dispatch(new TestTerminatedEvent())
+        }],
+        [Patterns.OVERALL_FIT_FACTOR, (matchGroups) => {
+            this.setActivity(Activity.Idle)
+            const ff = Number(matchGroups.fitFactor);
+            const result: string = matchGroups.result;
+            this.dispatch(new FitFactorResultsEvent(ff, "Final", result))
+        }],
+
+        // switching sample source should be about the same. ranking with above depends on protocol and external use
+        [ExternalControlResponsePatterns.SAMPLING_FROM_MASK, () => {
+            this.dispatch(new SampleSourceChangedEvent(SampleSource.MASK))
+        }],
+        [ExternalControlResponsePatterns.SAMPLING_FROM_AMBIENT, () => {
+            this.dispatch(new SampleSourceChangedEvent(SampleSource.AMBIENT))
+        }],
+
+        // these are rarely used
+        [ExternalControlResponsePatterns.EXTERNAL_CONTROL, () => {
+            this.dispatch(new ControlSourceChangedEvent(ControlSource.External))
+        }],
+        [ExternalControlResponsePatterns.INTERNAL_CONTROL, () => {
+            this.dispatch(new ControlSourceChangedEvent(ControlSource.Internal))
+        }],
+        [ExternalControlResponsePatterns.DATA_TRANSMISSION_DISABLED, () => {
+            this.dispatch(new DataTransmissionStateChangedEvent(DataTransmissionState.Paused))
+        }],
+        [ExternalControlResponsePatterns.DATA_TRANSMISSION_ENABLED, () => {
+            this.dispatch(new DataTransmissionStateChangedEvent(DataTransmissionState.Transmitting))
+        }],
+
+        // settings are pulled once per connection normally
+        // there are many pass levels and timings
+        [Patterns.Setting.FF_PASS_LEVEL, (matchGroups) => {
+            this._settings.fitFactorPassLevel.set(Number(matchGroups.index), Number(matchGroups.score))
+            this.dispatch(new SettingsChangedEvent(this._settings))
+        }],
+        [Patterns.Setting.Timing.MASK_SAMPLE, (matchGroups) => {
+            this._settings.maskSample.set(Number(matchGroups.exercise_num), Number(matchGroups.duration))
+            this.dispatch(new SettingsChangedEvent(this._settings))
+        }],
+        // there are fewer component voltages than pass levels, exercise num
+        [Patterns.VOLTAGE_INFO, (matchGroups) => {
+            this._state.componentVoltages.set(matchGroups.component, Number(matchGroups.value))
+            this.dispatch(new StateChangedEvent(this._state))
+        }],
+        // only line for each of these settings
+        [Patterns.Setting.Timing.MASK_PURGE, (matchGroups) => {
+            this._settings.maskPurge = Number(matchGroups.duration)
+            this.dispatch(new SettingsChangedEvent(this._settings))
+        }],
+        [Patterns.Setting.Timing.AMBIENT_SAMPLE, (matchGroups) => {
+            this._settings.ambientSample = Number(matchGroups.duration)
+            this.dispatch(new SettingsChangedEvent(this._settings))
+        }],
+        [Patterns.Setting.Timing.AMBIENT_PURGE, (matchGroups) => {
+            this._settings.ambientPurge = Number(matchGroups.duration)
+            this.dispatch(new SettingsChangedEvent(this._settings))
+        }],
+        [Patterns.BATTERY_AND_PULSE_STATUS, (matchGroups) => {
+            this._state.batteryStatus = matchGroups.battery === "G" ? "Good" : "Bad"
+            this._state.pulseStatus = matchGroups.pulse === "G" ? "Good" : "Bad"
+            this.dispatch(new StateChangedEvent(this._state))
+        }],
+        [Patterns.Setting.SERIAL_NUMBER, (matchGroups) => {
+            this._settings.serialNumber = matchGroups.serial_number
+            this.dispatch(new SettingsChangedEvent(this._settings))
+        }],
+        [Patterns.Setting.LAST_SERVICE_DATE, (matchGroups) => {
+            const monthIndex = Number(matchGroups.month) - 1
+            const yy = Number(matchGroups.year);
+            const yearGuess = yy + (yy < 61 ? 2000 : 1900) // TSI founded in 1961; todo: revisit this after 2060
+            this._settings.lastServiceDate = new Date(yearGuess, monthIndex)
+            this.dispatch(new SettingsChangedEvent(this._settings))
+        }],
+        [Patterns.Setting.RUN_TIME_SINCE_FACTORY_SERVICE, (matchGroups) => {
+            // this is in 10 minute increments
+            this._settings.runTimeSinceFactoryServiceSeconds = 10 * 60 * Number(matchGroups.runtime)
+            this.dispatch(new SettingsChangedEvent(this._settings))
+        }],
+        // these are only available as part of bootup sequence, so even more infrequent
+        [Patterns.NUM_EXERCISES, (matchGroups) => {
+            this._settings.numExercises = Number(matchGroups.num_exercises);
+            this.dispatch(new SettingsChangedEvent(this._settings))
+        }],
+    ];
+
+
     // visible-for-testing
-    public processLine(rawLine: string, ignoreStartOfLineMatch: boolean = false) {
+    public processLine(rawLine: string) {
         if (rawLine.length === 0) {
             return;
         }
 
-        const line: string | StringLike = ignoreStartOfLineMatch ? new StringLikeWithMatchesIgnoringLineStart(rawLine) : rawLine;
+        const line: string = rawLine
 
-        // TODO: strip out (and process) timestamp if present. inject timestamp if missing
+        const matched = this.orderedLineProcessors.reduce((done: boolean, [regexp, handler]) => {
+            if (!done) {
+                const match = regexp.exec(line)
+                if (match) {
+                    // dispatch
+                    if (match.groups) {
+                        handler(match.groups)
+                    } else {
+                        // some patterns don't need groups
+                        handler({})
+                    }
+                    return true
+                }
+            }
+            return done
+        }, false)
+        if (matched) {
+            return
+        }
 
-        let match;
-        if (line.match(ExternalControlResponsePatterns.SAMPLING_FROM_MASK)) {
-            this.dispatch(new SampleSourceChangedEvent(SampleSource.MASK));
-        } else if (line.match(ExternalControlResponsePatterns.SAMPLING_FROM_AMBIENT)) {
-            this.dispatch(new SampleSourceChangedEvent(SampleSource.AMBIENT));
-        } else if (line.match(ExternalControlResponsePatterns.DATA_TRANSMISSION_DISABLED)) {
-            this.dispatch(new DataTransmissionStateChangedEvent(DataTransmissionState.Paused))
-        } else if (line.match(ExternalControlResponsePatterns.DATA_TRANSMISSION_ENABLED)) {
-            this.dispatch(new DataTransmissionStateChangedEvent(DataTransmissionState.Transmitting));
-        } else if (line.match(ExternalControlResponsePatterns.EXTERNAL_CONTROL)) {
-            this.dispatch(new ControlSourceChangedEvent(ControlSource.External))
-        } else if (line.match(ExternalControlResponsePatterns.INTERNAL_CONTROL)) {
-            this.dispatch(new ControlSourceChangedEvent(ControlSource.Internal))
-        } else if ((match = line.match(Patterns.NEW_TEST))) {
-            this.setActivity(Activity.Testing)
-            this.dispatch(new TestStartedEvent());
-        } else if ((match = line.match(Patterns.AMBIENT_READING))) {
-            this.setActivity(Activity.Counting)
-            const concentration = match.groups?.concentration;
-            if (concentration) {
-                this.dispatch(new ParticleConcentrationEvent(Number(concentration), SampleSource.AMBIENT, ControlSource.Internal));
-            }
-        } else if ((match = line.match(Patterns.MASK_READING))) {
-            this.setActivity(Activity.Counting)
-            const concentration = match.groups?.concentration;
-            if (concentration) {
-                this.dispatch(new ParticleConcentrationEvent(Number(concentration), SampleSource.MASK, ControlSource.Internal));
-            }
-        } else if ((match = line.match(Patterns.FIT_FACTOR))) {
-            this.setActivity(Activity.Testing)
-            const ff = Number(match.groups?.fitFactor);
-            const exerciseNum = Number(match.groups?.exerciseNumber || -1);
-            const result = match.groups?.result || "unknown";
-            this.dispatch(new FitFactorResultsEvent(ff, exerciseNum, result));
-        } else if ((match = line.match(Patterns.OVERALL_FIT_FACTOR))) {
-            this.setActivity(Activity.Idle)
-            const ff = Number(match.groups?.fitFactor);
-            const result: string = match.groups?.result || "";
-            this.dispatch(new FitFactorResultsEvent(ff, "Final", result))
-        } else if ((match = line.match(Patterns.TEST_TERMINATED))) {
-            this.setActivity(Activity.Idle)
-            this.dispatch(new TestTerminatedEvent());
-        } else if ((match = line.match(Patterns.COUNT_READING) || line.match(ExternalControlResponsePatterns.PARTICLE_COUNT))) {
-            this.setActivity(Activity.Counting)
-            const concentration = Number(match.groups?.concentration);
-            const source = this.state.sampleSource
-            const controlSource = line.match(ExternalControlResponsePatterns.PARTICLE_COUNT) ? ControlSource.External : ControlSource.Internal
-            const event = new ParticleConcentrationEvent(concentration, source, controlSource);
-            const timestamp = match.groups?.timestamp;
-            if (timestamp) {
-                event.asOf(Date.parse(timestamp))
-            }
-            this.dispatch(event);
+        // todo: handle errors and write protect errors
+        if (line.match(/^E/)) {
+            // error
+            // todo: put this above in the main parser section?
+            console.warn(`error: ${line}`)
+        } else if (line.match(/^W/)) {
+            // write protected
+            console.warn(`write protected: ${line}`)
         } else {
-            // todo: lines starting with 'E' seem to be errors. try to retry once any commands that resulted in an
-            // error response.
-            if (line.match(/^E/)) {
-                // seems to be some error
-                // todo: put this above in the main parser section?
-                console.warn(`error received: ${line}`)
-            } else if (!ignoreStartOfLineMatch) {
-                // todo: don't do this anymore? don't think there's been a case of these not being errors
-                // try again, but ignore the start of line matching. this is in case there were extraneous characters
-                // for some reason
-                // console.debug(`retrying unparsed pattern: ${line}`)
-                // this.processLine(line.toString(), true)
-            } else {
-                console.debug(`unparsed pattern remains unparsed: ${line}`)
-            }
+            console.warn(`portacount client: no parser for line: ${line}`)
         }
     }
 
@@ -531,26 +708,16 @@ export class PortaCountClient8020 {
             }
             if (port.writable) {
                 this.externalController.setWriter(port.writable.getWriter());
-                /**
-                 * todo: the app needs to see data from the portacount to know it's connected properly.
-                 *  edge cases:
-                 *  1. connected to portacount already in external control mode, but data transmission is turned off
-                 * (won't receive data)
-                 *  2. connected to portacount in internal control mode, but is not counting (won't receive data)
-                 *  3. connected to portacount in external control mode but driver doesn't support setting CTS properly
-                 * and cable has CTS line connected (won't receive data)
-                 *
-                 * Workaround for 1 and 2 is to switch to external control mode, then turn on data transmission.
-                 */
                 if (this.syncOnConnect) {
-                    this.externalController.assumeManualControl()
-                    this.externalController.enableDataTransmission()
-                    // todo: use settings to determine: if we start in external or internal control mode
-                    // todo: synchronize state to portacount state by interrogation
-                    // todo: synchronize status to portacount (create a status widget)
+                    console.debug("sync on connect")
+                    this.waitUntilPortaCountIsReady()
+                        .then(() => {
+                            this.syncState()
+                        })
+                        .catch((err) => {
+                            console.warn(err)
+                        })
                 }
-                // todo: verify that we can connect. if not, disable auto-connect. see
-                // external-controls.verifyExternalControllability() for inspiration
             }
         } else {
             console.debug("portacount client connect not connected, attempting to connect...")
@@ -559,6 +726,76 @@ export class PortaCountClient8020 {
                 this.connect(port)
             })
         }
+    }
+
+
+    /**
+     * Wait until initial boot up is complete. Switch to External control mode.
+     * @private
+     */
+    private async waitUntilPortaCountIsReady() {
+        return new Promise<void>((resolve, reject) => {
+            const startTime = Date.now();
+            const intervalId = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                console.debug(`elapsed ${elapsed}`)
+                if (elapsed > 65000) {
+                    // more than 65 seconds have elapsed, something is wrong
+                    clearInterval(intervalId)
+                    reject(`waited too long for PortaCount to become ready. Elapsed ${formatDuration(elapsed)}.`)
+                } else {
+                    // todo: maybe can check for N95 companion since that doesn't change the control source
+                    // this.externalController.sendCommand(ExternalController.TEST_TO_SEE_N95_COMPANION_IS_ATTACHED, 0)
+                    this.externalController.sendCommand(ExternalController.INVOKE_EXTERNAL_CONTROL, 0)
+                }
+            }, 1000)
+            const ready = () => {
+                this.removeListener(connectedListener)
+                clearInterval(intervalId)
+                console.debug("PortaCount is ready.")
+                resolve()
+
+            }
+            const connectedListener: PortaCountListener = {
+                controlSourceChanged: (source: ControlSource) => {
+                    if (source === ControlSource.External) {
+                        // we're ready
+                        ready()
+                    }
+                },
+                lineReceived: (line) => {
+                    // we're connected. could be during the startup sequence, or in normal operation
+                    if (ExternalControlResponsePatterns.N95_COMPANION_PATTERN.exec(line)) {
+                        // got a response to our command
+                        ready()
+                    }
+                }
+            };
+            this.addListener(connectedListener)
+        })
+    }
+
+    /**
+     * todo: the app needs to see data from the portacount to know it's connected
+     * properly. edge cases:
+     *  1. connected to portacount already in external control mode, but data transmission is turned off
+     * (won't receive data)
+     *  2. connected to portacount in internal control mode, but is not counting (won't
+     * receive data)
+     *  3. connected to portacount in external control mode but driver doesn't support
+     * setting CTS properly and cable has CTS line connected (won't receive data)
+     *
+     * Workaround for 1 and 2 is to switch to external control mode, then turn on data
+     * transmission.
+     */
+    private syncState() {
+        this.externalController.enableDataTransmission()
+        this.externalController.requestRuntimeStatus()
+        this.externalController.requestSettings()
+        this.externalController.sendCommand(ExternalController.REQUEST_VOLTAGE_INFO)
+        // todo: use settings to determine: if we start in external or internal control
+        // mode todo: synchronize state to portacount state by interrogation todo:
+        // synchronize status to portacount (create a status widget)
     }
 }
 

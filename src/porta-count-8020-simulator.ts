@@ -171,6 +171,58 @@ export class PortaCount8020Simulator {
     private executeCommand(command: string) {
         this.randomize()
         switch (command) {
+            case ExternalController.REQUEST_RUNTIME_STATUS_OF_BATTERY_AND_SIGNAL_PULSE: {
+                this.sendResponse("RGG\n")
+                break;
+            }
+            case ExternalController.REQUEST_VOLTAGE_INFO: {
+                [
+                    "CS191",
+                    "CB483",
+                    "CT236",
+                    "CC065",
+                    "CL614",
+                    "CP255",
+                    "CD068",
+                ].forEach((value) => {this.sendResponse(`${value}\n`)})
+                break;
+            }
+            case ExternalController.REQUEST_SETTINGS: {
+                [
+                    "STPA 00004",
+                    "STA  00005",
+                    "STPM 00011",
+                    "STM0100040",
+                    "STM0200040",
+                    "STM0300040",
+                    "STM0400040",
+                    "STM0500040",
+                    "STM0600040",
+                    "STM0700040",
+                    "STM0800040",
+                    "STM0900040",
+                    "STM1000040",
+                    "STM1100040",
+                    "STM1200040",
+                    "STM1300040",
+                    "SP 0100100",
+                    "SP 0200250",
+                    "SP 0300500",
+                    "SP 0401000",
+                    "SP 0501250",
+                    "SP 0601667",
+                    "SP 0702000",
+                    "SP 0804000",
+                    "SP 0905000",
+                    "SP 1006667",
+                    "SP 1110000",
+                    "SP 1200000",
+                    "SS   17754",
+                    "SR   00722",
+                    "SD   00519",
+                ].forEach((value) => {this.sendResponse(`${value}\n`)})
+                break;
+            }
             case ExternalController.SWITCH_VALVE_OFF: {
                 // switch to mask
                 this._portaCountState.sampleSource = SampleSource.MASK;

@@ -1,7 +1,7 @@
 import {StrictMode, Suspense} from 'react'
 import {createRoot} from 'react-dom/client'
 import './index.css'
-import App from './App.tsx'
+import HomePanel from './HomePanel.tsx'
 import {registerSW} from "virtual:pwa-register";
 import {HashRouter, Route, Routes} from "react-router";
 import {SettingsPanel} from "./SettingsPanel.tsx";
@@ -11,6 +11,8 @@ import {UnsupportedBrowser} from './UnsupportedBrowser.tsx';
 import MainLayout from "src/MainLayout.tsx";
 import {ResultViewer} from "src/ResultViewer.tsx";
 import {QRScanner, SimpleFitTestProtocolPanel} from "src/lazy-components.ts";
+import {DailyChecksPanel} from "src/DailyChecksPanel.tsx";
+import {BookmarksPanel} from "src/BookmarksPanel.tsx";
 
 // add this to prompt for a refresh
 const updateSW = registerSW({
@@ -30,7 +32,7 @@ createRoot(document.getElementById('root')!).render(
             <Suspense fallback={"..."}>
                 <Routes>
                     <Route path="" element={<MainLayout/>}>
-                        <Route index element={<App/>}/>
+                        <Route index element={<HomePanel/>}/>
                         <Route path="view-results" element={<ResultViewer/>}/>
                         <Route path="settings" element={<SettingsPanel/>}/>
                         <Route path="protocols" element={<SimpleFitTestProtocolPanel/>}/>
@@ -38,6 +40,8 @@ createRoot(document.getElementById('root')!).render(
                         <Route path={"stats"} element={<StatsPanel/>}/>
                         <Route path={"qrscanner"} element={<QRScanner/>}/>
                         <Route path={"unsupported-browser"} element={<UnsupportedBrowser/>}/>
+                        <Route path={"daily-checks"} element={<DailyChecksPanel/>}/>
+                        <Route path={"bookmarks"} element={<BookmarksPanel/>}/>
                     </Route>
                 </Routes>
             </Suspense>

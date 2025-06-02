@@ -16,7 +16,6 @@ import {
     SortingState,
     useReactTable,
 } from '@tanstack/react-table'
-import './ResultsTable.css'
 
 import {useVirtualizer} from '@tanstack/react-virtual'
 import "react-datepicker/dist/react-datepicker.css";

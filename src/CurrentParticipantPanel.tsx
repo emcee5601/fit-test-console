@@ -67,7 +67,7 @@ export function CurrentParticipantPanel() {
     }
 
     return (
-        <div id="current-test-results">
+        <div id="current-participant-panel">
             <LabeledSection>
                 <legend>Current Participant <button onClick={() => manualEntry()}>Manual Entry</button></legend>
                 <div style={{

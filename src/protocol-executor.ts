@@ -199,14 +199,15 @@ export class ProtocolExecutor {
         this._timerId = undefined;
     }
 
-    isInProgress() {
+    protocolIsExecuting() {
         // console.debug(`isInProgress? ${this.protocolStartTime}, ${this._timerId}`)
         return this.protocolStartTime !== null && this._timerId !== undefined
     }
 
+    // todo: use protocol name here? or protocol definition? and convert to segments internally?
     public async executeProtocol(segments: ProtocolSegment[]) {
         // todo: be more explicit about marking in-progress protocol
-        if (this.isInProgress()) {
+        if (this.protocolIsExecuting()) {
             console.log("protocol execution in progress (can't start another protocol)");
             return;
         }

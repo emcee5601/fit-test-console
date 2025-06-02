@@ -38,6 +38,32 @@
     overflow: hidden;
 }
 
+.full-screen-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 10;
+    background-color: white;
+    align-content: center;
+    display:block;
+}
+.qrcode-container {
+    display: block;
+    aspect-ratio: 1;
+    box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.3);
+    /*padding: 1rem;*/
+    background: lightgray;
+    container-type: inline-size;
+    /*height: 100%;*/
+}
+.qrcode-container>svg {
+    display: block; /* svg is "inline" by default */
+    height: calc(min(100cqh, 100cqw) - 2em); /* reset height */
+    width: calc(min(100cqh, 100cqw) - 2em); /* reset width */
+}
+
 a {
     font-weight: 500;
     color: #646cff;
@@ -245,7 +271,7 @@ td.results {
     text-align: start;
     vertical-align: top;
     padding-top: 0;
-    padding-bottom: 0.2em;
+    padding-bottom: 0.5em; /* this should be 0.5em which seems to be the offset of the label in a fieldset to make sure we don't accidentally introduce scrollbars to our container */
     padding-inline-start: 0.2em;
     padding-inline-end: 0.4em;
 }
@@ -460,7 +486,7 @@ td input.simple-mask-selector {
     position: absolute;
     top:0;
     left:0;
-    height:100%;
+    height:inherit;
 }
 .test-idle {
     position: relative;

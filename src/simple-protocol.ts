@@ -46,8 +46,9 @@ export type InstructionOrStage = ExerciseInstructions | StandardStageDefinition 
 export type ProtocolDefinitions = {
     [protocol_name: string]: InstructionOrStage[]
 }
+export type StandardProtocolDefinition = StandardStageDefinition[]
 export type StandardizedProtocolDefinitions = {
-    [protocol_name: string]: StandardStageDefinition[]
+    [protocol_name: string]: StandardProtocolDefinition
 }
 
 export enum SampleSource {

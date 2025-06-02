@@ -1,5 +1,8 @@
 #!/usr/bin/env bash -ex
 
+# default to "patch". valid strategies are major|minor|patch (from yarn version command)
+strategy=${1:-patch}
+
 # make sure we're not in an "old" version directory to prevent accidentally pushing to the old version repo
 if pwd | grep -e '-old$'
 then
@@ -23,7 +26,7 @@ then
 fi
 
 # bump version
-yarn version patch
+yarn version ${strategy}
 
 # build with updated version
 yarn build

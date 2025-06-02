@@ -50,8 +50,7 @@ export function NavBar() {
         navLinks.push(
             {
                 label: "Protocols",
-                value:
-                    "/protocols"
+                value: "/protocols"
             }
         )
     }
@@ -59,19 +58,25 @@ export function NavBar() {
         navLinks.push(
             {
                 label: "Stats",
-                value:
-                    "/stats"
+                value: "/stats"
             }
         )
     }
     if (enableQrCodeScanner) {
         navLinks.push({
                 label: "QR Code",
-                value:
-                    "/qrscanner"
+                value: "/qrscanner"
             }
         )
     }
+    navLinks.push({
+        label: "Daily Checks",
+        value: "/daily-checks"
+    })
+    navLinks.push({
+        label: "Bookmarks",
+        value: "/bookmarks"
+    })
     return (
         <>
             <div id="nav-bar" style={{display: "flex", justifyContent: "space-between", height: "100%"}}>
@@ -104,7 +109,14 @@ export function NavBar() {
                         }, [])}
                     </div>
                     <div id="compact-ui" className={"inline-flex"}
-                         style={{width: 'fit-content', gap: "0.3em", alignItems: "center", height: "inherit", flexWrap: "wrap", justifyContent: "center"}}>
+                         style={{
+                             width: 'fit-content',
+                             gap: "0.3em",
+                             alignItems: "center",
+                             height: "inherit",
+                             flexWrap: "wrap",
+                             justifyContent: "center"
+                         }}>
                         {compactUi && <DriverSelectorWidget compact={true}/>}
                         <ControlSourceWidget/>
                         <SampleSourceWidget/>

@@ -55,7 +55,7 @@ export function ProtocolSelectorWidget0() {
 
         if(prevProtocol !== protocol) {
             // protocol changed, stop executor if it's running
-            if(appContext.protocolExecutor.isInProgress()) {
+            if(appContext.protocolExecutor.protocolIsExecuting()) {
                 appContext.protocolExecutor.cancel();
             }
         }

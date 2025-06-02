@@ -92,7 +92,7 @@ export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({
         <>
             {qrcodeUrl &&
                 <div className={"full-screen-overlay"}>
-                    <div onClick={() => setQrcodeUrl("")} id="results-qrcode">
+                    <div onClick={() => setQrcodeUrl("")} className="qrcode-container">
                         <span style={{display: "block"}}>Fit test results {getFilterSummary()}</span>
                         <QRCodeSVG value={qrcodeUrl}
                                    size={512}

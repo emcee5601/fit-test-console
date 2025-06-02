@@ -18,7 +18,7 @@ import {BsArrowsFullscreen} from "react-icons/bs";
 import {useEffect, useState} from "react";
 import {MdCloseFullscreen} from "react-icons/md";
 
-function App() {
+function HomePanel() {
     const [showExternalControl] = useSetting<boolean>(AppSettings.SHOW_EXTERNAL_CONTROL);
     const [useCompactControls] = useSetting<boolean>(AppSettings.USE_COMPACT_UI);
     const [activity] = useSetting<Activity>(AppSettings.ACTIVITY)
@@ -53,7 +53,7 @@ function App() {
                 {!useCompactControls && <PortaCountLastLineWidget/>}
                 {!useCompactControls && showExternalControl && <PortaCountCommandWidget/>}
             </section>}
-            <CurrentParticipantPanel/>
+            {!zoomInstructions && <CurrentParticipantPanel/>}
             <div id={"testing--mode-container"}
                  className={`test-instructions-container ${zoomInstructions && "test-in-progress"}`}>
                 <div style={{
@@ -62,17 +62,18 @@ function App() {
                     right: 0,
                     backgroundColor: "inherit",
                     aspectRatio: 1,
+                    zIndex:10,
                 }}
                      onClick={() => handleZoomInstructions()}
                 >
                     {zoomInstructions ? <MdCloseFullscreen/> : <BsArrowsFullscreen/>}
                 </div>
+                {showExternalControl && <ProtocolExecutorPanel/>}
                 <TestInstructionsPanel/>
-                {showExternalControl && <ProtocolExecutorPanel style={{display: "block", width: "100%"}}/>}
             </div>
             {!zoomInstructions && <CurrentParticipantResults/>}
         </>
     )
 }
 
-export default App
+export default HomePanel

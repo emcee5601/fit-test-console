@@ -5,7 +5,7 @@ import {
     SampleSource,
     StageDefinition,
     StandardizedProtocolDefinitions,
-    standardizeProtocolDefinitions,
+    standardizeProtocolDefinitions, StandardProtocolDefinition,
     StandardStageDefinition
 } from "./simple-protocol.ts";
 import {ColumnFiltersState, SortingState} from "@tanstack/react-table";
@@ -297,8 +297,8 @@ export function isThisAnExerciseSegment(segment: ProtocolSegment) {
     return segment.source === SampleSource.MASK && segment.state === SegmentState.SAMPLE;
 }
 
-export function calculateNumberOfExercises(stages: StandardStageDefinition[]) {
-    return convertStagesToSegments(stages).reduce((numExercises: number, segment: ProtocolSegment) => numExercises + (isThisAnExerciseSegment(segment) ? 1 : 0), 0);
+export function calculateNumberOfExercises(protocol: StandardProtocolDefinition) {
+    return convertStagesToSegments(protocol).reduce((numExercises: number, segment: ProtocolSegment) => numExercises + (isThisAnExerciseSegment(segment) ? 1 : 0), 0);
 }
 
 // todo: rename this to phase? so we don't share the same first letter as Stage
@@ -501,74 +501,83 @@ class AppSettingsContext {
         const baseProtocols: StandardizedProtocolDefinitions = standardizeProtocolDefinitions(this.getSetting<JSONContent>(AppSettings.PROTOCOL_INSTRUCTION_SETS).json as ProtocolDefinitions);
 
         if (this.getSetting(AppSettings.AUTO_CREATE_FAST_PROTOCOLS)) {
-            // TODO: define "fast" and "compressed" as separate auto-created protocols?
-            //  "compressed" => remove ambient segments in the middle
-            //  "fast" => shortened sample duration
-            //  "fast-compressed" => both "fast" and "compressed"
-            const fastProtocols: StandardizedProtocolDefinitions = {};
-            const baseProtocolNamesLowerCase = Object.keys(baseProtocols).map((name: string) => name.toLowerCase());
-
-            Object.entries(baseProtocols).forEach(([baseProtocolName, baseStages]) => {
-                const fastProtocolName = `fast-${baseProtocolName} (*)`;
-                if (baseProtocolName.toLowerCase().startsWith("fast-")) {
-                    // skip
-                } else if (baseProtocolNamesLowerCase.includes(fastProtocolName.toLowerCase())) {
-                    // don't overwrite existing fast protocols
-                    // skip
-                } else {
-                    const fastStages: StandardStageDefinition[] = []
-                    // make sure the first stage has an ambient segment. if not, add a prep stage
-                    // make sure the first mask segment has a mask purge segment.
-                    // remove ambient segments and mask purge segments from all following stages
-                    // add a finalizing stage with ambient purge and sample with no mask segment
-                    const firstStage = baseStages[0]
-                    fastStages.push({
-                        // use settings from the first stage to build the first ambient segment. use defaults if the
-                        // duration is zero
-                        instructions: "Prep",
-                        ambient_purge: firstStage.ambient_purge || ProtocolDefaults.defaultAmbientPurgeDuration,
-                        ambient_sample: firstStage.ambient_sample || ProtocolDefaults.defaultAmbientSampleDuration,
-                        mask_purge: 0,
-                        mask_sample: 0,
-                    })
-
-                    baseStages.forEach((baseStage: StandardStageDefinition) => {
-                        // create a fast version of each stage that has the ambient segments removed
-                        // if the stage has no sample duration, skip it.
-                        if (baseStage.mask_sample > 0) {
-                            fastStages.push({
-                                instructions: baseStage.instructions,
-                                ambient_purge: 0,
-                                ambient_sample: 0,
-                                mask_purge: 4, // it takes about 4 seconds to clear the counting chamber. the tube
-                                               // takes about 0.1 sec to clear
-                                // todo: make min and reduction ratio configurable
-                                mask_sample: Math.min(baseStage.mask_sample, Math.max(20, baseStage.mask_sample * 0.75)),
-                            })
-                        }
-                    })
-
-                    // todo: don't add trailing ambient stage unless there is an ambient segment at the end already
-                    // add the final ambient segment back. If the last stage had it, use whatever its setting were.
-                    const lastStage = baseStages[baseStages.length - 1]
-                    fastStages.push({
-                        // use settings from the last stage to build the final ambient segment. use defaults if the
-                        // duration is zero
-                        instructions: "Finalize",
-                        ambient_purge: lastStage.ambient_purge === 0 ? 0 : ProtocolDefaults.defaultAmbientPurgeDuration,
-                        ambient_sample: lastStage.ambient_sample || ProtocolDefaults.defaultAmbientSampleDuration,
-                        mask_purge: 0,
-                        mask_sample: 0,
-                    })
-
-                    fastProtocols[fastProtocolName] = fastStages
-                }
-            })
-
+            const fastProtocols = this.createFastProtocols(baseProtocols);
             // copy fast protocols to base protocols. todo: use a separate 3rd object instead.
             Object.assign(baseProtocols, fastProtocols)
         }
         return baseProtocols;
+    }
+
+    /**
+     * make "fast" versions of existing protocols by removing ambient samples between exercises and reducing sampling times.
+     * @param baseProtocols
+     * @private
+     */
+    private createFastProtocols(baseProtocols: StandardizedProtocolDefinitions) {
+        // TODO: define "fast" and "compressed" as separate auto-created protocols?
+        //  "compressed" => remove ambient segments in the middle
+        //  "fast" => shortened sample duration
+        //  "fast-compressed" => both "fast" and "compressed"
+        const fastProtocols: StandardizedProtocolDefinitions = {};
+        const baseProtocolNamesLowerCase = Object.keys(baseProtocols).map((name: string) => name.toLowerCase());
+
+        Object.entries(baseProtocols).forEach(([baseProtocolName, baseStages]) => {
+            const fastProtocolName = `fast-${baseProtocolName} (*)`;
+            if (baseProtocolName.toLowerCase().startsWith("fast-")) {
+                // skip
+            } else if (baseProtocolNamesLowerCase.includes(fastProtocolName.toLowerCase())) {
+                // don't overwrite existing fast protocols
+                // skip
+            } else {
+                const fastStages: StandardStageDefinition[] = []
+                // make sure the first stage has an ambient segment. if not, add a prep stage
+                // make sure the first mask segment has a mask purge segment.
+                // remove ambient segments and mask purge segments from all following stages
+                // add a finalizing stage with ambient purge and sample with no mask segment
+                const firstStage = baseStages[0]
+                fastStages.push({
+                    // use settings from the first stage to build the first ambient segment. use defaults if the
+                    // duration is zero
+                    instructions: "Prep",
+                    ambient_purge: firstStage.ambient_purge || ProtocolDefaults.defaultAmbientPurgeDuration,
+                    ambient_sample: firstStage.ambient_sample || ProtocolDefaults.defaultAmbientSampleDuration,
+                    mask_purge: 0,
+                    mask_sample: 0,
+                })
+
+                baseStages.forEach((baseStage: StandardStageDefinition) => {
+                    // create a fast version of each stage that has the ambient segments removed
+                    // if the stage has no sample duration, skip it.
+                    if (baseStage.mask_sample > 0) {
+                        fastStages.push({
+                            instructions: baseStage.instructions,
+                            ambient_purge: 0,
+                            ambient_sample: 0,
+                            mask_purge: 4, // it takes about 4 seconds to clear the counting chamber. the tube
+                                           // takes about 0.1 sec to clear
+                            // todo: make min and reduction ratio configurable
+                            mask_sample: Math.min(baseStage.mask_sample, Math.max(20, baseStage.mask_sample * 0.75)),
+                        })
+                    }
+                })
+
+                // todo: don't add trailing ambient stage unless there is an ambient segment at the end already
+                // add the final ambient segment back. If the last stage had it, use whatever its setting were.
+                const lastStage = baseStages[baseStages.length - 1]
+                fastStages.push({
+                    // use settings from the last stage to build the final ambient segment. use defaults if the
+                    // duration is zero
+                    instructions: "Finalize",
+                    ambient_purge: lastStage.ambient_purge === 0 ? 0 : ProtocolDefaults.defaultAmbientPurgeDuration,
+                    ambient_sample: lastStage.ambient_sample || ProtocolDefaults.defaultAmbientSampleDuration,
+                    mask_purge: 0,
+                    mask_sample: 0,
+                })
+
+                fastProtocols[fastProtocolName] = fastStages
+            }
+        })
+        return fastProtocols
     }
 
     // this isn't used anywhere yet
