@@ -5,10 +5,10 @@ import {
     SampleSource,
     StageDefinition,
     StandardizedProtocolDefinitions,
-    standardizeProtocolDefinitions, StandardProtocolDefinition,
+    standardizeProtocolDefinitions,
+    StandardProtocolDefinition,
     StandardStageDefinition
 } from "./simple-protocol.ts";
-import {ColumnFiltersState, SortingState} from "@tanstack/react-table";
 import AbstractDB from "./abstract-db.ts";
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 import stringifyDeterministically from "json-stringify-deterministic";
@@ -54,6 +54,8 @@ export enum AppSettings {
     ENABLE_PROTOCOL_EDITOR = "enable-protocol-editor",
     ENABLE_QR_CODE_SCANNER = "enable-qr-code-scanner",
     ENABLE_STATS = "enable-stats",
+    ENABLE_TEST_INSTRUCTIONS_ZOOM = "enable-test-instructions-zoom",
+    BOOKMARKS = "bookmarks",
 
     // session only settings (these start with "so-". todo: can we merge these from another enum into this?
     STATS_FIRST_DATE = "so-stats-first-date",
@@ -65,7 +67,6 @@ export enum AppSettings {
     SAMPLE_SOURCE_IN_VIEW = "so-sample-source-in-view",
     CONNECTION_STATUS_IN_VIEW = "so-connection-status-in-view",
     ACTIVITY = "so-activity",
-    ENABLE_TEST_INSTRUCTIONS_ZOOM = "enable-test-instructions-zoom",
 
     // these are deprecated:
     DEFAULT_TO_PREVIOUS_PARTICIPANT = "default-to-previous-participant",
@@ -81,16 +82,16 @@ export enum AppSettings {
 /**
  * Settings can be of these types.
  */
-export type AppSettingType =
-    boolean
-    | string
-    | string[]
-    | number
-    | JSONContent
-    | SortingState
-    | ColumnFiltersState
-    | Partial<SimpleResultsDBRecord>
-    | Date;
+export type AppSettingType = unknown
+    // boolean
+    // | string
+    // | string[]
+    // | number
+    // | JSONContent
+    // | SortingState
+    // | ColumnFiltersState
+    // | Partial<SimpleResultsDBRecord>
+    // | Date;
 
 /**
  * Settings names and default values.
@@ -223,6 +224,7 @@ const AppSettingsDefaults = {
     "enable-qr-code-scanner": false,
     "enable-stats": false,
     "enable-test-instructions-zoom": false,
+    "bookmarks": {},
 
     "so-stats-first-date": new Date(0), // epoch, sentinel value
     "so-stats-last-date": new Date(), // today
@@ -509,7 +511,8 @@ class AppSettingsContext {
     }
 
     /**
-     * make "fast" versions of existing protocols by removing ambient samples between exercises and reducing sampling times.
+     * make "fast" versions of existing protocols by removing ambient samples between exercises and reducing sampling
+     * times.
      * @param baseProtocols
      * @private
      */

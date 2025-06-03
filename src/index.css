@@ -373,7 +373,11 @@ td.results {
     background-color: #d9eeff;
 }
 .nav-link-active {
-    background-color: #d9eeff;
+    color: white;
+    background-color: blue;
+    font-weight: bold;
+    font-style: italic;
+    padding-inline: 0.2em;
 }
 .nav-link-pending {
     background-color: lightblue;
