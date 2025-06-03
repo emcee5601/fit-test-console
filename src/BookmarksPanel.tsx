@@ -30,8 +30,12 @@ export function BookmarksPanel() {
         setLabel(label)
     }
 
+    function safeToSaveBookmark() {
+        return newBookmarkUrl && !Object.values(bookmarks).includes(newBookmarkUrl)
+    }
+
     function saveBookmark() {
-        if(!newBookmarkUrl) {
+        if(!safeToSaveBookmark()) {
             return
         }
         const updatedBookmarks: Bookmarks = {}
@@ -82,7 +86,7 @@ export function BookmarksPanel() {
                             />
                         </div>
 
-                        <button onClick={() => saveBookmark()} disabled={!newBookmarkUrl}>Save bookmark</button>
+                        <button onClick={() => saveBookmark()} disabled={!safeToSaveBookmark()}>Save bookmark</button>
                     </div>
                 </fieldset>
                 {urls.map(([label, url]) => {
