@@ -9,7 +9,9 @@ import {HTMLAttributes, useState} from "react";
 import {useTimingSignal} from "src/timing-signal.ts";
 import {IoPersonSharp} from "react-icons/io5";
 
-export function CurrentParticipantTimeWidget({...props}: HTMLAttributes<HTMLDivElement>) {
+export function CurrentParticipantTimeWidget({useIcons = false, ...props}: {
+    useIcons?: boolean
+} & HTMLAttributes<HTMLDivElement>) {
     const [testTemplate] = useSetting<Partial<SimpleResultsDBRecord>>(AppSettings.TEST_TEMPLATE)
     const [minutesPerParticipant] = useSetting<number>(AppSettings.MINUTES_ALLOTTED_PER_PARTICIPANT)
     const [elapsedTimeString, setElapsedTimeString] = useState<string>("")
@@ -46,12 +48,15 @@ export function CurrentParticipantTimeWidget({...props}: HTMLAttributes<HTMLDivE
 
     useTimingSignal(updateUi)
 
-    props.style = {...props.style, ...{display:"flex", height:"inherit", gap:"0.3em"}}
+    props.style = {...props.style, ...{display: "flex", gap: "0.3em"}}
     return (
         <div {...props}
-              className={`thin-border number-field smooth-background-change ${getParticipantElapsedTimeClass()}`}>
-            <span className={"wide-time-trackers"}>Participant Time:</span>
-            <span className={"narrow-time-trackers svg-container"}><IoPersonSharp /></span>{elapsedTimeString}
+             className={`thin-border number-field smooth-background-change svg-container no-wrap ${getParticipantElapsedTimeClass()}`}>
+            {useIcons
+                ? <IoPersonSharp/>
+                : <span>Participant Time:</span>
+            }
+            <span>{elapsedTimeString}</span>
         </div>
     )
 }

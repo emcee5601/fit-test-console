@@ -386,51 +386,6 @@ td.results {
     container-type: inline-size;
     container-name: nav-bar-container;
 }
-/*narrow screen*/
-@container nav-bar-container (width < 41em) {
-    .wide-nav-links {
-        display: none;
-    }
-    .wide-time-trackers {
-        display: none;
-    }
-    .narrow-nav-links {
-        display: block;
-    }
-    .narrow-time-trackers {
-        display: block;
-    }
-}
-/*medium screen*/
-@container nav-bar-container (41em <= width < 48em) {
-    .wide-nav-links {
-        display: flex;
-    }
-    .wide-time-trackers {
-        display: none;
-    }
-    .narrow-nav-links {
-        display: none;
-    }
-    .narrow-time-trackers {
-        display: block;
-    }
-}
-/*wide screen*/
-@container nav-bar-container (width >= 48em) {
-    .wide-nav-links {
-        display: flex;
-    }
-    .wide-time-trackers {
-        display: block;
-    }
-    .narrow-nav-links {
-        display: none;
-    }
-    .narrow-time-trackers {
-        display: none;
-    }
-}
 
 @container root-container (width <= 55em) {
     .icon-text .wide-display {

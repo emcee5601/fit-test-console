@@ -145,6 +145,12 @@ class TestTerminatedEvent extends PortaCountEvent {
     }
 }
 
+class TestCompletedEvent extends PortaCountEvent {
+    constructor() {
+        super();
+    }
+}
+
 class ConnectionStatusChangedEvent extends PortaCountEvent {
     public readonly connectionStatus: ConnectionStatus;
 
@@ -304,7 +310,8 @@ export interface PortaCountListener {
     controlSourceChanged?(source: ControlSource): void;
     testStarted?(timestamp: number): void;
     fitFactorResultsReceived?(results: FitFactorResultsEvent): void;
-    testTerminated?(): void;
+    testTerminated?(): void; // aborted
+    testCompleted?(): void; // completed normally
     particleConcentrationReceived?(concentrationEvent: ParticleConcentrationEvent): void;
     connectionStatusChanged?(connectionStatus: ConnectionStatus): void;
     activityChanged?(activity: Activity): void;
@@ -435,6 +442,13 @@ export class PortaCountClient8020 {
                     }
                     break;
                 }
+                case TestCompletedEvent.name: {
+                    this.setActivity(Activity.Idle)
+                    if (listener.testCompleted) {
+                        listener.testCompleted();
+                    }
+                    break;
+                }
                 case FitFactorResultsEvent.name: {
                     if (listener.fitFactorResultsReceived) {
                         listener.fitFactorResultsReceived(event as FitFactorResultsEvent);
@@ -562,6 +576,7 @@ export class PortaCountClient8020 {
             this.dispatch(new TestStartedEvent())
         }],
         [Patterns.TEST_TERMINATED, () => {
+            // aborted
             this.setActivity(Activity.Idle)
             this.dispatch(new TestTerminatedEvent())
         }],
@@ -570,6 +585,7 @@ export class PortaCountClient8020 {
             const ff = Number(matchGroups.fitFactor);
             const result: string = matchGroups.result;
             this.dispatch(new FitFactorResultsEvent(ff, "Final", result))
+            this.dispatch(new TestCompletedEvent())
         }],
 
         // switching sample source should be about the same. ranking with above depends on protocol and external use
@@ -793,6 +809,11 @@ export class PortaCountClient8020 {
         this.externalController.requestRuntimeStatus()
         this.externalController.requestSettings()
         this.externalController.sendCommand(ExternalController.REQUEST_VOLTAGE_INFO)
+        // try to detect when we're done with sync
+        // todo: add listener for the beeps
+        this.externalController.beep(1)
+        this.externalController.beep(1)
+        this.externalController.beep(1)
         // todo: use settings to determine: if we start in external or internal control
         // mode todo: synchronize state to portacount state by interrogation todo:
         // synchronize status to portacount (create a status widget)

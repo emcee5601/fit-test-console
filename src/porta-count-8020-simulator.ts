@@ -69,7 +69,6 @@ export class PortaCount8020Simulator {
          * - count values should be dependent on sample source
          * - responses to commands should be enqueued on demand
          */
-        const simulator = this as PortaCount8020Simulator;
         // todo: have a way to stop and start the concentration generation. when a different source is connected,
         // disconnect from this one. when there are no readers, or readers are not reading, stop generating
         // concentrations
@@ -88,16 +87,16 @@ export class PortaCount8020Simulator {
             start: (controller: ReadableStreamDefaultController<Uint8Array>) => {
                 // this is an initializer
                 console.debug("PortaCountSimulator started")
-                simulator._readerController = controller;
+                this._readerController = controller;
 
-                function loop() {
+                const loop = () =>  {
                     // todo: start and stop the interval instead
-                    if (simulator._started) {
-                        const concentration = simulator.generateConcentration();
+                    if (this._started) {
+                        const concentration = this.generateConcentration();
                         console.debug(`simulator loop: ${concentration}, isPulling? ${isPulling}`)
                         if (isPulling) {
                             isPulling = false; // only enqueue if something wanted enqueuing
-                            controller.enqueue(simulator.encoder.encode(`${concentration}\n`))
+                            controller.enqueue(this.encoder.encode(`${concentration}\n`))
                         }
                     }
                 }

@@ -53,19 +53,22 @@ export function TestInstructionsPanel() {
     return (
         <fieldset style={{display: "inline-block", flexGrow: 1, height: "inherit"}} className={"info-box-compact"}>
             <legend>Test Instructions</legend>
-            <textarea id="instructions"
+            <textarea id="test-instructions"
                       ref={ref}
                       style={{
                           width: "100%",
                           // height must not be relative to font size or updating fot size via ResizeObserver will infinite loop
                           minHeight: "16px",
-                          height: "100%",
+                          height: "inherit",
                           fontSize: "2.3em",
                           overflow: "auto",
                           resize: "none",
                           border: "none",
                           alignContent: "center",
                           textAlign: "center",
+                          // wordWrap: "normal", // this causes some infinite resizing loop when test is stopped in zoomed view
+                          textWrap: "wrap",
+                          whiteSpaceCollapse: "collapse",
                       }}
                       readOnly={true}
                       value={instructions}

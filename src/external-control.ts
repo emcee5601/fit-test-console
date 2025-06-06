@@ -216,8 +216,10 @@ export class ExternalController {
         SPEECH.sayItLater("Power off");
     }
 
-    beep() {
-        const tenthsOfSeconds = 2
+    /**
+     *
+     */
+    beep(tenthsOfSeconds:number = 2) {
         this.sendCommand(`B${String(tenthsOfSeconds).padStart(2, "0")}`);
     }
 

@@ -140,7 +140,7 @@ export class DataCollector {
             return;
         }
         const selectedProtocol = this.settings.selectedProtocol;
-        const protocolInstructionSet: InstructionOrStage[] = this.settings.protocolDefinitions[selectedProtocol]
+        const protocolInstructionSet: InstructionOrStage[] = this.settings.getProtocolDefinition(selectedProtocol)
         const instructionsOrStageInfo = protocolInstructionSet[exerciseNum - 1];
         const instructions = typeof instructionsOrStageInfo === "object"
             ? ("instructions" in instructionsOrStageInfo

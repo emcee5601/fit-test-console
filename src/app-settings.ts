@@ -34,8 +34,6 @@ export enum AppSettings {
     BAUD_RATE = "baud-rate",
     PROTOCOL_INSTRUCTION_SETS = "protocol-instruction-sets",
     SELECTED_PROTOCOL = "selected-protocol",
-    SELECTED_INTERNAL_PROTOCOL = "selected-internal-protocol",
-    SELECTED_EXTERNAL_PROTOCOL = "selected-external-protocol",
     KEEP_SCREEN_AWAKE = "keep-screen-awake",
     TEST_TEMPLATE = "test-template",
     ENABLE_SIMULATOR = "enable-simulator",
@@ -83,15 +81,15 @@ export enum AppSettings {
  * Settings can be of these types.
  */
 export type AppSettingType = unknown
-    // boolean
-    // | string
-    // | string[]
-    // | number
-    // | JSONContent
-    // | SortingState
-    // | ColumnFiltersState
-    // | Partial<SimpleResultsDBRecord>
-    // | Date;
+// boolean
+// | string
+// | string[]
+// | number
+// | JSONContent
+// | SortingState
+// | ColumnFiltersState
+// | Partial<SimpleResultsDBRecord>
+// | Date;
 
 /**
  * Settings names and default values.
@@ -203,8 +201,6 @@ const AppSettingsDefaults = {
         }
     },
     "selected-protocol": "w1",
-    "selected-internal-protocol": "w1",
-    "selected-external-protocol": "w1",
     "keep-screen-awake": true,
     "test-template": {} as Partial<SimpleResultsDBRecord>,
     "enable-simulator": false,
@@ -498,7 +494,14 @@ class AppSettingsContext {
         this.saveSetting(AppSettings.SPEECH_ENABLED, value);
     }
 
-    get protocolDefinitions(): StandardizedProtocolDefinitions {
+    getProtocolDefinition(protocolName: string): StandardProtocolDefinition {
+        return this.protocolDefinitions[protocolName] || [];
+    }
+    getProtocolNames(): string[] {
+        return Object.keys(this.protocolDefinitions)
+    }
+
+    private get protocolDefinitions(): StandardizedProtocolDefinitions {
         // todo: cache these. for now, fetch them every time
         const baseProtocols: StandardizedProtocolDefinitions = standardizeProtocolDefinitions(this.getSetting<JSONContent>(AppSettings.PROTOCOL_INSTRUCTION_SETS).json as ProtocolDefinitions);
 

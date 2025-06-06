@@ -211,6 +211,7 @@ export class ProtocolExecutor {
             console.log("protocol execution in progress (can't start another protocol)");
             return;
         }
+        this.controller.assumeManualControl() // make sure we're in control
         this.lastAmbientSegment = undefined // reset
         this.segments = segments;
         const startTime = new Date();

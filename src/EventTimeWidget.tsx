@@ -9,7 +9,7 @@ import {AppSettings} from "src/app-settings.ts";
 import {useTimingSignal} from "src/timing-signal.ts";
 import {IoToday} from "react-icons/io5";
 
-export function EventTimeWidget({...props}:HTMLAttributes<HTMLDivElement>) {
+export function EventTimeWidget({useIcons = false, ...props}: { useIcons?: boolean } & HTMLAttributes<HTMLDivElement>) {
     const appContext = useContext(AppContext)
     const [minutesPerParticipant] = useSetting<number>(AppSettings.MINUTES_ALLOTTED_PER_PARTICIPANT)
     const [eventTimeStr, setEventTimeStr] = useState<string>("")
@@ -34,12 +34,15 @@ export function EventTimeWidget({...props}:HTMLAttributes<HTMLDivElement>) {
 
     useTimingSignal(updateUi)
 
-    props.style = {...props.style, ...{display:"flex", height:"inherit", gap:"0.3em"}}
+    props.style = {...props.style, ...{display: "flex", gap: "0.3em"}}
     return (
-    <div {...props}
-         className={`number-field thin-border smooth-background-change ${getEventElapsedTimeClass()}`} >
-        <span className={"wide-time-trackers"}>Event Time:</span>
-        <span className={"narrow-time-trackers svg-container"}><IoToday /></span>{eventTimeStr}
-    </div>
+        <div {...props}
+             className={`number-field thin-border smooth-background-change svg-container no-wrap ${getEventElapsedTimeClass()}`}>
+            {useIcons
+                ? <IoToday/>
+                : <span>Event Time:</span>
+            }
+            <span>{eventTimeStr}</span>
+        </div>
     )
 }

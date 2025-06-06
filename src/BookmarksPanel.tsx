@@ -46,7 +46,7 @@ export function BookmarksPanel() {
 
     function deleteBookmark(title:string) {
         const updatedBookmarks: Bookmarks = {}
-        Object.entries(bookmarks).filter(([entryTitle, _]) => entryTitle !== title).forEach(([title, url]) => updatedBookmarks[title] = url)
+        Object.entries(bookmarks).filter(([entryTitle]) => entryTitle !== title).forEach(([title, url]) => updatedBookmarks[title] = url)
         setBookmarks(updatedBookmarks)
     }
 

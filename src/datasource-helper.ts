@@ -121,7 +121,6 @@ export class DataFilePushSource extends PushSource {
     rateBytesPerSecond: number;
     lastRequestTime: number = 0;
 
-    // todo: support realtime speed by looking at timestamp in simulation file
     constructor(fileOrUrl: string | File, bytesPerSecond = DataFilePushSource.DEFAULT_BYTES_PER_SECOND) {
         super();
         this.fileOrUrl = fileOrUrl;
@@ -146,6 +145,7 @@ export class DataFilePushSource extends PushSource {
             if (!this.reader) {
                 return DataFilePushSource.NO_MORE_DATA;
             }
+            console.debug("simulator(file) started")
         }
 
         if(!this.linesSource) {

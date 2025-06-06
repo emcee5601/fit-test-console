@@ -71,12 +71,6 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
     const [stages, setStages] = useState<StandardProtocolDefinition>([])
     const [deviceTestInProgress, setDeviceTestInProgress] = useState<boolean>(false)
 
-    function shouldEnableStartButton(controlSource: ControlSource): boolean {
-        // todo: protocol executor should emit events for "isInProgress" state changed
-        return controlSource === ControlSource.External && !isProtocolRunning
-    }
-
-    const [enableStartButton, setEnableStartButton] = useState(shouldEnableStartButton(portaCountClient.state.controlSource))
     const [protocolDuration, setProtocolDuration] = useState<number>(0)
     const [segmentElements, setSegmentElements] = useState<ReactElement[]>([])
     const [stageElements, setStageElements] = useState<ReactElement[]>([])
@@ -193,6 +187,12 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
                 setDeviceTestInProgress(true)
                 setCurrentSegment(segments[0])
                 setSegmentStartTimeMs(timestamp)
+                updateProtocol({source: ControlSource.Internal})
+            },
+            testTerminated() {
+                // test aborted
+                setDeviceTestInProgress(false)
+                setCurrentSegment(undefined)
             },
             fitFactorResultsReceived(results: FitFactorResultsEvent) {
                 if (results.exerciseNum === "Final") {
@@ -221,17 +221,6 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
     }, [segments]);
 
     useEffect(() => {
-        const portaCountListener: PortaCountListener = {
-            controlSourceChanged(source: ControlSource) {
-                setEnableStartButton(shouldEnableStartButton(source))
-                updateProtocol({source: source})
-            },
-            testTerminated() {
-                // test aborted
-                setDeviceTestInProgress(false)
-                setCurrentSegment(undefined)
-            },
-        }
         const protocolExecutorListener: ProtocolExecutorListener = {
             started() {
                 setIsProtocolRunning(true)
@@ -266,21 +255,21 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
         };
 
         protocolExecutor.addListener(protocolExecutorListener)
-        portaCountClient.addListener(portaCountListener)
         dataCollector.addListener(dataCollectorListener)
         // appContext.timingSignal.addListener(timingSignalListener)
+
+        updateProtocol({})
 
         maybeContinueProtocolExecution();
         return () => {
             protocolExecutor.removeListener(protocolExecutorListener);
-            portaCountClient.removeListener(portaCountListener)
             dataCollector.removeListener(dataCollectorListener)
         }
     }, []);
 
     useEffect(() => {
         setCurrentTestData({} as SimpleResultsDBRecord)
-        updateProtocol({protocolName: selectedProtocolName})
+        updateProtocol({})
         setUiUpdateNeeded(true)
     }, [selectedProtocolName]);
 
@@ -294,13 +283,14 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
 
     useTimingSignal(updateUi)
 
-    function updateProtocol({protocolName = selectedProtocolName, source}: {
+    function updateProtocol({protocolName = selectedProtocolName, source = ControlSource.External}: {
         protocolName?: string,
         source?: ControlSource
     }) {
-        // todo: look at control source
+        // todo: note when timings are altered because we're syncing to internal timings
+        // todo: add executor switch so both timings can be shown?
         const protocol = source === ControlSource.External
-            ? appContext.settings.protocolDefinitions[protocolName] // external control
+            ? appContext.settings.getProtocolDefinition(protocolName) // external control
             : createDeviceSynchronizedProtocol(protocolName) // internal control
         setStages(protocol);
         setSegments(convertStagesToSegments(protocol))
@@ -383,7 +373,7 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
                     flexWrap: "wrap",
                     paddingInline: "0.5rem",
                 }}>Protocol <ProtocolSelectorWidget0/>
-                    <button disabled={!enableStartButton || isProtocolRunning} className={"start"}
+                    <button disabled={isProtocolRunning} className={"start"}
                             onClick={() => protocolExecutor.executeProtocol(segments)}>Start <ImPlay2/>
                     </button>
                     <button disabled={!isProtocolRunning} onClick={() => handleStopButtonClick()}

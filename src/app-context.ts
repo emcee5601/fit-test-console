@@ -12,7 +12,6 @@ import {RESULTS_DB} from "./SimpleResultsDB.ts";
 import {RAW_DB} from "./database.ts";
 import {ProtocolExecutor, ProtocolExecutorListener} from "./protocol-executor.ts";
 import {PortaCount8020Simulator} from "./porta-count-8020-simulator.ts";
-import {ControlSource} from "./control-source.ts";
 import {UsbSerialDrivers} from "./web-usb-serial-drivers.ts";
 import {DataSource} from "./data-source.ts";
 import {timingSignal} from "src/timing-signal.ts";
@@ -73,21 +72,6 @@ function initSpeech() {
     dataCollector.addListener(dataCollectorListener)
 }
 
-/**
- * switch selected protocol to match control source. in internal control mode, we don't allow custom protocols.
- * @param source
- */
-function adjustSelectedProtocol(source: ControlSource) {
-    if (source === ControlSource.Internal) {
-        const internalProtocol = settings.getSetting(AppSettings.SELECTED_INTERNAL_PROTOCOL)
-        settings.saveSetting(AppSettings.SELECTED_PROTOCOL, internalProtocol);
-    } else {
-        // external
-        const externalProtocol = settings.getSetting(AppSettings.SELECTED_EXTERNAL_PROTOCOL)
-        settings.saveSetting(AppSettings.SELECTED_PROTOCOL, externalProtocol);
-    }
-}
-
 
 /**
  * Create a protocol using the device's internal settings for timings with the selected protocol's instructions.
@@ -95,7 +79,7 @@ function adjustSelectedProtocol(source: ControlSource) {
  * todo: handle the case where we're not connected and have no device timings
  */
 export function createDeviceSynchronizedProtocol(protocolName:string): StandardProtocolDefinition {
-    const protocolDefinition = settings.protocolDefinitions[protocolName];
+    const protocolDefinition = settings.getProtocolDefinition(protocolName);
     // we really want numExercises, but that's only available on device start. We infer it as we run tests. For now
     // if we don't have it, assume it's the same as the selected protocol
     const numProtocolExercises = calculateNumberOfExercises(protocolDefinition);
@@ -117,7 +101,11 @@ export function createDeviceSynchronizedProtocol(protocolName:string): StandardP
                 mask_purge: portaCountSettings.maskPurge || ProtocolDefaults.defaultMaskPurgeDuration,
                 mask_sample: portaCountSettings.maskSample.get(exerciseNum) || ProtocolDefaults.defaultMaskSampleDuration
             }
-            dsProtocol.push(stage)
+            if( exerciseNum > numExercises) {
+                console.log(`Ignoring extra exercises. Device is configured for ${numExercises}. Ignoring exercise ${exerciseNum}`)
+            } else {
+                dsProtocol.push(stage)
+            }
         }
     })
     dsProtocol.push({
@@ -130,20 +118,9 @@ export function createDeviceSynchronizedProtocol(protocolName:string): StandardP
     return dsProtocol
 }
 
-
-function initPortaCountListener() {
-    portaCountClient.addListener({
-        controlSourceChanged(source: ControlSource) {
-            // link external/internal control to the appropriate protocol
-            adjustSelectedProtocol(source);
-        }
-    })
-}
-
-function initSelectedProtocol() {
-    adjustSelectedProtocol(portaCountClient.state.controlSource) // on startup this should always be internal
-}
-
+/**
+ * Doesn't seem to work consistently on android.
+ */
 async function autoConnect() {
     // todo: prioritize the selected data source
     // todo: optionally support auto-connecting to simulator
@@ -249,8 +226,6 @@ async function init() {
     initSpeech();
     initDataCollector()
     await initMaskList();
-    initPortaCountListener();
-    initSelectedProtocol();
     initCurrentActivityListener();
     timingSignal.start();
 

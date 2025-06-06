@@ -21,13 +21,13 @@ export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({
     columnFilters: ColumnFiltersState
 } & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'>) {
     const [qrcodeUrl, setQrcodeUrl] = useState<string>("")
-    const appBasePath = `${import.meta.env.BASE_URL}`
     const origin = location.origin
+
     // const origin = "https://emcee5601.github.io"
     // sometimes location has a trailing '/', remove it so we don't get a '//'. This behavior is different between
     // local and prod for some reason
     // use useHref here so it can insert the # needed by HashRouter. HashRouter and BrowserRouter are not drop-in replacements for each other, so maybe the hash can be hardcoded.
-    const baseLocation = origin + appBasePath.replace(/\/$/, '') + useHref("/view-results");
+    const baseLocation = origin + location.pathname + useHref("/view-results");
 
     useEffect(() => {
         if (qrcodeUrl) {
@@ -94,6 +94,7 @@ export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({
                 <div className={"full-screen-overlay"}>
                     <div onClick={() => setQrcodeUrl("")} className="qrcode-container">
                         <span style={{display: "block"}}>Fit test results {getFilterSummary()}</span>
+                        <span style={{display: "block"}}>{baseLocation}</span>
                         <QRCodeSVG value={qrcodeUrl}
                                    size={512}
                                    marginSize={4}
