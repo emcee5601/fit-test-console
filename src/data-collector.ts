@@ -189,7 +189,6 @@ export class DataCollector {
         }
     }
 
-    // todo:
     async recordTestStart(controlSource: ControlSource, timestamp = new Date().toLocaleString()) {
         if (!this.resultsDatabase) {
             console.log("database not ready");
@@ -203,7 +202,7 @@ export class DataCollector {
         const newTestData = await this.resultsDatabase.createNewTest(timestamp, this.settings.selectedProtocol, controlSource, this.dataSource);
         this.currentTestData = newTestData;
 
-        const testTemplate = this.settings.testTemplate
+        const testTemplate = this.settings.getTestTemplate()
         for (const key in testTemplate) {
             if (key in newTestData) {
                 // don't copy fields that were assigned
@@ -284,12 +283,6 @@ export class DataCollector {
         }
         this.resultsDatabase.updateTest(this.currentTestData);
         this.dispatch(new CurrentTestUpdatedEvent(this.currentTestData))
-    }
-
-
-    setProtocol(protocol: string) {
-        console.log(`setProtocol ${protocol}`)
-        this.settings.selectedProtocol = protocol;
     }
 
     public addListener(listener: DataCollectorListener): void {

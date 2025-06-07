@@ -1,4 +1,4 @@
-import {useContext, useEffect, useState} from "react";
+import {useCallback, useContext, useEffect, useState} from "react";
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 import {DebouncedTextArea} from "./DebouncedTextArea.tsx";
 import {AppSettings} from "./app-settings.ts";
@@ -12,7 +12,15 @@ import {ControlSource} from "src/control-source.ts";
 export function CurrentParticipantPanel() {
     const appContext = useContext(AppContext);
     const [testTemplate, setTestTemplate] = useSetting<Partial<SimpleResultsDBRecord>>(AppSettings.TEST_TEMPLATE)
-    const [currentParticipant, setCurrentParticipant] = useState<string>(testTemplate.Participant ?? "")
+    const [, helpUpdateState] = useState({})
+    const updateState = useCallback(() => {
+        helpUpdateState({})
+    }, []);
+
+    useEffect(() => {
+        // update our ui state when the template updates
+        updateState()
+    }, [testTemplate]);
 
     function updateCurrentParticipant(value: string) {
         value = value.trim() // strip extraneous spaces
@@ -52,15 +60,10 @@ export function CurrentParticipantPanel() {
     }
 
     function updateTestTemplate() {
+        // propagate changes to settings
         console.debug(`updateTestTemplate -> ${JSON.stringify(testTemplate)}`);
         setTestTemplate(deepCopy(testTemplate)) // copy to force React to see the update
     }
-
-    useEffect(() => {
-        console.debug(`testTemplate updated (via useEffect): ${JSON.stringify(testTemplate)}`)
-        setCurrentParticipant(testTemplate.Participant ?? "")
-    }, [testTemplate]);
-
 
     function manualEntry() {
         appContext.dataCollector.recordTestStart(ControlSource.Manual)
@@ -83,7 +86,7 @@ export function CurrentParticipantPanel() {
                                                    onClick={nextParticipant}/>
                         </legend>
                         <DebouncedTextArea className="table-cell-input" placeholder={"Click to add Participant"}
-                                           value={currentParticipant}
+                                           value={testTemplate.Participant || ""}
                                            onChange={(value) => updateCurrentParticipant(value)}
                         />
                     </fieldset>

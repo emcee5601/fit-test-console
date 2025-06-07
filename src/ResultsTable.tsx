@@ -219,7 +219,6 @@ export default function ResultsTable({
                     return `${record.ProtocolName} - ${record.TestController}`
                 },
                 header: 'Protocol',
-                size: 115,
             },
         ],
         [numExerciseColumns, selectedRows]
@@ -344,6 +343,7 @@ export default function ResultsTable({
         const listener: DataCollectorListener = {
             currentTestUpdated(updatedRecord: SimpleResultsDBRecord) {
                 // happens when new test is started too
+                // console.debug("currentTestUpdated:", updatedRecord)
                 setTableData((prev) => {
                     // upsert the updated record. force a copy so tanstack table sees the update
                     return ([...prev.filter((record) => record.ID !== updatedRecord.ID), updatedRecord])

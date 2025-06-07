@@ -24,6 +24,7 @@ import {BsWind} from "react-icons/bs";
 import {PiFaceMask, PiWatch} from "react-icons/pi";
 import {IoGlassesOutline} from "react-icons/io5";
 import {IconType} from "react-icons";
+import {ConnectionStatus} from "src/connection-status.ts";
 
 /**
  * Helper type. Maps from stage indexes or segment indexes to durations
@@ -210,7 +211,7 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
                         }
                         return null;
                     }, null)
-                    console.debug(`next segment is`, nextSegment, "segments:", segments)
+                    // console.debug(`next segment is`, nextSegment, "segments:", segments)
                     setCurrentSegment(nextSegment|| undefined)
                     setSegmentStartTimeMs(results.timestamp)
                 }
@@ -373,7 +374,7 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
                     flexWrap: "wrap",
                     paddingInline: "0.5rem",
                 }}>Protocol <ProtocolSelectorWidget0/>
-                    <button disabled={isProtocolRunning} className={"start"}
+                    <button disabled={isProtocolRunning || portaCountClient.state.connectionStatus !== ConnectionStatus.RECEIVING} className={"start"}
                             onClick={() => protocolExecutor.executeProtocol(segments)}>Start <ImPlay2/>
                     </button>
                     <button disabled={!isProtocolRunning} onClick={() => handleStopButtonClick()}

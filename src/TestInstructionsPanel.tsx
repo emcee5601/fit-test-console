@@ -7,7 +7,7 @@ export function TestInstructionsPanel() {
     const [dataCollector] = useState(appContext.dataCollector)
     const [instructions, setInstructions] = useState<string>("")
     const ref = useRef<HTMLTextAreaElement>(null)
-    const [dimensions, setDimensions] = useState([0,0])
+    const [dimensions, setDimensions] = useState([0, 0])
 
     /**
      * adjust font size so instructions fill the space available
@@ -15,13 +15,49 @@ export function TestInstructionsPanel() {
      */
     function updateFontSize(instructions: string) {
         if (ref.current) {
-            const area = ref.current.clientHeight * ref.current.clientWidth
-            const areaPerChar = area / instructions.length
-            const approxFontSize = Math.sqrt(areaPerChar) * 0.8
-            // todo: account for long words: scale font size down so long word doesn't get wrapped?
-            ref.current.style.fontSize = approxFontSize + 'px'
-            console.debug(`setting font size to ${approxFontSize}`)
+            const calculatedFontSize = calculateFontSize(instructions)
+            ref.current.style.fontSize = calculatedFontSize + 'px'
+            // console.debug(`setting font size to ${calculatedFontSize}`)
         }
+    }
+
+    function calculateNumRowsAtFontSize(fontSize: number, instructions: string, width: number) {
+        // todo: determine the width of each character instead of assuming all characters are the same width
+        const words: string[] = instructions.split(/\s+/)
+        let numRows: number = 0
+        let curWidth: number = 0;
+        words.forEach((word) => {
+            const wordWidth = word.length * fontSize;
+            if (curWidth + wordWidth < width) {
+                curWidth += wordWidth + fontSize // include the space
+            } else {
+                numRows++;
+                curWidth = wordWidth
+            }
+        })
+        return numRows
+    }
+
+    function calculateFontSize(instructions: string) {
+        let fontSize: number = 1;
+        if (ref.current) {
+            const width = ref.current.clientWidth;
+            const height = ref.current.clientHeight;
+            const numChars = instructions.length;
+            const minFontSize = width / numChars  // fit everything onto 1 row
+            const maxFontSize = Math.sqrt(width * height / numChars)
+            for (let candidate = minFontSize; candidate < maxFontSize; candidate++) {
+                const numRows = calculateNumRowsAtFontSize(candidate, instructions, width)
+                const heightAtFontSize = numRows * candidate
+                if (heightAtFontSize > height) {
+                    // done
+                    break;
+                }
+                fontSize = candidate;
+            }
+        }
+        const minFontSize = 30; // px
+        return Math.max(fontSize, minFontSize);
     }
 
     const dataCollectorListener: DataCollectorListener = {
@@ -36,7 +72,7 @@ export function TestInstructionsPanel() {
             // assume it's just the one element we're observing
             setDimensions([entry.target.clientWidth, entry.target.clientHeight])
         })
-        if(ref.current) {
+        if (ref.current) {
             ro.observe(ref.current)
         }
 
@@ -57,16 +93,17 @@ export function TestInstructionsPanel() {
                       ref={ref}
                       style={{
                           width: "100%",
-                          // height must not be relative to font size or updating fot size via ResizeObserver will infinite loop
-                          minHeight: "16px",
+                          // height must not be relative to font size or updating fot size via ResizeObserver will
+                          // infinite loop
+                          minHeight: "1em",
                           height: "inherit",
-                          fontSize: "2.3em",
                           overflow: "auto",
                           resize: "none",
                           border: "none",
                           alignContent: "center",
                           textAlign: "center",
-                          // wordWrap: "normal", // this causes some infinite resizing loop when test is stopped in zoomed view
+                          // wordWrap: "normal", // this causes some infinite resizing loop when test is stopped in
+                          // zoomed view
                           textWrap: "wrap",
                           whiteSpaceCollapse: "collapse",
                       }}

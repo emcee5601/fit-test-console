@@ -4,7 +4,6 @@ import {EventTimeWidget} from "src/EventTimeWidget.tsx";
 import {CurrentParticipantTimeWidget} from "src/CurrentParticipantTimeWidget.tsx";
 import {useSetting} from "src/use-setting.ts";
 import {AppSettings} from "src/app-settings.ts";
-import {BrowserDetect} from "src/BrowserDetect.tsx";
 import {SampleSourceWidget} from "src/SampleSourceWidget.tsx";
 import {ControlSourceWidget} from "src/ControlSourceWidget.tsx";
 import {PortaCountCommandWidget} from "src/PortaCountCommandWidget.tsx";
@@ -172,7 +171,6 @@ export function NavBar() {
         <div id="nav-bar"
              ref={ref}
              style={{display: "flex", justifyContent: "space-between", height: "100%"}}>
-            <BrowserDetect/>
             <CurrentParticipantTimeWidget style={{visibility: showParticipantTime ? "visible" : "hidden"}}
                                           useIcons={useIcons}/>
             <div id={"nav-links-container"} className={"inline-flex"}

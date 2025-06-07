@@ -591,11 +591,11 @@ class AppSettingsContext {
         this.saveSetting(AppSettings.PROTOCOL_INSTRUCTION_SETS, {"json": value})
     }
 
-    get testTemplate(): Partial<SimpleResultsDBRecord> {
+    public getTestTemplate(): Partial<SimpleResultsDBRecord> {
         return this.getSetting(AppSettings.TEST_TEMPLATE)
     }
 
-    set testTemplate(value: Partial<SimpleResultsDBRecord>) {
+    setTestTemplate(value: Partial<SimpleResultsDBRecord>) {
         this.saveSetting(AppSettings.TEST_TEMPLATE, value)
     }
 

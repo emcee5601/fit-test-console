@@ -36,9 +36,12 @@ export function useEditableExerciseResultColumn<T extends SimpleResultsDBRecord,
     const initialValue = getValue()
     // We need to keep and update the state of the cell normally
     const [value, setValue] = React.useState<V>(initialValue)
-    const {ref, inView} = useInView()
 
-    // When the input is blurred, we'll call our table meta's updateData function
+    /**
+     * Since we're using DebouncedInput, we'll get an update event quickly. This happen before the component
+     * scrolls off screen in most cases. So no need to try to detect when it goes off screen. Which may not work
+     * properly in a virtualized table anyway.
+     */
     const onBlur = useCallback(() => {
         if (value != initialValue) {
             // only update if changed
@@ -50,12 +53,6 @@ export function useEditableExerciseResultColumn<T extends SimpleResultsDBRecord,
     React.useEffect(() => {
         setValue(initialValue)
     }, [initialValue])
-    useEffect(() => {
-        // console.log(`inview is now ${inView}`)
-        if (!inView) {
-            onBlur();
-        }
-    }, [inView, onBlur]);
     useEffect(() => {
         onBlur()
     }, [value]);
@@ -69,7 +66,7 @@ export function useEditableExerciseResultColumn<T extends SimpleResultsDBRecord,
     const maskConcentration = (row.original.ParticleCounts ?? []).filter((particleCount) => particleCount.type === SampleSource.MASK).at(Number(exerciseNum) - 1)?.count ?? 0
 
     return (
-        <div className={classes} style={{width: "100%", display: "inline-flex", flexDirection: "column"}} ref={ref}>
+        <div className={classes} style={{width: "100%", display: "inline-flex", flexDirection: "column"}}>
             <div className={"inline-flex"}>
                 {editable
                     ? <DebouncedInput style={{minWidth: 0, minHeight: 0, width: "calc(100% - 0.3em)"}}

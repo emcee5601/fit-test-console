@@ -17,6 +17,7 @@ import {Activity} from "src/activity.ts";
 import {BsArrowsFullscreen} from "react-icons/bs";
 import {useEffect, useState} from "react";
 import {MdCloseFullscreen} from "react-icons/md";
+import {BrowserDetect} from "src/BrowserDetect.tsx";
 
 function HomePanel() {
     const [showExternalControl] = useSetting<boolean>(AppSettings.SHOW_EXTERNAL_CONTROL);
@@ -36,6 +37,7 @@ function HomePanel() {
 
     return (
         <>
+            <BrowserDetect/>
             {!zoomInstructions && <section id="control-widgets"
                                            style={{
                                                display: "flex",
@@ -54,7 +56,7 @@ function HomePanel() {
                 {!useCompactControls && showExternalControl && <PortaCountCommandWidget/>}
             </section>}
             {!zoomInstructions && <CurrentParticipantPanel/>}
-            <div id={"testing--mode-container"}
+            <div id={"testing-mode-container"}
                  className={`test-instructions-container ${zoomInstructions && "test-in-progress"}`}>
                 <div style={{
                     padding: "0.2em",
