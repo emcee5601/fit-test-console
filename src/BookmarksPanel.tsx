@@ -1,10 +1,10 @@
 import {QRCodeSVG} from "qrcode.react";
 import {useState} from "react";
-import {ResizingTextArea} from "src/ResizingTextArea.tsx";
 import {useSetting} from "src/use-setting.ts";
 import {AppSettings} from "src/app-settings.ts";
+import {SmartTextArea} from "src/SmartTextArea.tsx";
 
-type Bookmarks = {[title:string]:string}
+type Bookmarks = { [title: string]: string }
 
 export function BookmarksPanel() {
     const [qrcodeUrl, setQrcodeUrl] = useState<string>("")
@@ -23,7 +23,7 @@ export function BookmarksPanel() {
         ["MFTC app source", "https://github.com/emcee5601/fit-test-console"],
         ["Breathesafe", "https://www.breathesafe.xyz/"]
     ]
-    Object.entries(bookmarks).forEach(([title, url]) => urls.push([title,url]));
+    Object.entries(bookmarks).forEach(([title, url]) => urls.push([title, url]));
 
     function showUrlQR(url: string, label: string) {
         setQrcodeUrl(url);
@@ -35,16 +35,16 @@ export function BookmarksPanel() {
     }
 
     function saveBookmark() {
-        if(!safeToSaveBookmark()) {
+        if (!safeToSaveBookmark()) {
             return
         }
         const updatedBookmarks: Bookmarks = {}
-        updatedBookmarks[newBookmarkTitle||newBookmarkUrl] = newBookmarkUrl
+        updatedBookmarks[newBookmarkTitle || newBookmarkUrl] = newBookmarkUrl
         Object.assign(updatedBookmarks, bookmarks)
         setBookmarks(updatedBookmarks)
     }
 
-    function deleteBookmark(title:string) {
+    function deleteBookmark(title: string) {
         const updatedBookmarks: Bookmarks = {}
         Object.entries(bookmarks).filter(([entryTitle]) => entryTitle !== title).forEach(([title, url]) => updatedBookmarks[title] = url)
         setBookmarks(updatedBookmarks)
@@ -70,11 +70,19 @@ export function BookmarksPanel() {
                 <fieldset>
                     <legend>Add new bookmark</legend>
                     <div id={"bookmark-adder"} style={{display: "flex"}}>
-                        <div style={{textAlign: "start"}}>
-                            <ResizingTextArea value={newBookmarkTitle} placeholder={"Title"}
-                                              onChange={(e) => setNewBookmarkTitle(e.target.value)}></ResizingTextArea>
-                            <ResizingTextArea value={newBookmarkUrl} placeholder={"URL"}
-                                              onChange={(e) => setNewBookmarkUrl(e.target.value)}></ResizingTextArea>
+                        <div style={{textAlign: "start", height: "100%", display:"flex", flexDirection:"column", gap:"0.3em"}}>
+                            <div className={"thin-border-2"}>
+                                <SmartTextArea
+                                    id={"bookmark-title"}
+                                    initialValue={newBookmarkTitle} placeholder={"Title"}
+                                    onChange={(value) => setNewBookmarkTitle(value || "")}/>
+                            </div>
+                            <div className={"thin-border-2"}>
+                                <SmartTextArea
+                                    id={"bookmark-url"}
+                                    initialValue={newBookmarkUrl} placeholder={"URL"}
+                                    onChange={(value) => setNewBookmarkUrl(value || "")}/>
+                            </div>
                         </div>
                         <div style={{height: "100%"}}>
                             <QRCodeSVG value={newBookmarkUrl}
@@ -82,11 +90,12 @@ export function BookmarksPanel() {
                                        marginSize={4}
                                        title={newBookmarkUrl}
                                        onClick={() => showUrlQR(newBookmarkUrl, newBookmarkTitle)}
-                                       visibility={newBookmarkUrl?"visible":"hidden"}
+                                       visibility={newBookmarkUrl ? "visible" : "hidden"}
                             />
                         </div>
 
-                        <button onClick={() => saveBookmark()} disabled={!safeToSaveBookmark()}>Save bookmark</button>
+                        <button onClick={() => saveBookmark()} disabled={!safeToSaveBookmark()}>Save bookmark
+                        </button>
                     </div>
                 </fieldset>
                 {urls.map(([label, url]) => {
@@ -100,7 +109,7 @@ export function BookmarksPanel() {
                                        title={label}
                                        onClick={() => showUrlQR(url, label)}
                             />
-                            {label in bookmarks &&<button onClick={() => deleteBookmark(label)}>delete</button>}
+                            {label in bookmarks && <button onClick={() => deleteBookmark(label)}>delete</button>}
                         </fieldset>
                     </div>
                 })}

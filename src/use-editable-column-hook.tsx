@@ -3,14 +3,13 @@ import React, {useCallback, useContext, useEffect} from "react";
 import {useInView} from "react-intersection-observer";
 import {numberInputClasses, Unstable_NumberInput as NumberInput} from "@mui/base/Unstable_NumberInput";
 import {useTheme} from '@mui/system';
-import {SimpleMaskSelector} from "src/SimpleMaskSelector.tsx";
 import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
 import {convertFitFactorToFiltrationEfficiency, getFitFactorCssClass} from "src/utils.ts";
-import {DebouncedInput} from "src/DebouncedInput.tsx";
 import {ControlSource} from "src/control-source.ts";
 import {AppContext} from "src/app-context.ts";
-import {ResizingTextArea} from "src/ResizingTextArea.tsx";
 import {SampleSource} from "src/simple-protocol.ts";
+import {SmartTextArea} from "src/SmartTextArea.tsx";
+import {MaskSelectorWidget} from "src/MaskSelectorWidget.tsx";
 
 declare module '@tanstack/react-table' {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -57,23 +56,28 @@ export function useEditableExerciseResultColumn<T extends SimpleResultsDBRecord,
         onBlur()
     }, [value]);
 
-    const fitFactor = Number(value);
-    const efficiencyPercentage = convertFitFactorToFiltrationEfficiency(fitFactor);
-    const classes = getFitFactorCssClass(fitFactor)
-    const {exerciseNum} = id.match(/.*?(?<exerciseNum>[0-9]+)$/)?.groups ?? {exerciseNum: 0}
+    const {exerciseNum} = id.match(/.*?(?<exerciseNum>[0-9]+)$/)?.groups ?? {exerciseNum: 0} // ex 0 == final
     const protocolHasThisManyExercises = row.original.ProtocolName && appContext.settings.numExercisesForProtocol[row.original.ProtocolName] >= Number(exerciseNum) || false;
     const editable = row.original.TestController === ControlSource.Manual && protocolHasThisManyExercises
     const maskConcentration = (row.original.ParticleCounts ?? []).filter((particleCount) => particleCount.type === SampleSource.MASK).at(Number(exerciseNum) - 1)?.count ?? 0
+
+    const fitFactor = Number(value);
+    const efficiencyPercentage = convertFitFactorToFiltrationEfficiency(fitFactor);
+    const classes = getFitFactorCssClass(fitFactor, protocolHasThisManyExercises)
 
     return (
         <div className={classes} style={{width: "100%", display: "inline-flex", flexDirection: "column"}}>
             <div className={"inline-flex"}>
                 {editable
-                    ? <DebouncedInput style={{minWidth: 0, minHeight: 0, width: "calc(100% - 0.3em)"}}
-                                      value={value ? value as string : ""}
-                                      onChange={value => setValue(value as V)}
-                                      onBlur={onBlur}
-                                      placeholder={`Click to add ${id}`}
+                    ? <SmartTextArea
+                        id={`${row.original.ID}-${id}`}
+                        resize={false}
+                        oneLine={true}
+                        // style={{minWidth: 0, minHeight: 0, width: "calc(100% - 0.3em)"}}
+                        initialValue={value ? value as string : ""}
+                        onChange={value => setValue(value as V)}
+                        onBlur={onBlur}
+                        placeholder={`${id}`}
                     />
                     : <div>{value}</div>
                 }{(value && row.original.ParticleCounts && maskConcentration === 0) && "*"}
@@ -92,7 +96,6 @@ export function useEditableColumn<T, V>({
     const initialValue = getValue()
     // We need to keep and update the state of the cell normally
     const [value, setValue] = React.useState<V>(initialValue as V)
-    const {ref, inView} = useInView()
 
     // When the input is blurred, we'll call our table meta's updateData function
     const onBlur = useCallback(() => {
@@ -107,25 +110,17 @@ export function useEditableColumn<T, V>({
         setValue(initialValue as V)
     }, [initialValue])
     useEffect(() => {
-        // console.log(`inview is now ${inView}`)
-        if (!inView) {
-            onBlur();
-        }
-    }, [inView, onBlur]);
-
-    function handleOnChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
-        setValue(e.target.value as V);
-    }
+        onBlur();
+    }, [value]);
 
     return (
-        <ResizingTextArea
-            className={"table-cell-input"}
-            textAreaRef={ref}
-            value={value ? value as string : ""}
-            onChange={e => handleOnChange(e)}
+        <SmartTextArea
+            id={`${String(index)}-${id}`}
+            initialValue={value ? value as string : ""}
+            onChange={v => setValue(v as V)}
             onBlur={onBlur}
             placeholder={`Click to add ${id}`}
-        ></ResizingTextArea>
+        ></SmartTextArea>
     )
 }
 
@@ -149,7 +144,7 @@ export function useEditableMaskColumn<T, V>({
 
 
     return (
-        <SimpleMaskSelector value={(value as string) ?? ""} onChange={(v) => onChange(v)} allowCreate={true}/>
+        <MaskSelectorWidget id={String(index)} value={(value as string) ?? ""} onChange={(v) => onChange(v)}/>
     )
 }
 

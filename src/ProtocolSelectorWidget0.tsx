@@ -27,7 +27,7 @@ export function ProtocolSelectorWidget0() {
     }
 
     return (
-        <select onChange={(event) => setProtocol(event.target.value)}
+        <select id={"protocol-select"} onChange={(event) => setProtocol(event.target.value)}
                 value={selectedProtocol}>
             {protocolNames.map((protocolName) => <option key={protocolName}
                                                                 value={protocolName}>{protocolName}</option>)}

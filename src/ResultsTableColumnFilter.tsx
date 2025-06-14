@@ -2,7 +2,8 @@ import {Column} from "@tanstack/react-table";
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 import {DebouncedInput} from "./DebouncedInput.tsx";
 import DatePicker from "react-datepicker";
-import {SimpleMaskSelector} from "src/SimpleMaskSelector.tsx";
+import {MaskSelectorWidget} from "src/MaskSelectorWidget.tsx";
+import {SmartTextArea} from "src/SmartTextArea.tsx";
 
 export function ResultsTableColumnFilter<V>({column, dates}: {
     column: Column<SimpleResultsDBRecord, V>,
@@ -51,30 +52,36 @@ export function ResultsTableColumnFilter<V>({column, dates}: {
         case 'date': {
             const curFilter = column.getFilterValue() as string;
             const selectedDate = curFilter ? new Date(curFilter) : null;
-            return <DatePicker minDate={new Date("2024-01-01")} maxDate={new Date()}
-                               isClearable={true}
-                               placeholderText={"Search..."}
-                               selected={selectedDate}
-                               showMonthYearDropdown={true}
-                               includeDates={dates}
-                               showIcon={true}
-                               showDisabledMonthNavigation={true}
-                               className={'date-picker-input'}
-                               todayButton={<input type={"button"} value={"Today"}/>}
-                               onChange={(value) => column.setFilterValue(value?.toLocaleDateString())}
+            return <DatePicker
+                id={column.id}
+                minDate={new Date("2024-01-01")} maxDate={new Date()}
+                isClearable={true}
+                placeholderText={"Search..."}
+                selected={selectedDate}
+                showMonthYearDropdown={true}
+                includeDates={dates}
+                showIcon={true}
+                showDisabledMonthNavigation={true}
+                className={'date-picker-input'}
+                todayButton={<input type={"button"} value={"Today"}/>}
+                onChange={(value) => column.setFilterValue(value?.toLocaleDateString())}
             ></DatePicker>
         }
         case 'mask': {
             const curFilter = column.getFilterValue() as string || "";
-            return <SimpleMaskSelector value={curFilter} onChange={value => column.setFilterValue(value)} showClearControl={true}/>
+            return <MaskSelectorWidget
+                id={"filter"}
+                value={curFilter}
+                placeholder={"Search..."}
+                onChange={value => column.setFilterValue(value)}/>
         }
         default:
-            return <DebouncedInput
+            return <SmartTextArea
+                id={`${column.id}-filter`}
                 className="filterInput"
                 onChange={value => column.setFilterValue(value)}
                 placeholder={`Search...`}
-                type="text"
-                value={(columnFilterValue ?? '') as string}
+                initialValue={(columnFilterValue ?? '') as string}
             />
     }
 }

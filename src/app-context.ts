@@ -78,21 +78,21 @@ function initSpeech() {
  * Todo: move to util class?
  * todo: handle the case where we're not connected and have no device timings
  */
-export function createDeviceSynchronizedProtocol(protocolName:string): StandardProtocolDefinition {
+export function createDeviceSynchronizedProtocol(protocolName: string): StandardProtocolDefinition {
     const protocolDefinition = settings.getProtocolDefinition(protocolName);
     // we really want numExercises, but that's only available on device start. We infer it as we run tests. For now
     // if we don't have it, assume it's the same as the selected protocol
     const numProtocolExercises = calculateNumberOfExercises(protocolDefinition);
     const portaCountSettings = portaCountClient.settings;
     const numExercises = portaCountSettings.numExercises || numProtocolExercises;
-    if(numExercises !== numProtocolExercises) {
+    if (numExercises !== numProtocolExercises) {
         console.warn(`numExercises (${numExercises} does not match num exercise for protocol ${protocolName} (${numProtocolExercises})`)
         // todo: auto-select a compatible protocol? display a warning?
     }
-    const dsProtocol:StandardProtocolDefinition = []
+    const dsProtocol: StandardProtocolDefinition = []
     let exerciseNum = 0;
     protocolDefinition.forEach((templateStage) => {
-        if(templateStage.mask_sample) {
+        if (templateStage.mask_sample) {
             exerciseNum++;
             const stage: StandardStageDefinition = {
                 instructions: templateStage.instructions,
@@ -101,7 +101,7 @@ export function createDeviceSynchronizedProtocol(protocolName:string): StandardP
                 mask_purge: portaCountSettings.maskPurge || ProtocolDefaults.defaultMaskPurgeDuration,
                 mask_sample: portaCountSettings.maskSample.get(exerciseNum) || ProtocolDefaults.defaultMaskSampleDuration
             }
-            if( exerciseNum > numExercises) {
+            if (exerciseNum > numExercises) {
                 console.log(`Ignoring extra exercises. Device is configured for ${numExercises}. Ignoring exercise ${exerciseNum}`)
             } else {
                 dsProtocol.push(stage)
@@ -132,7 +132,8 @@ async function autoConnect() {
     const webUsbPort = usbSerialPorts.length > 0 ? usbSerialPorts[0] : null
     const webSerialPort = webSerialPorts.length > 0 ? webSerialPorts[0] : null
 
-    // console.log(`autoConnect: available web serial ${JSON.stringify(webSerialPorts)}, available web usb serial ports: ${JSON.stringify(usbSerialPorts)}`);
+    // console.log(`autoConnect: available web serial ${JSON.stringify(webSerialPorts)}, available web usb serial
+    // ports: ${JSON.stringify(usbSerialPorts)}`);
     const lastDataSource: DataSource = settings.getSetting(AppSettings.SELECTED_DATA_SOURCE);
 
     let port: SerialPortLike | null = null;
@@ -147,27 +148,53 @@ async function autoConnect() {
         port = webSerialPort
         settings.saveSetting(AppSettings.SELECTED_DATA_SOURCE, DataSource.WebSerial)
     }
-    if(port) {
+    if (port) {
         console.debug(`auto-connecting to port ${JSON.stringify(port)}`)
         portaCountClient.connect(port);
     } else {
         // console.debug("no eligible ports to auto-connect, setting up retry...")
-        if(settings.getSetting(AppSettings.ENABLE_AUTO_CONNECT)) {
+        if (settings.getSetting(AppSettings.ENABLE_AUTO_CONNECT)) {
             // still enabled
             setTimeout(() => autoConnect(), 1500)
         }
     }
 }
 
-async function initMaskList() {
+/**
+ * read all historical results and collect auto-completion lists
+ */
+async function scanHistoricalResults() {
     // must do this only after settings have been loaded
+    // convert time back to local time
+    const today = new Date();
+    const todayYyyymmdd = new Date(today.getTime() - today.getTimezoneOffset() * 60 * 1000).toISOString().substring(0, 10)
+
+    function isToday(time:string) {
+        // compare in localtime.  maybe we can compare in utc?
+        const recordDate = new Date(time);
+        const recordYyyymmdd = new Date(recordDate.getTime() - recordDate.getTimezoneOffset() * 60 * 1000).toISOString().substring(0, 10);
+        return recordYyyymmdd === todayYyyymmdd
+    }
+
     RESULTS_DB.getData().then((results) => {
         const dbMasks = results.reduce((masks, currentValue) => {
             // make sure mask has a value and strip that value of leading and trailing spaces
             masks.add(((currentValue.Mask as string) ?? "").trim())
             return masks;
         }, new Set<string>())
+        const dbTestNotes = results.reduce((notes, currentValue) => {
+            notes.add(((currentValue.Notes as string)??"").trim())
+            return notes;
+        }, new Set<string>())
+        const todayParticipants = results
+            .filter((record) => isToday(record.Time))
+            .reduce((participants, currentValue) => {
+                participants.add(((currentValue.Participant as string) ?? "").trim())
+                return participants;
+            }, new Set<string>())
         settings.saveSetting(AppSettings.MASK_LIST, [...dbMasks].sort(enCaseInsensitiveCollator.compare))
+        settings.saveSetting(AppSettings.TEST_NOTES, [...dbTestNotes].sort(enCaseInsensitiveCollator.compare))
+        settings.saveSetting(AppSettings.TODAY_PARTICIPANTS, [...todayParticipants].sort(enCaseInsensitiveCollator.compare))
     })
 }
 
@@ -225,7 +252,7 @@ async function init() {
     initPortaCountClient()
     initSpeech();
     initDataCollector()
-    await initMaskList();
+    await scanHistoricalResults();
     initCurrentActivityListener();
     timingSignal.start();
 

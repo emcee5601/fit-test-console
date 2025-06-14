@@ -1,13 +1,13 @@
 import {useCallback, useContext, useEffect, useState} from "react";
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
-import {DebouncedTextArea} from "./DebouncedTextArea.tsx";
 import {AppSettings} from "./app-settings.ts";
-import {deepCopy} from "json-2-csv/lib/utils";
 import {LabeledSection} from "./LabeledSection.tsx";
 import {useSetting} from "./use-setting.ts";
-import {SimpleMaskSelector} from "src/SimpleMaskSelector.tsx";
 import {AppContext} from "src/app-context.ts";
 import {ControlSource} from "src/control-source.ts";
+import {MaskSelectorWidget} from "src/MaskSelectorWidget.tsx";
+import {TodayParticipantSelectorWidget} from "src/TodayParticipantSelectorWidget.tsx";
+import {TestNotesSelectorWidget} from "src/TestNotesSelectorWidget.tsx";
 
 export function CurrentParticipantPanel() {
     const appContext = useContext(AppContext);
@@ -24,45 +24,29 @@ export function CurrentParticipantPanel() {
 
     function updateCurrentParticipant(value: string) {
         value = value.trim() // strip extraneous spaces
-        console.debug(`updating current participant -> '${value}'`)
-        if (testTemplate.Participant !== value) {
-            // participant name changed, update start time
-            testTemplate.Time = new Date().toISOString(); // todo: does this need to be localtime?
-        }
-        testTemplate.Participant = value;
-        updateTestTemplate();
+        updateTestTemplate({
+            Participant: value,
+            Time: testTemplate.Participant !== value
+                ? new Date().toISOString() // todo: does this need to be localtime?
+                : testTemplate.Time, // participant unchanged, don't change the time
+        });
     }
 
     function updateCurrentMask(value: string) {
-        testTemplate.Mask = value ? value.trim() : "";
-        updateTestTemplate();
+        updateTestTemplate({Mask: value});
     }
 
     function updateCurrentNotes(value: string) {
-        testTemplate.Notes = value;
-        updateTestTemplate();
+        updateTestTemplate({Notes: value});
     }
 
-    function nextParticipant() {
-        // latestResult is a const. just clear all its internals
-        testTemplate.Participant = ""
-        testTemplate.Mask = ""
-        testTemplate.Notes = ""
-        testTemplate.Time = new Date().toISOString(); // todo: does this need to be localtime?
-        updateTestTemplate();
-    }
-
-    function nextMask() {
-        // latestResult is a const. just clear all its internals
-        testTemplate.Mask = ""
-        testTemplate.Notes = ""
-        updateTestTemplate();
-    }
-
-    function updateTestTemplate() {
-        // propagate changes to settings
-        console.debug(`updateTestTemplate -> ${JSON.stringify(testTemplate)}`);
-        setTestTemplate(deepCopy(testTemplate)) // copy to force React to see the update
+    function updateTestTemplate(props: Partial<SimpleResultsDBRecord>) {
+        // propagate changes to settings (don't edit testTemplate directly since it's passed as reference from settings)
+        const newTemplate = {}
+        Object.assign(newTemplate, testTemplate)
+        Object.assign(newTemplate, props)
+        console.debug(`updateTestTemplate -> ${JSON.stringify(newTemplate)}`);
+        setTestTemplate(newTemplate) // copy to force React to see the update
     }
 
     function manualEntry() {
@@ -73,37 +57,29 @@ export function CurrentParticipantPanel() {
         <div id="current-participant-panel">
             <LabeledSection>
                 <legend>Current Participant <button onClick={() => manualEntry()}>Manual Entry</button></legend>
-                <div style={{
-                    display: "flex",
-                    textAlign: "start",
-                    flexDirection: "row",
-                    flexWrap: "wrap",
-                    justifySelf: "center"
-                }}>
-                    <fieldset className={"info-box-compact"}>
-                        <legend>Participant <input id={"next-participant-button"} type={"button"}
-                                                   value={"Next participant"}
-                                                   onClick={nextParticipant}/>
-                        </legend>
-                        <DebouncedTextArea className="table-cell-input" placeholder={"Click to add Participant"}
-                                           value={testTemplate.Participant || ""}
-                                           onChange={(value) => updateCurrentParticipant(value)}
+                <div id={"participant-parameters"}
+                     style={{
+                         display: "flex",
+                         textAlign: "start",
+                         flexDirection: "row",
+                         flexWrap: "wrap",
+                         gap: "2px",
+                     }}>
+                    <div className={"thin-border-2"}>
+                        <TodayParticipantSelectorWidget
+                            value={testTemplate.Participant} label={"Participant"}
+                            onChange={(value) => updateCurrentParticipant(value || "")}
                         />
-                    </fieldset>
-                    <fieldset className={"info-box-compact"} style={{width: "25ch"}}>
-                        <legend>Mask <input id={"next-mask-button"} type={"button"} value={"Next mask"}
-                                            onClick={nextMask}/>
-                        </legend>
-                        <SimpleMaskSelector value={testTemplate.Mask} onChange={(value) => updateCurrentMask(value)}
-                                            allowCreate={true} showClearControl={true}/>
-                    </fieldset>
-                    <fieldset className={"info-box-compact"} style={{width: "25ch"}}>
-                        <legend>Notes</legend>
-                        <DebouncedTextArea className="table-cell-input" placeholder={"Click to add Notes"}
-                                           value={testTemplate.Notes as string}
-                                           onChange={(value) => updateCurrentNotes(value)}
+                    </div>
+                    <div className={"thin-border-2"}>
+                        <MaskSelectorWidget value={testTemplate.Mask} label={"Mask"}
+                                            onChange={(value) => updateCurrentMask(value || "")}/>
+                    </div>
+                    <div className={"thin-border-2"}>
+                        <TestNotesSelectorWidget value={testTemplate.Notes} label={"Notes"}
+                                                 onChange={(value) => updateCurrentNotes(value || "")}
                         />
-                    </fieldset>
+                    </div>
                 </div>
             </LabeledSection>
         </div>

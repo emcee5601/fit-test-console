@@ -104,7 +104,7 @@ export function EstimatedFitFactorWidget() {
                         <span>{maskConcentration < 0 ? "?" : Number(maskConcentration).toFixed(maskConcentration < 10 ? 1 : 0)}</span>
                     </fieldset>
                 </div>
-                <div className={getFitFactorCssClass(estimatedFitFactor)}
+                <div className={getFitFactorCssClass(estimatedFitFactor, true)}
                      style={{
                          boxSizing: "border-box",
                          width: '100%',

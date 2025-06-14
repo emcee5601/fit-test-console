@@ -16,6 +16,7 @@ import {DataSource} from "./data-source.ts";
 import {SegmentState} from "./protocol-executor.ts";
 import {ParticleConcentrationEvent} from "./portacount-client-8020.ts";
 import {Activity} from "src/activity.ts";
+import {deepCopy} from "json-2-csv/lib/utils";
 
 /**
  * this is for convenience. code outside of this module should use AppSettings enum.
@@ -61,6 +62,8 @@ export enum AppSettings {
     RESULTS_TABLE_FILTER = "so-results-table-filter",
     PARTICIPANT_RESULTS_TABLE_FILTER = "so-participant-results-table-filter",
     MASK_LIST = "so-mask-list",
+    TODAY_PARTICIPANTS = "so-today-participants",
+    TEST_NOTES = "so-test-notes",
     CONTROL_SOURCE_IN_VIEW = "so-control-source-in-view",
     SAMPLE_SOURCE_IN_VIEW = "so-sample-source-in-view",
     CONNECTION_STATUS_IN_VIEW = "so-connection-status-in-view",
@@ -227,6 +230,8 @@ const AppSettingsDefaults = {
     "so-results-table-filter": [],
     "so-participant-results-table-filter": [],
     "so-mask-list": [],
+    "so-today-participants": [],
+    "so-test-notes": [],
     "so-control-source-in-view": true,
     "so-sample-source-in-view": true,
     "so-connection-status-in-view": true,
@@ -402,7 +407,8 @@ class AppSettingsContext {
         this.listeners.forEach((listener) => {
             if (listener.subscriptions && listener.settingsChanged) {
                 if (listener.subscriptions().some((wantSetting) => wantSetting === setting)) {
-                    listener.settingsChanged(setting, value);
+                    const valueCopy = deepCopy(value) // make sure we're not accidentally passing by reference
+                    listener.settingsChanged(setting, valueCopy);
                 }
             }
         })

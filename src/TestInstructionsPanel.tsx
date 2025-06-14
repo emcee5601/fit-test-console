@@ -3,6 +3,7 @@ import {DataCollectorListener} from "./data-collector.ts";
 import {AppContext} from "./app-context.ts";
 
 export function TestInstructionsPanel() {
+    const minFontSizePx: number = 30;
     const appContext = useContext(AppContext)
     const [dataCollector] = useState(appContext.dataCollector)
     const [instructions, setInstructions] = useState<string>("")
@@ -56,8 +57,7 @@ export function TestInstructionsPanel() {
                 fontSize = candidate;
             }
         }
-        const minFontSize = 30; // px
-        return Math.max(fontSize, minFontSize);
+        return Math.max(fontSize, minFontSizePx);
     }
 
     const dataCollectorListener: DataCollectorListener = {

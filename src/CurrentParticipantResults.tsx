@@ -24,7 +24,7 @@ export function CurrentParticipantResults() {
             subscriptions: () => [AppSettings.TEST_TEMPLATE],
             settingsChanged(setting: AppSettings, value: AppSettingType) {
                 // assume we're getting the correct
-                console.log(`setting ${setting} changed to ${JSON.stringify(value)} with stages ${JSON.stringify(appContext.settings.protocolStages)}`)
+                console.log(`setting ${setting} changed to ${JSON.stringify(value)}`)
                 updateCurrentParticipantTests((value as SimpleResultsDBRecord).Participant)
             }
         }

@@ -24,7 +24,7 @@ export function formatDuration(elapsedMs: number, includeMs: boolean = false, in
     const secondsStr = includeSeconds ? `:${secondsVal.toString().padStart(2, "0")}` : "";
     const millisStr = includeMs && includeSeconds ? (millisVal > 0 ? `.${millisVal.toString().padStart(3, "0")}` : '') : "";
     // show hours if there are hours to show, OR if there are no seconds to show. eg. don't just show minutes.
-    const includeHours = totalHours||!includeSeconds;
+    const includeHours = totalHours || !includeSeconds;
     return `${elapsedMs < 0 ? "-" : ""}${includeHours ? `${totalHours}:` : ""}${minutesVal.toString().padStart(includeHours ? 2 : 1, "0")}${secondsStr}${millisStr}`;
 }
 
@@ -56,20 +56,24 @@ export function getConnectionStatusCssClass(connectionStatus: ConnectionStatus):
     }
 }
 
-export function getFitFactorCssClass(fitFactor: number): string {
-    if (fitFactor < 1.1) {
-        // probably aborted
-        return "result aborted"
-    } else if (fitFactor < 20) {
-        return "result low-fit-score"
-    } else if (fitFactor < 100) {
-        return "result moderate-fit-score"
-    } else if (fitFactor >= 100) {
-        return "result high-fit-score"
-    } else {
-        // NaN
+export function getFitFactorCssClass(fitFactor: number, hasThisExercise: boolean): string {
+    // console.debug(`ff is ${fitFactor}`)
+    if(!hasThisExercise) {
+        // we don't have this many exercises
+        return "result"
+    }
+
+    if( isNaN(fitFactor) || fitFactor <= 0 ) {
+        // if it's zero, it was probably parsed from empty string
         return "result aborted"
     }
+    if (fitFactor >= 100) {
+        return "result high-fit-score"
+    }
+    if (fitFactor > 20) {
+        return "result moderate-fit-score"
+    }
+    return "result low-fit-score"
 }
 
 export function sum(theNumbers: number[], startIndex: number = 0, endIndex: number = -1) {

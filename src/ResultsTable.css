@@ -1,0 +1,31 @@
+.results-table-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.results-table-header {
+    display: grid;
+    position: sticky;
+    top: 0;
+    z-index: 1; /* table rows are zIndex 0 by default? */
+}
+
+.results-table-header-row {
+    display: flex;
+    width: 100%;
+}
+
+.results-table-cell {
+    display: flex;
+}
+
+.results-table-header-cell {
+    position: relative;
+}
+
+.results-table-virtualized-row {
+    display: flex;
+    position: absolute;
+    width: 100%;
+}

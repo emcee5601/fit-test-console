@@ -68,7 +68,7 @@ export function SimpleMaskSelector({value, onChange, allowCreate = false, showCl
 
     // is in effect, it could otherwise remove the row mid-edit
     return (
-        <div style={{width: "100%", height: "inherit", display: "flex", flexDirection: "row", position: "relative"}}>
+        <div style={{width: "fit-content", height: "inherit", display: "flex", flexDirection: "row", position: "relative"}}>
             <DebouncedInput
                 style={{
                     fontFamily: "monospace",

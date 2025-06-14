@@ -3,7 +3,8 @@
  */
 import React, {Dispatch, SetStateAction, useContext, useEffect, useState} from 'react'
 
-import './index.css'
+// import './index.css'
+import './ResultsTable.css'
 
 import {
     ColumnDef,
@@ -137,7 +138,7 @@ export default function ResultsTable({
 
     useEffect(() => {
     }, [selectedRows]);
-    const columns = React.useMemo<ColumnDef<SimpleResultsDBRecord, string | number|boolean>[]>(
+    const columns = React.useMemo<ColumnDef<SimpleResultsDBRecord, string | number | boolean>[]>(
         () => [
             {
                 accessorFn: record => {
@@ -148,7 +149,7 @@ export default function ResultsTable({
                     const recordId: number = info.row.getValue("ID") as number;
                     return <input type={"checkbox"} checked={selectedRows.includes(recordId)}
                                   onChange={(event) => {
-                                      if(event.target.checked) {
+                                      if (event.target.checked) {
                                           setSelectedRows((prev) => [...prev, recordId])
                                       } else {
                                           setSelectedRows((prev) => prev.filter((item) => item !== recordId));
@@ -183,14 +184,12 @@ export default function ResultsTable({
                 meta: {
                     filterVariant: 'date',
                 },
-                size: 125,
             },
             {
                 accessorKey: 'Participant',
                 cell: useEditableColumn,
                 enableColumnFilter: searchableColumns.includes('Participant'),
                 filterFn: safeRegExpFilter,
-                size: 150,
             },
             {
                 accessorKey: 'Mask',
@@ -200,14 +199,12 @@ export default function ResultsTable({
                 meta: {
                     filterVariant: 'mask',
                 },
-                size: 250,
             },
             {
                 accessorKey: 'Notes',
                 cell: useEditableColumn,
                 enableColumnFilter: searchableColumns.includes('Notes'),
                 filterFn: safeRegExpFilter,
-                size: 150,
             },
             createExerciseResultColumnBase("Final"),
             ...createExerciseResultColumns(numExerciseColumns),
@@ -228,14 +225,16 @@ export default function ResultsTable({
     const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
     const [columnFilters, setColumnFilters] = useSetting<ColumnFiltersState>(columnFilterSettingKey)
     const [sorting, setSorting] = useSetting<SortingState>(columnSortingSettingKey)
-    const [columnVisibility, setColumnVisibility] = useState(hideColumns.reduce((result: { [key: string]: boolean }, column: string) => {
+    const [columnVisibility, setColumnVisibility] = useState(hideColumns.reduce((result: {
+        [key: string]: boolean
+    }, column: string) => {
         result[column] = false;
         return result
     }, {}))
     useEffect(() => {
         columnVisibility["Select"] = enableSelection;
         setColumnVisibility(deepCopy(columnVisibility))
-        if(!enableSelection) {
+        if (!enableSelection) {
             setSelectedRows([]) // clear
         }
     }, [enableSelection]);
@@ -309,7 +308,7 @@ export default function ResultsTable({
                 maxExercises = numExercises[protocol];
             }
         })
-        if(maxExercises === 0) {
+        if (maxExercises === 0) {
             // default to 4. before the protocol column was added, num exercises was hardcoded to 4
             maxExercises = 4
         }
@@ -360,19 +359,35 @@ export default function ResultsTable({
 
     function deleteSelectedRecords() {
         setSelectedRows([]) // reset
-        if(deleteRowsCallback) {
+        if (deleteRowsCallback) {
             deleteRowsCallback(selectedRows)
         }
     }
 
-    //All important CSS styles are included as inline styles for this example. This is not recommended for your code.
+    function getColumnStyleName(columnId: string) {
+        return `${columnId.replace(/\s+/g, "_")}-column`
+    }
+
     return (
-        <div style={{height: "100%", display: "flex", flexDirection: "column"}}>
+        <div className={"results-table-container"}>
+            <style id={"per-column-styles"}>{
+                table.getHeaderGroups().flatMap(headerGroup => {
+                    return headerGroup.headers.map(header => {
+                        const className = `.${getColumnStyleName(header.id)}`
+                        const width = header.getSize()
+                        return `${className} { width: ${width}px; }`
+                    })
+                })
+            }</style>
+
             <div>
-                <div style={{display: "inline-block"}}><BooleanToggleButton trueLabel={"Enable selection"}
-                                                                            value={enableSelection}
-                                                                            setValue={setEnableSelection}/></div>
-                {enableSelection && deleteRowsCallback &&<button onClick={() => deleteSelectedRecords()}>Delete selected</button>}
+                <div style={{display: "inline-block"}}>
+                    <BooleanToggleButton trueLabel={"Enable selection"}
+                                         value={enableSelection}
+                                         setValue={setEnableSelection}/>
+                </div>
+                {enableSelection && deleteRowsCallback &&
+                    <button onClick={() => deleteSelectedRecords()}>Delete selected</button>}
                 <ReactTableCsvExportWidget table={table}/>
                 <ReactTableQrCodeExportWidget table={table} tableData={tableData} columnFilters={columnFilters}/>
             </div>
@@ -386,25 +401,15 @@ export default function ResultsTable({
             >
                 {/* Even though we're still using sematic table tags, we must use CSS grid and flexbox for dynamic row heights */}
                 <table style={{display: 'grid'}}>
-                    <thead
-                        style={{
-                            display: 'grid',
-                            position: 'sticky',
-                            top: 0,
-                            zIndex: 1, // table rows are zIndex 0 by default?
-                        }}
-                    >
+                    <thead className={"results-table-header"}>
                     {table.getHeaderGroups().map(headerGroup => (
-                        <tr
-                            key={headerGroup.id}
-                            style={{display: 'flex', width: '100%'}}
-                        >
+                        <tr className={"results-table-header-row"}
+                            key={headerGroup.id}>
                             {headerGroup.headers.map(header => {
                                 return (
-                                    <th
-                                        key={header.id}
+                                    <th key={header.id}
+                                        className={`results-table-header-cell ${getColumnStyleName(header.id)}`}
                                         colSpan={header.colSpan}
-                                        style={{position: 'relative', width: header.getSize()}}
                                     >
                                         {header.isPlaceholder
                                             ? null
@@ -462,22 +467,17 @@ export default function ResultsTable({
                                 data-index={virtualRow.index} //needed for dynamic row height measurement
                                 ref={node => rowVirtualizer.measureElement(node)} //measure dynamic row height
                                 key={row.id}
+                                className={"results-table-virtualized-row"}
                                 style={{
-                                    display: 'flex',
-                                    position: 'absolute',
                                     transform: `translateY(${virtualRow.start}px)`, //this should always be a `style`
                                                                                     // as it changes on scroll
-                                    width: '100%',
                                 }}
                             >
                                 {row.getVisibleCells().map(cell => {
                                     return (
                                         <td
                                             key={cell.id}
-                                            style={{
-                                                display: 'flex',
-                                                width: cell.column.getSize(),
-                                            }}
+                                            className={`results-table-cell ${getColumnStyleName(cell.column.id)}`}
                                         >
                                             {flexRender(
                                                 cell.column.columnDef.cell,
