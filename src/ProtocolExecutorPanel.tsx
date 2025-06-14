@@ -144,7 +144,7 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
             // protocols with no customizations are of the form ambient-mask-....-ambient, so make sure we account for
             // the auto-injected final ambient stage
             stageDivs.push(<div key={`stage-${index}`} style={{
-                border: "1px solid black",
+                border: "1px solid",
                 display: "inline-block",
                 flexGrow: `${duration}`,
                 // flexShrink: `${duration}`,
@@ -401,7 +401,7 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
                             flexWrap: "nowrap",
                             width: "100%",
                             minWidth: "100%",
-                            backgroundColor: "lightgray",
+                            // backgroundColor: "lightgray",
                             height: "fit-content",
                             minHeight: "1rem"
                         }}>{stageElements}</div>
@@ -410,7 +410,7 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
                             flexWrap: "nowrap",
                             width: "100%",
                             minWidth: "100%",
-                            backgroundColor: "lightgray",
+                            // backgroundColor: "lightgray",
                             height: "fit-content",
                             minHeight: "1rem"
                         }}>{segmentElements}</div>

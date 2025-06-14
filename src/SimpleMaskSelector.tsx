@@ -12,7 +12,7 @@ export function SimpleMaskSelector({value, onChange, allowCreate = false, showCl
     showClearControl?: boolean
     onChange?: (value: string) => void
 }) {
-    const [maskList, setMaskList] = useSetting<string[]>(AppSettings.MASK_LIST)
+    const [maskList, setMaskList] = useSetting<string[]>(AppSettings.MASKS_IN_DATABASE)
     const displayRef = useRef<HTMLTextAreaElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 

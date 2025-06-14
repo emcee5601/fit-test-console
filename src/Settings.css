@@ -47,11 +47,11 @@ input:disabled {
 }
 
 input:checked + .slider {
-    background-color: #2196F3;
+    background-color: dodgerblue;
 }
 
 input:focus + .slider {
-    box-shadow: 0 0 0.7em #2196F3;
+    box-shadow: 0 0 0.7em dodgerblue;
 }
 
 input:checked + .slider:before {

@@ -48,10 +48,13 @@ export function ResultViewer() {
     }
 
     return (
-        <>
-            <ResultsTable tableData={results} setTableData={setResults}
-                          deleteRowsCallback={deleteRows}/>
-        </>
+        <div style={{
+            justifySelf: "center",
+            maxWidth: "100%",
+            height: "100%",
+        }}>
+            <ResultsTable tableData={results} setTableData={setResults} deleteRowsCallback={deleteRows}/>
+        </div>
     );
 }
 

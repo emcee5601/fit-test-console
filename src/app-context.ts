@@ -192,7 +192,7 @@ async function scanHistoricalResults() {
                 participants.add(((currentValue.Participant as string) ?? "").trim())
                 return participants;
             }, new Set<string>())
-        settings.saveSetting(AppSettings.MASK_LIST, [...dbMasks].sort(enCaseInsensitiveCollator.compare))
+        settings.saveSetting(AppSettings.MASKS_IN_DATABASE, [...dbMasks].sort(enCaseInsensitiveCollator.compare))
         settings.saveSetting(AppSettings.TEST_NOTES, [...dbTestNotes].sort(enCaseInsensitiveCollator.compare))
         settings.saveSetting(AppSettings.TODAY_PARTICIPANTS, [...todayParticipants].sort(enCaseInsensitiveCollator.compare))
     })

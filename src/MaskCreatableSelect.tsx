@@ -4,7 +4,7 @@ import {AppSettings} from "src/app-settings.ts";
 import {enCaseInsensitiveCollator} from "src/utils.ts";
 
 export function MaskCreatableSelect({value, onChange}: { value?: string, onChange?: (value: string) => void }) {
-    const [maskList,setMaskList] = useSetting<string[]>(AppSettings.MASK_LIST)
+    const [maskList,setMaskList] = useSetting<string[]>(AppSettings.MASKS_IN_DATABASE)
 
     return (
         <CreatableSelect

@@ -16,6 +16,7 @@ import {InfoBox} from "src/InfoBox.tsx";
 import {ExternalController} from "src/external-control.ts";
 import {formatDuration} from "src/utils.ts";
 import {PortaCountListener} from "src/portacount-client-8020.ts";
+import {SmartTextArea} from "src/SmartTextArea.tsx";
 
 export function SettingsPanel() {
     const appContext = useContext(AppContext)
@@ -28,6 +29,8 @@ export function SettingsPanel() {
     const [showDangerZoneSettings, setShowDangerZoneSettings] = useState<boolean>(false); // don't persist this setting
     const [dataToDownload, setDataToDownload] = useState<string>("all-raw-data")
     const [minutesPerParticipant, setMinutesPerParticipant] = useSetting<number>(AppSettings.MINUTES_ALLOTTED_PER_PARTICIPANT)
+    const [maskList, setMaskList] = useSetting<string[]>(AppSettings.MASK_LIST)
+    const [colorScheme, setColorScheme] = useSetting<string>(AppSettings.COLOR_SCHEME)
     const [eventEndDate, setEventEndDate] = useState<Date>(appContext.settings.eventEndTime)
 
     const [, helpUpdateState] = useState({})
@@ -190,6 +193,13 @@ export function SettingsPanel() {
                                                     {"2400": "2400"},
                                                     {"9600": "9600"}
                                                 ]}/>
+                                <SettingsSelect label={"Color Scheme"} value={colorScheme}
+                                                setValue={(value) => setColorScheme(value)}
+                                                options={[
+                                                    {"Auto": "light dark"},
+                                                    {"Dark": "dark"},
+                                                    {"Light": "light"},
+                                                ]}/>
                                 <SpeechVoiceSelectorWidget/>
                                 <BooleanSettingToggleButton trueLabel={"Verbose speech"} setting={AppSettings.VERBOSE}/>
                                 <BooleanSettingToggleButton
@@ -217,6 +227,14 @@ export function SettingsPanel() {
                                    onClick={() => localStorage.clear()}/>
                         </fieldset>}
                     </section>
+                    <fieldset id={"mask-list"}>
+                        <legend>Mask list</legend>
+                        <SmartTextArea initialValue={maskList.join("\n")} onChange={(value) => {
+                            if(value) {
+                                setMaskList(value.split(/\n/))
+                            }
+                        }}/>
+                    </fieldset>
                     <fieldset id={"settings-state"}>
                         <legend>Settings & State</legend>
                         <button onClick={fetchSettingsAndStateInfo}>Fetch settings & state info</button>

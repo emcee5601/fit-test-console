@@ -13,6 +13,7 @@ import {IoMdArrowDropdown} from "react-icons/io";
 import {CurrentActivityWidget} from "src/CurrentActivityWidget.tsx";
 import {PortaCountLastLineWidget} from "src/PortaCountLastLineWidget.tsx";
 import {ReactNode, useEffect, useRef, useState} from "react";
+import {ColorSchemeSwitcher} from "src/ColorSchemeSwitcher.tsx";
 
 
 type NavBarState = "full-width" | "time-icons" | "2-lines" | "dropdown-tabs"
@@ -171,6 +172,7 @@ export function NavBar() {
         <div id="nav-bar"
              ref={ref}
              style={{display: "flex", justifyContent: "space-between", height: "100%"}}>
+            <ColorSchemeSwitcher/>
             <CurrentParticipantTimeWidget style={{visibility: showParticipantTime ? "visible" : "hidden"}}
                                           useIcons={useIcons}/>
             <div id={"nav-links-container"} className={"inline-flex"}

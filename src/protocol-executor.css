@@ -3,7 +3,7 @@
 }
 
 .sample-source-mask {
-    background-color: #c1feb5;
+    background-color: light-dark(palegreen, green);
 }
 .sample-source-mask.segment-purge {
     background-image: repeating-linear-gradient(
@@ -16,7 +16,7 @@
 }
 
 .sample-source-ambient {
-    background-color: #bafde7;
+    background-color: light-dark(lightskyblue, royalblue);
 }
 .sample-source-ambient.segment-purge {
     background-image: repeating-linear-gradient(
@@ -81,7 +81,6 @@
     --color: green;
 }
 
-
 .protocol-position-pointer::before {
     content: ""; /*needed so this shows up*/
     background-image: repeating-linear-gradient(
@@ -107,13 +106,9 @@
 }
 
 #protocol-executor-panel-main.in-progress {
-    background-color: #e7ffe7;
 }
 
 #protocol-executor-panel-main.idle {
-    /*background-color: #ffe3e3;*/
-    background-color: #eeeeee;
     filter: grayscale(60%);
-    opacity: 80%;
 }
 

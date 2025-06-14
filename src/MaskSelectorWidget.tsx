@@ -7,12 +7,13 @@ type MaskSelectorWidgetProps = {
     value?: string,
     onChange?: (mask: string) => void,
     label?: string,
-    id?:string,
+    id?: string,
     placeholder?: string,
 };
 
 export function MaskSelectorWidget(props: MaskSelectorWidgetProps) {
-    const [maskList, setMaskList] = useSetting<string[]>(AppSettings.MASK_LIST)
+    const [dbMaskist, setDbMaskList] = useSetting<string[]>(AppSettings.MASKS_IN_DATABASE)
+    const [maskList] = useSetting<string[]>(AppSettings.MASK_LIST)
 
     function updateCurrentMask(mask: string) {
         if (props.onChange) {
@@ -20,7 +21,7 @@ export function MaskSelectorWidget(props: MaskSelectorWidgetProps) {
         }
 
         // update the mask list
-        setMaskList((prev) => {
+        setDbMaskList((prev) => {
             return [...new Set([...prev, mask])].filter((item) => item && item.trim().length > 0).toSorted(enCaseInsensitiveCollator.compare)
         })
     }
@@ -30,9 +31,13 @@ export function MaskSelectorWidget(props: MaskSelectorWidgetProps) {
             id={`mask-${props.id}`}
             label={props.label}
             initialValue={props.value}
-            autocompleteOptions={maskList.map((maskName) => {
-                return {label: maskName, value: maskName}
-            })}
+            autocompleteOptions={() => {
+                return [...dbMaskist, ...maskList]
+                    .toSorted(enCaseInsensitiveCollator.compare)
+                    .map((maskName) => {
+                        return {label: maskName, value: maskName}
+                    })
+            }}
             placeholder={props.placeholder || "Click to add mask"}
             onChange={(value) => updateCurrentMask(value || "")}
         ></SmartTextArea>
