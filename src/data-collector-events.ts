@@ -1,4 +1,5 @@
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
+import {deepCopy} from "json-2-csv/lib/utils";
 
 /**
  * These are here so we don't create a dependency loop while refactoring FitFactorEstimator. Will probably need FitFactorEstimatorEvents at some point.
@@ -71,12 +72,20 @@ export class ProcessedDataEvent extends DataCollectorEvent {
         this.data = data;
     }
 }
+export class NewTestStartedEvent extends DataCollectorEvent {
+    readonly record: SimpleResultsDBRecord
+
+    constructor(record: SimpleResultsDBRecord) {
+        super();
+        this.record = deepCopy(record) // pass by value
+    }
+}
 export class CurrentTestUpdatedEvent extends DataCollectorEvent {
     readonly record: SimpleResultsDBRecord
 
     constructor(record: SimpleResultsDBRecord) {
         super();
-        this.record = record
+        this.record = deepCopy(record) // pass by value
     }
 }
 

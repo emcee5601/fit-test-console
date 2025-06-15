@@ -56,6 +56,7 @@ export enum AppSettings {
     ENABLE_TEST_INSTRUCTIONS_ZOOM = "enable-test-instructions-zoom",
     BOOKMARKS = "bookmarks",
     MASK_LIST = "mask-list",
+    AUTO_UPDATE_MASK_LIST = "auto-update-mask-list",
     COLOR_SCHEME = "color-scheme",
 
     // session only settings (these start with "so-". todo: can we merge these from another enum into this?
@@ -63,7 +64,7 @@ export enum AppSettings {
     STATS_LAST_DATE = "so-stats-last-date",
     RESULTS_TABLE_FILTER = "so-results-table-filter",
     PARTICIPANT_RESULTS_TABLE_FILTER = "so-participant-results-table-filter",
-    MASKS_IN_DATABASE = "so-masks-in-db",
+    COMBINED_MASK_LIST = "so-combined-mask-list",
     TODAY_PARTICIPANTS = "so-today-participants",
     TEST_NOTES = "so-test-notes",
     CONTROL_SOURCE_IN_VIEW = "so-control-source-in-view",
@@ -227,13 +228,14 @@ const AppSettingsDefaults = {
     "enable-test-instructions-zoom": false,
     "bookmarks": {},
     "mask-list": [],
+    "auto-update-mask-list": true,
     "color-scheme": "auto",
 
     "so-stats-first-date": new Date(0), // epoch, sentinel value
     "so-stats-last-date": new Date(), // today
     "so-results-table-filter": [],
     "so-participant-results-table-filter": [],
-    "so-masks-in-db": [],
+    "so-combined-mask-list": [],
     "so-today-participants": [],
     "so-test-notes": [],
     "so-control-source-in-view": true,

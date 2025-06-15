@@ -15,6 +15,7 @@ type SmartTextAreaProps = {
     autocompleteOptions?: Option[] | (() => Option[]),
     id?: string,
     oneLine?: boolean,
+    scrollable?: boolean,
 }
 
 /**
@@ -43,6 +44,7 @@ export function SmartTextArea({
     autocompleteOptions = [],
     id,
     oneLine = false,
+    scrollable = false,
 }: SmartTextAreaProps & Omit<HTMLAttributes<HTMLTextAreaElement>, 'onChange' | 'value' | 'style'>) {
     const [value, setValue] = React.useState(initialValue)
     const labelRef = useRef<HTMLLabelElement>(null);
@@ -319,7 +321,7 @@ export function SmartTextArea({
                              className={"smart-text-area-label"}>{label}</label>}
             <label id={`smart-text-area-${id}-textarea-resizer`} className={"textarea-resizer"} ref={labelRef}>
                 <textarea id={`smart-text-area-${id}-textarea`}
-                          className={`smart-text-area-textarea ${oneLine && "one-line"}`}
+                          className={`smart-text-area-textarea ${oneLine && "one-line"} ${scrollable&& "scrollable"}`}
                           placeholder={placeholder}
                           value={value as string}
                           ref={textAreaRef}

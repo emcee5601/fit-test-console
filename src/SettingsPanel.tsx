@@ -102,7 +102,9 @@ export function SettingsPanel() {
             }
         }
         appContext.portaCountClient.addListener(portaCountListener);
-        return () => { appContext.portaCountClient.removeListener(portaCountListener); };
+        return () => {
+            appContext.portaCountClient.removeListener(portaCountListener);
+        };
     }, []);
 
 
@@ -210,6 +212,7 @@ export function SettingsPanel() {
                                 <BooleanSettingToggleButton setting={AppSettings.ENABLE_PROTOCOL_EDITOR}/>
                                 <BooleanSettingToggleButton setting={AppSettings.ENABLE_QR_CODE_SCANNER}/>
                                 <BooleanSettingToggleButton setting={AppSettings.ENABLE_STATS}/>
+                                <BooleanSettingToggleButton setting={AppSettings.AUTO_UPDATE_MASK_LIST}/>
                                 <BooleanSettingToggleButton
                                     setting={AppSettings.ENABLE_AUTO_CONNECT}/>
                                 <BooleanSettingToggleButton
@@ -229,11 +232,17 @@ export function SettingsPanel() {
                     </section>
                     <fieldset id={"mask-list"}>
                         <legend>Mask list</legend>
-                        <SmartTextArea initialValue={maskList.join("\n")} onChange={(value) => {
-                            if(value) {
-                                setMaskList(value.split(/\n/))
-                            }
-                        }}/>
+                        <div style={{height: "50vh"}}>
+                            <SmartTextArea
+                                scrollable={true}
+                                debounceDelay={5000} // needs to be longer multi-word/multi-line typing
+                                initialValue={maskList.join("\n")}
+                                onChange={(value) => {
+                                    if (value) {
+                                        setMaskList(value.split(/\n/).map((line) => line.trim()).filter((line) => line.length > 0));
+                                    }
+                                }}/>
+                        </div>
                     </fieldset>
                     <fieldset id={"settings-state"}>
                         <legend>Settings & State</legend>
@@ -251,18 +260,21 @@ export function SettingsPanel() {
                         <InfoBox label={"Mask Purge"}>{formatDuration(1000 * portaCountSettings.maskPurge)}</InfoBox>
                         {/*mask sample*/}
                         {
-                            [...portaCountSettings.maskSample.entries()].map(([index, value]) => <InfoBox key={index} label={`Ex ${String(index)} sample`}>{formatDuration(1000*value)}</InfoBox>)
+                            [...portaCountSettings.maskSample.entries()].map(([index, value]) => <InfoBox key={index}
+                                                                                                          label={`Ex ${String(index)} sample`}>{formatDuration(1000 * value)}</InfoBox>)
                         }
 
                         {/*ff pass levels*/}
                         {
-                            [...portaCountSettings.fitFactorPassLevel.entries()].map(([index, value]) => <InfoBox key={index} label={`FF pass level ${String(index)}`}>{value}</InfoBox>)
+                            [...portaCountSettings.fitFactorPassLevel.entries()].map(([index, value]) => <InfoBox
+                                key={index} label={`FF pass level ${String(index)}`}>{value}</InfoBox>)
                         }
 
                         <InfoBox label={"Battery"}>{portaCountState.batteryStatus}</InfoBox>
                         <InfoBox label={"Pulse"}>{portaCountState.pulseStatus}</InfoBox>
                         {
-                            [...portaCountState.componentVoltages.entries()].map(([component, value]) => <InfoBox key={component} label={`${component} voltage`}>{value}</InfoBox>)
+                            [...portaCountState.componentVoltages.entries()].map(([component, value]) => <InfoBox
+                                key={component} label={`${component} voltage`}>{value}</InfoBox>)
                         }
                     </fieldset>
                 </section>

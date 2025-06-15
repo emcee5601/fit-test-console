@@ -23,7 +23,7 @@ import {
     EstimatedFitFactorChangedEvent,
     EstimatedMaskConcentrationChangedEvent,
     InstructionsChangedEvent,
-    LogEvent,
+    LogEvent, NewTestStartedEvent,
     ProcessedDataEvent,
     RawLineEvent,
     TickEvent
@@ -50,6 +50,7 @@ export interface DataCollectorListener {
 
     logRawLine?(line: string): void,
 
+    newTestStarted?(data: SimpleResultsDBRecord): void,
     currentTestUpdated?(data: SimpleResultsDBRecord): void,
 }
 
@@ -216,8 +217,11 @@ export class DataCollector {
                 this.currentTestData[key] = testTemplate[key];
             }
         }
+        // save the templated changes to db
+        this.updateCurrentRowInDatabase()
 
         console.log(`new test added: ${JSON.stringify(this.currentTestData)}`)
+        this.dispatch(new NewTestStartedEvent(newTestData))
         this.dispatch(new CurrentTestUpdatedEvent(newTestData))
     }
 
@@ -304,6 +308,12 @@ export class DataCollector {
         this.listeners.forEach((listener) => {
             // console.log(`dispatch event ${event.constructor.name}`)
             switch (event.constructor.name) {
+                case NewTestStartedEvent.name: {
+                    if(listener.newTestStarted) {
+                        listener.newTestStarted((event as NewTestStartedEvent).record)
+                    }
+                    break;
+                }
                 case CurrentTestUpdatedEvent.name: {
                     if (listener.currentTestUpdated) {
                         listener.currentTestUpdated((event as CurrentTestUpdatedEvent).record)

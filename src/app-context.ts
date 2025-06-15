@@ -8,7 +8,7 @@ import {
 import {APP_SETTINGS_CONTEXT, AppSettings, calculateNumberOfExercises} from "./app-settings.ts";
 import {DataCollector, DataCollectorListener} from "./data-collector.ts";
 import {SPEECH} from "./speech.ts";
-import {RESULTS_DB} from "./SimpleResultsDB.ts";
+import {RESULTS_DB, SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 import {RAW_DB} from "./database.ts";
 import {ProtocolExecutor, ProtocolExecutorListener} from "./protocol-executor.ts";
 import {PortaCount8020Simulator} from "./porta-count-8020-simulator.ts";
@@ -169,21 +169,17 @@ async function scanHistoricalResults() {
     const today = new Date();
     const todayYyyymmdd = new Date(today.getTime() - today.getTimezoneOffset() * 60 * 1000).toISOString().substring(0, 10)
 
-    function isToday(time:string) {
+    function isToday(time: string) {
         // compare in localtime.  maybe we can compare in utc?
         const recordDate = new Date(time);
         const recordYyyymmdd = new Date(recordDate.getTime() - recordDate.getTimezoneOffset() * 60 * 1000).toISOString().substring(0, 10);
         return recordYyyymmdd === todayYyyymmdd
     }
 
-    RESULTS_DB.getData().then((results) => {
-        const dbMasks = results.reduce((masks, currentValue) => {
-            // make sure mask has a value and strip that value of leading and trailing spaces
-            masks.add(((currentValue.Mask as string) ?? "").trim())
-            return masks;
-        }, new Set<string>())
+    return RESULTS_DB.getData().then((results) => {
+        const dbMasks = deduplicateMasks(results.map((record) => record.Mask as string))
         const dbTestNotes = results.reduce((notes, currentValue) => {
-            notes.add(((currentValue.Notes as string)??"").trim())
+            notes.add(((currentValue.Notes as string) ?? "").trim())
             return notes;
         }, new Set<string>())
         const todayParticipants = results
@@ -192,7 +188,7 @@ async function scanHistoricalResults() {
                 participants.add(((currentValue.Participant as string) ?? "").trim())
                 return participants;
             }, new Set<string>())
-        settings.saveSetting(AppSettings.MASKS_IN_DATABASE, [...dbMasks].sort(enCaseInsensitiveCollator.compare))
+        settings.saveSetting(AppSettings.COMBINED_MASK_LIST, dbMasks)
         settings.saveSetting(AppSettings.TEST_NOTES, [...dbTestNotes].sort(enCaseInsensitiveCollator.compare))
         settings.saveSetting(AppSettings.TODAY_PARTICIPANTS, [...todayParticipants].sort(enCaseInsensitiveCollator.compare))
     })
@@ -245,6 +241,35 @@ function initCurrentActivityListener() {
     protocolExecutor.addListener(combinedListener)
 }
 
+function initMaskListUpdator() {
+    // update the mask list when a new test is started
+    const maskListUpdater: DataCollectorListener = {
+        newTestStarted(data: SimpleResultsDBRecord) {
+            const mask = cleanMaskName(data.Mask)
+            if (!mask) {
+                return; // no mask was specified
+            }
+            const combinedMaskList = settings.getSetting<string[]>(AppSettings.COMBINED_MASK_LIST);
+            const lcMasks = new Set(combinedMaskList.map((mask) => mask.toLowerCase()));
+            if (!lcMasks.has(mask.toLowerCase())) {
+                settings.saveSetting(AppSettings.COMBINED_MASK_LIST, [...combinedMaskList, mask].toSorted(enCaseInsensitiveCollator.compare));
+            }
+        }
+    }
+    dataCollector.addListener(maskListUpdater)
+
+    const combinedMaskList = deduplicateMasks(
+        [
+            ...settings.getSetting<string[]>(AppSettings.MASK_LIST),
+            ...settings.getSetting<string[]>(AppSettings.COMBINED_MASK_LIST),
+        ]
+    );
+    settings.saveSetting(AppSettings.COMBINED_MASK_LIST, combinedMaskList)
+    if (settings.getSetting(AppSettings.AUTO_UPDATE_MASK_LIST)) {
+        settings.saveSetting(AppSettings.MASK_LIST, combinedMaskList)
+    }
+}
+
 async function init() {
     await settings.loadAllSettings()
     await RESULTS_DB.open() // start init process
@@ -254,6 +279,7 @@ async function init() {
     initDataCollector()
     await scanHistoricalResults();
     initCurrentActivityListener();
+    initMaskListUpdator();
     timingSignal.start();
 
     if (settings.getSetting<boolean>(AppSettings.ENABLE_AUTO_CONNECT)) {
@@ -262,6 +288,29 @@ async function init() {
     }
     // todo: make a ready callback (if await, we don't need to?)
 }
+
+
+// support functions
+function cleanMaskName(mask: string | undefined) {
+    // clean up mask names
+    return ((mask as string) ?? "").replaceAll(/\s+/g, ' ');
+}
+
+function deduplicateMasks(maskNames: string[]) {
+    const lcMasks = new Set<string>();
+    const uniqueMasks = maskNames.reduce((masks, maskName) => {
+        const cleanMask = cleanMaskName(maskName)
+        const lcMask = cleanMask.toLowerCase()
+        if (lcMask && !lcMasks.has(lcMask)) {
+            lcMasks.add(lcMask);
+            masks.add(cleanMask)
+        }
+        return masks
+    }, new Set<string>())
+
+    return [...uniqueMasks].toSorted(enCaseInsensitiveCollator.compare)
+}
+
 
 await init()
 // anything that needs to persist across tabs should be here

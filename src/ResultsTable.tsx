@@ -3,7 +3,6 @@
  */
 import React, {Dispatch, SetStateAction, useContext, useEffect, useState} from 'react'
 
-// import './index.css'
 import './ResultsTable.css'
 
 import {

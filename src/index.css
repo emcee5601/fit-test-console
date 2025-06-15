@@ -159,27 +159,6 @@ button:disabled {
     }
 }
 
-table {
-    border-collapse: collapse;
-
-    th {
-        top: 0;
-        border-top: 1px solid;
-        border-left: 1px solid;
-        border-right: 1px solid;
-        border-bottom: 5px solid;
-    }
-
-    td {
-        border: 1px solid;
-        text-align: left;
-    }
-
-    th, td {
-        padding: 0px;
-    }
-}
-
 
 div.editable-table-cell {
     display: inline-block;
