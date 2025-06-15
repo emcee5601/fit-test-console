@@ -16,6 +16,7 @@ type SmartTextAreaProps = {
     id?: string,
     oneLine?: boolean,
     scrollable?: boolean,
+    onChangeOnlyOnBlur?: boolean, // call onChange callback only when we lose focus
 }
 
 /**
@@ -45,6 +46,7 @@ export function SmartTextArea({
     id,
     oneLine = false,
     scrollable = false,
+    onChangeOnlyOnBlur,
 }: SmartTextAreaProps & Omit<HTMLAttributes<HTMLTextAreaElement>, 'onChange' | 'value' | 'style'>) {
     const [value, setValue] = React.useState(initialValue)
     const labelRef = useRef<HTMLLabelElement>(null);
@@ -144,6 +146,9 @@ export function SmartTextArea({
             setHoverOptionIndex(null)
         }
 
+        if(onChangeOnlyOnBlur) {
+            return;
+        }
         if (onChange) {
             // todo: figure out how to create a ChangeEvent and send that along instead of just the value
             if (debounce) {
@@ -252,7 +257,7 @@ export function SmartTextArea({
         }
     }
 
-    function handleOnChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    function handleTextAreaOnChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
         updateTextAreaSize(e.target.value);
         setValue(e.target.value)
     }
@@ -291,9 +296,15 @@ export function SmartTextArea({
         }
     }
 
-    function handleOnFocus() {
+    function handleTextAreaOnFocus() {
         if (availableCompletions.length > 1) {
             setAutocompleteVisible(true);
+        }
+    }
+
+    function handleTextAreaOnBlur() {
+        if(onChangeOnlyOnBlur && onChange) {
+            onChange(value)
         }
     }
 
@@ -325,8 +336,9 @@ export function SmartTextArea({
                           placeholder={placeholder}
                           value={value as string}
                           ref={textAreaRef}
-                          onChange={handleOnChange}
-                          onFocus={handleOnFocus}
+                          onChange={handleTextAreaOnChange}
+                          onFocus={handleTextAreaOnFocus}
+                          onBlur={handleTextAreaOnBlur}
                           onMouseDown={handleTextAreaMouseEvent}
                           onKeyDown={(event) => handleKeyDown(event)}
                 />

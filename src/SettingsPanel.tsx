@@ -235,10 +235,10 @@ export function SettingsPanel() {
                         <div style={{height: "50vh"}}>
                             <SmartTextArea
                                 scrollable={true}
-                                debounceDelay={5000} // needs to be longer multi-word/multi-line typing
+                                onChangeOnlyOnBlur={true}
                                 initialValue={maskList.join("\n")}
                                 onChange={(value) => {
-                                    if (value) {
+                                    if (value !== undefined) {
                                         setMaskList(value.split(/\n/).map((line) => line.trim()).filter((line) => line.length > 0));
                                     }
                                 }}/>
