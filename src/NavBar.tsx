@@ -171,7 +171,7 @@ export function NavBar() {
     return (
         <div id="nav-bar"
              ref={ref}
-             style={{display: "flex", justifyContent: "space-between", height: "100%"}}>
+             className={"nav-bar"}>
             <ColorSchemeSwitcher/>
             <CurrentParticipantTimeWidget style={{visibility: showParticipantTime ? "visible" : "hidden"}}
                                           useIcons={useIcons}/>

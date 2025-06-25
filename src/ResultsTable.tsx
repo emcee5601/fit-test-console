@@ -286,31 +286,29 @@ export default function ResultsTable({
     })
 
     /**
-     * Look at the data currently displayed and adjust the number of exercise columns to fit. eg. if we only have 4
-     * exercises (w1 protocol), there's no need to show ex 5-8 that are only in the osha protocol when we are not
-     * showing any osha protocol results.
+     * Look at the data and the protocol for the visible rows to determine how many exercise columns we need.
      */
     function dynamicallyAdjustNumExerciseColumns() {
         const filteredRowModel = table.getFilteredRowModel();
         const numExercises = appContext.settings.numExercisesForProtocol
-        const protocolsShownInTable: string[] = []
+        let maxExercises = minExercisesToShow
         filteredRowModel.rows.forEach((row) => {
+            while (true) {
+                if (row.original[`Ex ${maxExercises + 1}`]) {
+                    maxExercises += 1;
+                } else {
+                    break;
+                }
+            }
+
             const protocolName = row.original.ProtocolName as string;
-            if (!(protocolsShownInTable.includes(protocolName))) {
-                protocolsShownInTable.push(protocolName);
+            if ((numExercises[protocolName] || 4) > maxExercises) {
+                // if the protocol doesn't exist, assume it's 4 since before we recorded protocols it was w1 which is 4
+                maxExercises = numExercises[protocolName] || 4;
             }
         });
 
-        let maxExercises = Math.max(minExercisesToShow, protocolsShownInTable.length)
-        protocolsShownInTable.forEach((protocol) => {
-            if (protocol in numExercises && numExercises[protocol] > maxExercises) {
-                maxExercises = numExercises[protocol];
-            }
-        })
-        if (maxExercises === 0) {
-            // default to 4. before the protocol column was added, num exercises was hardcoded to 4
-            maxExercises = 4
-        }
+        console.debug("maxExercises from protocols:", maxExercises)
         setNumExerciseColumns(maxExercises);
     }
 

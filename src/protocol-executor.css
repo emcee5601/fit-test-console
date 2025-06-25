@@ -62,15 +62,18 @@
 }
 
 .protocol-position-pointer {
-    opacity: 50%;
+    opacity: 90%;
     overflow: hidden;
-    border: 1px solid var(--color);
+    border-top: 10px solid var(--color);
+    border-bottom: 10px solid var(--color);
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
 
     position: absolute;
-    top: -2px;
-    bottom: -2px;
+    top: -3px;
+    bottom: -3px;
     width: 5px;
-    right: 100%;
+    right: calc(100% - 13px);
     transition: --color 0.4s linear;
 }
 
@@ -83,22 +86,14 @@
 
 .protocol-position-pointer::before {
     content: ""; /*needed so this shows up*/
-    background-image: repeating-linear-gradient(
-            0deg,
-            transparent,
-            transparent 15%,
-            var(--color) 15%,
-            var(--color) 85%
-    );
-    background-size: 10px 10px;
-    transform: rotate(var(--angle));
+    background-color: var(--color);
 
     position: absolute;
-    top: 0px;
-    left: -50px;
-    right: -50px;
+    top: -10px;
+    left: -5px;
+    right: -5px;
     bottom: -10px;
-    animation: slide 1s infinite linear, rotate 17s infinite ease-in-out alternate;
+    /*animation: slide 1s infinite linear, rotate 17s infinite ease-in-out alternate;*/
 }
 
 #protocol-executor-panel-main {

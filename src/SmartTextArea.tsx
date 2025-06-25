@@ -1,12 +1,14 @@
-import React, {HTMLAttributes, useCallback, useEffect, useMemo, useRef, useState} from "react";
+import React, {HTMLAttributes, ReactElement, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {createPortal} from "react-dom";
 import "./SmartTextArea.css";
 import {BsXCircleFill} from "react-icons/bs";
+import {isString} from "json-2-csv/lib/utils";
+import {LuUndo2} from "react-icons/lu";
 
 type Option = { label: string, value: string }
 type SmartTextAreaProps = {
     initialValue?: string,
-    label?: string,
+    label?: string | ReactElement,
     placeholder?: string,
     onChange?: (value: string | undefined) => void,
     debounce?: boolean,
@@ -25,7 +27,6 @@ type SmartTextAreaProps = {
  * @param textAreaRef
  * @param initialValue
  * @param placeholder
- * @param props
  * @constructor
  *
  * todo:
@@ -52,11 +53,11 @@ export function SmartTextArea({
     const labelRef = useRef<HTMLLabelElement>(null);
     const textAreaRef = useRef<HTMLTextAreaElement>(null);
     const [hoverOptionIndex, setHoverOptionIndex] = useState<number | null>(null)
-    // const [availableCompletions, setAvailableCompletions] = useState<Option[]>([])
     const [autocompleteVisible, setAutocompleteVisible] = useState<boolean>(false)
     const [allowMouseFocus, setAllowMouseFocus] = useState<boolean>(true)
     const [enableFiltering, setEnableFiltering] = useState<boolean>(true)
     const [numAutocompletionOptions, setNumAutocompletionOptions] = useState<number>(0)
+    const smartTextAreaContainerRef = useRef<HTMLLabelElement>(null)
     const autocompleteOptionsDivRef = useRef<HTMLDivElement>(null)
     const availableCompletions = useMemo(() => {
         const opts = Array.isArray(autocompleteOptions) ? autocompleteOptions : autocompleteOptions()
@@ -72,16 +73,11 @@ export function SmartTextArea({
         }
 
         return opts.filter((option) => filterFun(option))
-
     }, [autocompleteOptions, value, enableFiltering])
     const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
         // console.debug("keyDown", event)
         // console.debug("availableCompletions:", availableCompletions, ", hover index:", hoverOptionIndex);
         const numCompletions = availableCompletions.length;
-        if (!numCompletions) {
-            // no completions. nothing to do.
-            return;
-        }
         // if ctrl-key is down, construct our own key code with modifiers. otherwise use the key code.
         // event.key is the logical key, event.code is the physical key. so use logical key so keyboard remapping is
         // honored.
@@ -89,6 +85,11 @@ export function SmartTextArea({
 
         switch (key) {
             case "Escape":
+                if (value !== initialValue) {
+                    // reset value
+                    undoChanges()
+                    break;
+                }
                 if (enableFiltering && numCompletions < numAutocompletionOptions) {
                     // we're filtering, and we've filtered some items
                     setEnableFiltering(false)
@@ -99,36 +100,78 @@ export function SmartTextArea({
             case "Ctrl-N": // next
             case "Ctrl-F": // forward
             case "ArrowDown":
+                if (!numCompletions) {
+                    break;
+                }
                 setHoverOptionIndex((prev) => (prev === null ? 0 : (prev + 1)) % numCompletions)
                 setAutocompleteVisible(true);
                 break;
             case "Ctrl-P": // prev
             case "Ctrl-B": // back
             case "ArrowUp":
+                if (!numCompletions) {
+                    break;
+                }
                 setHoverOptionIndex((prev) => (numCompletions + (prev === null ? (numCompletions - 1) : (prev - 1))) % numCompletions)
                 setAutocompleteVisible(true);
                 break;
 
             // case "Space": // can't use space since options can contain space
-            case "Enter": // same as tab
-            case "Tab":
+            case "Enter":
                 if (!autocompleteVisible) {
-                    break; // do nothing
+                    // we're not in auto-complete mode, do nothing so we can enter newlines
+                    break;
+                }
+                if (!numCompletions) {
+                    // we're in auto-complete mode, but there are no completions. do nothing so we can enter newlines
+                    break;
                 }
                 if (hoverOptionIndex === null) {
-                    // no selection => no completion
-                } else if (numCompletions === 1 && availableCompletions[0].value.toLowerCase() === (value ?? "").toLowerCase()) {
-                    // we have exactly 1 completion, and the completion is an exact match, treat it as not a completion.
-                } else if (numCompletions > 0) {
-                    // console.debug("tab pressed with available completions:", availableCompletions)
+                    // we're in auto-complete mode with completions, but none of the completions are selected. allow
+                    // newlines
+                    break;
+                }
+                if (numCompletions === 1 && availableCompletions[0].value.toLowerCase() === (value ?? "").toLowerCase()) {
+                    // we have exactly 1 completion, and the completion is an exact match, select it.
                     event.preventDefault(); // consume
-                    setValue(availableCompletions[hoverOptionIndex].value)
+                    updateValue(value)
+                } else if (numCompletions > 0) {
+                    // we have 1 completion that's not an exact match, or we have more than 1 completion, pick the
+                    // selected one console.debug("tab pressed with available completions:", availableCompletions)
+                    event.preventDefault(); // consume
+                    updateValue(availableCompletions[hoverOptionIndex].value)
+                }
+                resetAutocompleteSelection();
+                break;
+            case "Tab":
+                if (!autocompleteVisible) {
+                    // we're not in auto-complete mode, use whatever value is entered.
+                    updateValue(value)
+                } else if (!numCompletions) {
+                    // we're in auto-complete mode, but there are no completions. use value as-is
+                    updateValue(value)
+                } else if (hoverOptionIndex === null) {
+                    // we're in auto-complete mode with completions, but none of the completions are selected. use
+                    // value as-is
+                    updateValue(value)
+                } else if (numCompletions === 1 && availableCompletions[0].value.toLowerCase() === (value ?? "").toLowerCase()) {
+                    // we have exactly 1 completion, and the completion is an exact match, treat it as not a
+                    // completion. use value as-is
+                    updateValue(value)
+                } else if (numCompletions > 0) {
+                    // we have 1 completion that's not an exact match, or we have more than 1 completion, pick the
+                    // selected one console.debug("tab pressed with available completions:", availableCompletions)
+                    // event.preventDefault(); // consume
+                    updateValue(availableCompletions[hoverOptionIndex].value)
+                } else {
+                    console.debug("tab fallthrough")
                 }
                 resetAutocompleteSelection();
                 break;
             default:
                 // a regular key
                 setEnableFiltering(true)
+                setAutocompleteVisible(true)
                 break
         }
     }, [availableCompletions, hoverOptionIndex, value, autocompleteVisible])
@@ -142,11 +185,15 @@ export function SmartTextArea({
     }, [initialValue])
 
     useEffect(() => {
+        updateTextAreaSize(value as string)
+
         if (!value) {
             setHoverOptionIndex(null)
         }
 
-        if(onChangeOnlyOnBlur) {
+        // this is basically the debounce handler
+        if (onChangeOnlyOnBlur) {
+            // don't propagate updates unless we lose focus (in case we want to esc to revert)
             return;
         }
         if (onChange) {
@@ -192,6 +239,7 @@ export function SmartTextArea({
 
     useEffect(() => {
         if (autocompleteVisible) {
+            // console.debug("installing global mouse listener")
             /*
              whenever we show the autocomplete dropdown, set up global event listeners to detect if we've navigated
              away:
@@ -199,21 +247,45 @@ export function SmartTextArea({
              - mouse clicked away
              - scrolled away (todo)
             */
+
             const mouseClickListener = (event: MouseEvent) => {
-                // console.debug("global click listener:", event)
-                if (event.target !== autocompleteOptionsDivRef.current && event.target !== textAreaRef.current) {
-                    resetAutocompleteSelection()
-                    cleanUpListeners();
+                console.debug("global click listener:", event)
+                if (event.target === autocompleteOptionsDivRef.current) {
+                    // clicked an option
+                    return;
                 }
+                if (smartTextAreaContainerRef.current) {
+                    const bounds = smartTextAreaContainerRef.current.getBoundingClientRect();
+                    if (event.clientX >= bounds.left
+                        && event.clientX <= bounds.right
+                        && event.clientY >= bounds.top
+                        && event.clientY <= bounds.bottom) {
+                        // clicked inside the smart text area
+                        return;
+                    }
+                }
+                if (!textAreaRef.current) {
+                    // not ready
+                    return
+                }
+
+                // we clicked outside the dropdown and outside the textarea. probably clicked outside the component.
+                console.debug("clicked outside component, value is", value, "event value is", textAreaRef.current.value)
+                updateValue(textAreaRef.current.value)
+                resetAutocompleteSelection()
+                cleanUpListeners();
             };
+
             const focusInListener = (event: FocusEvent) => {
                 // console.debug("focus in", event)
                 if (!allowMouseFocus) {
                     // console.debug("mouse focus not allowed")
                     return
                 }
-                if (event.target !== textAreaRef.current) {
-                    // we focused into some other element
+                if (event.target !== textAreaRef.current && textAreaRef.current) {
+                    // we focused into some other element. seems to happen before click
+                    console.debug("focusIn different element, value is", textAreaRef.current.value)
+                    updateValue(textAreaRef.current.value)
                     resetAutocompleteSelection()
                     cleanUpListeners();
                 }
@@ -237,6 +309,7 @@ export function SmartTextArea({
             document.addEventListener("mousemove", mouseMoveListener)
 
             return () => {
+                // console.debug("cleaning up autocomplete listeners")
                 cleanUpListeners()
             }
         }
@@ -258,8 +331,8 @@ export function SmartTextArea({
     }
 
     function handleTextAreaOnChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
-        updateTextAreaSize(e.target.value);
-        setValue(e.target.value)
+        console.debug("textarea onchange", e.target.value)
+        setValue(e.target.value) // we want to be debounced
     }
 
     function handleOnMouseEnter() {
@@ -279,7 +352,7 @@ export function SmartTextArea({
 
     function handleAutoCompleteOptionClick(option: Option) {
         // console.debug("autoCompleteOptionClick", option)
-        setValue(option.value)
+        updateValue(option.value)
         resetAutocompleteSelection();
     }
 
@@ -302,13 +375,7 @@ export function SmartTextArea({
         }
     }
 
-    function handleTextAreaOnBlur() {
-        if(onChangeOnlyOnBlur && onChange) {
-            onChange(value)
-        }
-    }
-
-    function getOptions() {
+    const getOptions = useCallback(() => {
         return availableCompletions.map((option) => {
             const selected = hoverOptionIndex !== null && (availableCompletions[hoverOptionIndex] === option)
             return <li key={option.value}
@@ -316,35 +383,81 @@ export function SmartTextArea({
                        onMouseEnter={() => handleOnMouseEnter()}
                        onClick={() => handleAutoCompleteOptionClick(option)}>{option.label}</li>
         })
-    }
+    }, [availableCompletions, hoverOptionIndex])
 
     function clearContent() {
         setValue("")
+        // updateValue("")
+    }
+
+    function undoChanges() {
+        setValue(initialValue)
+        // updateValue(initialValue)
+    }
+
+    /**
+     * set the value for the UI AND propagate it to the onChange listener if any, bypassing debounce
+     * @param value
+     */
+    function updateValue(value?: string) {
+        console.debug(`updateValue '${initialValue}' => '${value}'`)
+        if(value === initialValue) {
+            console.debug("no change")
+            return
+        }
+        setValue(value)
+        if (onChange) {
+            onChange(value)
+        }
+    }
+
+
+    function handleTextAreaOnBlur(event: React.FocusEvent<HTMLTextAreaElement, Element>) {
+        console.debug("onBlur handler", value, "autocomplete visible?", autocompleteVisible)
+
+        if (autocompleteVisible) {
+            // autocomplete was visible. let autocomplete handling determine what value was chosen
+            console.debug("let autocomplete handle update")
+            event.preventDefault()
+            return;
+        }
+        updateValue(value)
     }
 
     const rect = textAreaRef.current?.getBoundingClientRect();
 
     const textAreaId = `smart-text-area-${id}-textarea`;
     return (
-        <label id={`smart-text-area-${id}-container`} className="smart-text-area-container">
-            {label && <label id={`smart-text-area-${id}-label`}
+        <label id={`smart-text-area-${id}-container`} className="smart-text-area-container"
+               ref={smartTextAreaContainerRef}>
+            {label && (
+                isString(label)
+                    ? <label id={`smart-text-area-${id}-label`}
                              htmlFor={textAreaId}
-                             className={"smart-text-area-label"}>{label}</label>}
+                             className={"smart-text-area-label"}>{label}</label>
+                    : label
+            )}
             <label id={`smart-text-area-${id}-textarea-resizer`} className={"textarea-resizer"} ref={labelRef}>
-                <textarea id={`smart-text-area-${id}-textarea`}
-                          className={`smart-text-area-textarea ${oneLine && "one-line"} ${scrollable&& "scrollable"}`}
+                <textarea id={textAreaId}
+                          className={`smart-text-area-textarea ${oneLine && "one-line"} ${scrollable && "scrollable"}`}
                           placeholder={placeholder}
                           value={value as string}
                           ref={textAreaRef}
+                    // todo: calculate rows based on font size instead of using css datalist hack since that doesn't
+                    // handle case where the text *could* fit on 1 row. seems minimum is 2 rows
+                    // rows={value?.split(/\n/).length}
                           onChange={handleTextAreaOnChange}
                           onFocus={handleTextAreaOnFocus}
-                          onBlur={handleTextAreaOnBlur}
+                          onBlur={(e) => handleTextAreaOnBlur(e)}
                           onMouseDown={handleTextAreaMouseEvent}
                           onKeyDown={(event) => handleKeyDown(event)}
                 />
             </label>
-            <div className={"clear-content-icon"}>
-                <BsXCircleFill onClick={() => clearContent()}/>
+            <div className={"clear-content-icon svg-container"}>
+                {value === initialValue || !initialValue
+                    ? <BsXCircleFill onClick={() => clearContent()}/>
+                    : <LuUndo2 onClick={() => undoChanges()}/>
+                }
             </div>
             {autocompleteVisible && // only render this if we need to show it
                 // use createPortal() to place the auto-completion div on the document body. Otherwise, if we're

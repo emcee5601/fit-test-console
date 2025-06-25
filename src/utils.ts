@@ -56,12 +56,13 @@ export function getConnectionStatusCssClass(connectionStatus: ConnectionStatus):
     }
 }
 
-export function getFitFactorCssClass(fitFactor: number, hasThisExercise: boolean): string {
+export function getFitFactorCssClass(fitFactor: number|string, hasThisExercise: boolean): string {
     // console.debug(`ff is ${fitFactor}`)
-    if(!hasThisExercise) {
-        // we don't have this many exercises
+    if(!hasThisExercise && !fitFactor) {
+        // we don't have this many exercises, and there's no value in the cell
         return "result"
     }
+    fitFactor = Number(fitFactor)
 
     if( isNaN(fitFactor) || fitFactor <= 0 ) {
         // if it's zero, it was probably parsed from empty string

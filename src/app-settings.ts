@@ -9,14 +9,12 @@ import {
     StandardProtocolDefinition,
     StandardStageDefinition
 } from "./simple-protocol.ts";
-import AbstractDB from "./abstract-db.ts";
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
-import stringifyDeterministically from "json-stringify-deterministic";
 import {DataSource} from "./data-source.ts";
 import {SegmentState} from "./protocol-executor.ts";
 import {ParticleConcentrationEvent} from "./portacount-client-8020.ts";
 import {Activity} from "src/activity.ts";
-import {deepCopy} from "json-2-csv/lib/utils";
+import {defaultConfigManager} from "src/config/config-context.tsx";
 
 /**
  * this is for convenience. code outside of this module should use AppSettings enum.
@@ -56,6 +54,7 @@ export enum AppSettings {
     ENABLE_TEST_INSTRUCTIONS_ZOOM = "enable-test-instructions-zoom",
     BOOKMARKS = "bookmarks",
     MASK_LIST = "mask-list",
+    PARTICIPANT_LIST = "participant-list",
     AUTO_UPDATE_MASK_LIST = "auto-update-mask-list",
     COLOR_SCHEME = "color-scheme",
 
@@ -65,7 +64,7 @@ export enum AppSettings {
     RESULTS_TABLE_FILTER = "so-results-table-filter",
     PARTICIPANT_RESULTS_TABLE_FILTER = "so-participant-results-table-filter",
     COMBINED_MASK_LIST = "so-combined-mask-list",
-    TODAY_PARTICIPANTS = "so-today-participants",
+    COMBINED_PARTICIPANT_LIST = "so-combined-participant-list",
     TEST_NOTES = "so-test-notes",
     CONTROL_SOURCE_IN_VIEW = "so-control-source-in-view",
     SAMPLE_SOURCE_IN_VIEW = "so-sample-source-in-view",
@@ -101,7 +100,7 @@ export type AppSettingType = unknown
  * Settings names and default values.
  * Keys are the database keys, so we must preserve what we have previously used (or convert)
  */
-const AppSettingsDefaults = {
+export const AppSettingsDefaults = {
     "speech-enabled": false,
     "advanced-mode": false,
     "speech-voice": "default",
@@ -228,6 +227,7 @@ const AppSettingsDefaults = {
     "enable-test-instructions-zoom": false,
     "bookmarks": {},
     "mask-list": [],
+    "participant-list": [],
     "auto-update-mask-list": true,
     "color-scheme": "auto",
 
@@ -236,7 +236,7 @@ const AppSettingsDefaults = {
     "so-results-table-filter": [],
     "so-participant-results-table-filter": [],
     "so-combined-mask-list": [],
-    "so-today-participants": [],
+    "so-combined-participant-list": [],
     "so-test-notes": [],
     "so-control-source-in-view": true,
     "so-sample-source-in-view": true,
@@ -257,43 +257,6 @@ export type ValidSettings = keyof typeof AppSettingsDefaults;
 function isSessionOnlySetting(setting: ValidSettings) {
     return setting.toLowerCase().startsWith("so-")
 }
-
-type SettingsDBEntry<T> = { ID: string, value: T }
-
-// this should be kept internal
-class SettingsDB extends AbstractDB {
-    static DB_NAME = "settings-db";
-    static OBJECT_STORE_NAME = "settings-data";
-
-    constructor(name = SettingsDB.DB_NAME) {
-        super(name, [SettingsDB.OBJECT_STORE_NAME], 1)
-    }
-
-    override onUpgradeNeeded(request: IDBOpenDBRequest) {
-        const theDb = request.result;
-
-        console.warn(`Database upgrade needed: ${theDb.name}`);
-        // Create an objectStore for this database
-        theDb.createObjectStore(SettingsDB.OBJECT_STORE_NAME, {keyPath: "ID"});
-    }
-
-    public async getSetting<T>(name: ValidSettings): Promise<T | undefined> {
-        // because we change the way AppSettings
-        const result = await this.get<SettingsDBEntry<T>>(SettingsDB.OBJECT_STORE_NAME, name);
-        if (result) {
-            return result.value;
-        }
-        return undefined;
-    }
-
-    async saveSetting<T>(name: ValidSettings, value: T) {
-        console.debug(`saveSettings saving to DB ${name} : ${JSON.stringify(value)}`);
-        const entry = {ID: name, value: value}
-        return this.put<SettingsDBEntry<T>>(SettingsDB.OBJECT_STORE_NAME, entry)
-    }
-}
-
-const SETTINGS_DB: SettingsDB = new SettingsDB();
 
 export interface SettingsListener {
     subscriptions?(): AppSettings[],
@@ -320,6 +283,7 @@ export type ProtocolSegment = {
     state: SegmentState,
     source: SampleSource,
     protocolStartTimeOffsetSeconds: number, // to help with pointer
+    stageStartTimeOffsetSeconds: number, // helper
     segmentStartTimeMs?: number, // epoch time
     duration: number,
     data: ParticleConcentrationEvent[], // todo: trim this down to timestamp and concentration?
@@ -339,7 +303,6 @@ export type ProtocolSegment = {
  * - When the cache updates, dispatch an event if the value has changed.
  */
 class AppSettingsContext {
-    private readonly cache = new Map<ValidSettings, AppSettingType>(); // todo: consolidate cache with settings db cache
     private readonly listeners: SettingsListener[] = [];
     private _protocolStages: StageDefinition[] = []; // kept in sync with selected protocol
     private _protocolSegments: ProtocolSegment[] = []; // kept in sync with protocol stages
@@ -408,17 +371,6 @@ class AppSettingsContext {
         })
     }
 
-    private dispatch(setting: ValidSettings, value: AppSettingType) {
-        // console.debug(`dispatching setting ${setting}: ${JSON.stringify(value)}`);
-        this.listeners.forEach((listener) => {
-            if (listener.subscriptions && listener.settingsChanged) {
-                if (listener.subscriptions().some((wantSetting) => wantSetting === setting)) {
-                    const valueCopy = deepCopy(value) // make sure we're not accidentally passing by reference
-                    listener.settingsChanged(setting, valueCopy);
-                }
-            }
-        })
-    }
 
     getDefault<T extends AppSettingType>(setting: AppSettings): T {
         return AppSettingsDefaults[setting] as T;
@@ -467,7 +419,7 @@ class AppSettingsContext {
     }
 
     get numExercises(): number {
-        return Math.max(...this.protocolSegments.map((segment) => segment.exerciseNumber ?? 0))
+        return Math.max(...this.protocolSegments.map((segment) => segment.exerciseNumber ?? 0), 0)
     }
 
     set protocolSegments(value: ProtocolSegment[]) {
@@ -616,13 +568,7 @@ class AppSettingsContext {
      * @param setting
      */
     async getActualSetting<T extends AppSettingType>(setting: AppSettings): Promise<T> {
-        const cachedValue = this.cache.get(setting);
-        if (cachedValue !== undefined) {
-            // console.debug(`getActualSetting(${setting}) returning value from cache: ${JSON.stringify(cachedValue)}`)
-            return cachedValue as T;
-        }
-        // not in cache
-        return this.loadSetting(setting); // load it asynchronously, return default value while waiting
+        return this.getSetting(setting);
     }
 
     /**
@@ -632,38 +578,7 @@ class AppSettingsContext {
      * @private
      */
     getSetting<T extends AppSettingType>(setting: AppSettings): T {
-        const cachedValue = this.cache.get(setting);
-        if (cachedValue !== undefined) {
-            // console.debug(`getSetting(${setting}) returning value from cache: ${JSON.stringify(cachedValue)}`)
-            return cachedValue as T;
-        }
-        const defaultValue = AppSettingsDefaults[setting] as T
-        // console.debug(`getSetting(${setting}) returning default value ${JSON.stringify(defaultValue)}`)
-        // not in cache
-        this.loadSetting(setting); // load it asynchronously, return default value while waiting
-        return defaultValue;
-    }
-
-    /**
-     * load value from the database and add it to the cache
-     * @param setting
-     * @param defaultValue
-     * @private
-     */
-    private async loadSetting<T extends AppSettingType>(setting: ValidSettings): Promise<T> {
-        const defaultValue = AppSettingsDefaults[setting] as T
-        if (isSessionOnlySetting(setting)) {
-            // don't bother loading from db because session only settings are not saved to db
-            this.updateCache(setting, defaultValue);
-            return defaultValue;
-        } else {
-            await SETTINGS_DB.open();
-            const dbValue = await SETTINGS_DB.getSetting(setting);
-            const result: T = dbValue === undefined ? defaultValue : dbValue as T; // explicitly check for undefined
-                                                                                   // instead of truthy
-            this.updateCache(setting, result);
-            return result;
-        }
+        return JSON.parse(defaultConfigManager.getConfig(setting) || "[]") as T;
     }
 
     /**
@@ -672,10 +587,7 @@ class AppSettingsContext {
      * @private
      */
     public async loadAllSettings() {
-        const enumKeys = Object.keys(AppSettingsDefaults) // todo: can this be taken from AppSettings?
-        for (const key of enumKeys) {
-            await this.loadSetting(key as ValidSettings);
-        }
+        // nothing to do since settings uses config which is synchronous
 
         const protocolInstructionSets = this.protocolDefinitions;
         for (const protocolName of Object.keys(protocolInstructionSets)) {
@@ -692,51 +604,9 @@ class AppSettingsContext {
      * @private
      */
     saveSetting(setting: ValidSettings, value: AppSettingType) {
-        // todo: rethink how this should work
-        // for now, only save setting to cache if a value is already there.
-        // and only call updateCache initially from loadSetting
-        if (!this.cache.has(setting)) {
-            // console.debug(`saveSetting ${setting} -> ${value}, but setting has not been loaded from DB yet,
-            // ignoring`)
-            return;
-        }
-        this.updateCache(setting, value)
+        defaultConfigManager.setConfig(setting, JSON.stringify(value));
     }
 
-    /**
-     * update the cached value of the setting. dispatch changes.
-     * returns true if the value of the setting has changed, false otherwise.
-     * @param setting
-     * @param value
-     * @private
-     */
-    private updateCache(setting: ValidSettings, value: AppSettingType): boolean {
-        if (this.cache.has(setting)) {
-            const oldValue = this.cache.get(setting);
-            if (stringifyDeterministically(oldValue) === stringifyDeterministically(value)) {
-                // settings haven't changed.  prevent infinite loop by not dispatching
-                return false;
-            }
-
-            // value was changed
-            if (isSessionOnlySetting(setting)) {
-                // ignore. session-only settings don't get preserved to db
-            } else {
-                // update the db
-                SETTINGS_DB.open().then(() => {
-                    SETTINGS_DB.saveSetting(setting, value);
-                })
-            }
-
-        } else {
-            // the first time we're trying to update this cache key. This means this call was the result of loading
-            // from the DB don't re-save it to the db (not necessary)
-        }
-        // settings have changed. update cache and dispatch event
-        this.cache.set(setting, value);
-        this.dispatch(setting, value);
-        return true
-    }
 
 
     private updateProtocolStages(selectedProtocol: string) {
@@ -776,6 +646,7 @@ export function convertStagesToSegments(stages: StandardStageDefinition[]): Prot
     let currentOffset: number = 0
 
     stages.forEach((stage: StandardStageDefinition, stageIndex: number) => {
+        let stageOffset: number = 0
         if (stage.mask_sample > 0) {
             // increment the exercise number if this stage has a mask sample segment
             numExercisesSeen = (numExercisesSeen ?? 0) + 1; // increment; 1-based
@@ -797,11 +668,13 @@ export function convertStagesToSegments(stages: StandardStageDefinition[]): Prot
                 source: SampleSource.AMBIENT,
                 state: SegmentState.PURGE,
                 protocolStartTimeOffsetSeconds: currentOffset,
+                stageStartTimeOffsetSeconds: stageOffset,
                 duration: stage.ambient_purge,
                 data: []
             };
             segments.push(ambientPurgeSegment);
             currentOffset += ambientPurgeSegment.duration;
+            stageOffset += ambientPurgeSegment.duration;
         }
 
         if (stage.ambient_sample > 0) {
@@ -813,11 +686,13 @@ export function convertStagesToSegments(stages: StandardStageDefinition[]): Prot
                 source: SampleSource.AMBIENT,
                 state: SegmentState.SAMPLE,
                 protocolStartTimeOffsetSeconds: currentOffset,
+                stageStartTimeOffsetSeconds: stageOffset,
                 duration: stage.ambient_sample,
                 data: []
             };
             segments.push(ambientSampleSegment);
             currentOffset += ambientSampleSegment.duration;
+            stageOffset += ambientSampleSegment.duration;
         }
 
         // mask segments
@@ -830,11 +705,13 @@ export function convertStagesToSegments(stages: StandardStageDefinition[]): Prot
                 source: SampleSource.MASK,
                 state: SegmentState.PURGE,
                 protocolStartTimeOffsetSeconds: currentOffset,
+                stageStartTimeOffsetSeconds: stageOffset,
                 duration: stage.mask_purge,
                 data: []
             };
             segments.push(maskPurgeSegment);
             currentOffset += maskPurgeSegment.duration;
+            stageOffset += maskPurgeSegment.duration;
         }
 
         if (stage.mask_sample > 0) {
@@ -846,6 +723,7 @@ export function convertStagesToSegments(stages: StandardStageDefinition[]): Prot
                 source: SampleSource.MASK,
                 state: SegmentState.SAMPLE,
                 protocolStartTimeOffsetSeconds: currentOffset,
+                stageStartTimeOffsetSeconds: stageOffset,
                 duration: stage.mask_sample,
                 data: []
             };

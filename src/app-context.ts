@@ -5,7 +5,7 @@ import {
     PortaCountListener,
     SerialPortLike
 } from "./portacount-client-8020.ts";
-import {APP_SETTINGS_CONTEXT, AppSettings, calculateNumberOfExercises} from "./app-settings.ts";
+import {APP_SETTINGS_CONTEXT, AppSettings, AppSettingsDefaults, calculateNumberOfExercises} from "./app-settings.ts";
 import {DataCollector, DataCollectorListener} from "./data-collector.ts";
 import {SPEECH} from "./speech.ts";
 import {RESULTS_DB, SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
@@ -19,6 +19,7 @@ import {enCaseInsensitiveCollator} from "src/utils.ts";
 import {Activity} from "src/activity.ts";
 import {ConnectionStatus} from "src/connection-status.ts";
 import {ProtocolDefaults, StandardProtocolDefinition, StandardStageDefinition} from "src/simple-protocol.ts";
+import {defaultConfigManager} from "src/config/config-context.tsx";
 
 /**
  * Global context.
@@ -177,20 +178,14 @@ async function scanHistoricalResults() {
     }
 
     return RESULTS_DB.getData().then((results) => {
-        const dbMasks = deduplicateMasks(results.map((record) => record.Mask as string))
-        const dbTestNotes = results.reduce((notes, currentValue) => {
-            notes.add(((currentValue.Notes as string) ?? "").trim())
-            return notes;
-        }, new Set<string>())
-        const todayParticipants = results
+        const dbMasks = deduplicateValues(results.map((record) => record.Mask as string))
+        const dbTestNotes = deduplicateValues(results.map((record) => record.Notes as string))
+        const todayDbParticipants = deduplicateValues(results
             .filter((record) => isToday(record.Time))
-            .reduce((participants, currentValue) => {
-                participants.add(((currentValue.Participant as string) ?? "").trim())
-                return participants;
-            }, new Set<string>())
+            .map((record) => record.Participant as string))
         settings.saveSetting(AppSettings.COMBINED_MASK_LIST, dbMasks)
         settings.saveSetting(AppSettings.TEST_NOTES, [...dbTestNotes].sort(enCaseInsensitiveCollator.compare))
-        settings.saveSetting(AppSettings.TODAY_PARTICIPANTS, [...todayParticipants].sort(enCaseInsensitiveCollator.compare))
+        settings.saveSetting(AppSettings.COMBINED_PARTICIPANT_LIST, todayDbParticipants)
     })
 }
 
@@ -245,7 +240,7 @@ function initMaskListUpdator() {
     // update the mask list when a new test is started
     const maskListUpdater: DataCollectorListener = {
         newTestStarted(data: SimpleResultsDBRecord) {
-            const mask = cleanMaskName(data.Mask)
+            const mask = cleanString(data.Mask)
             if (!mask) {
                 return; // no mask was specified
             }
@@ -258,7 +253,7 @@ function initMaskListUpdator() {
     }
     dataCollector.addListener(maskListUpdater)
 
-    const combinedMaskList = deduplicateMasks(
+    const combinedMaskList = deduplicateValues(
         [
             ...settings.getSetting<string[]>(AppSettings.MASK_LIST),
             ...settings.getSetting<string[]>(AppSettings.COMBINED_MASK_LIST),
@@ -270,7 +265,42 @@ function initMaskListUpdator() {
     }
 }
 
+function initParticipantListUpdator() {
+    // update the participant list when a new test is started
+    const participantListUpdater: DataCollectorListener = {
+        newTestStarted(data: SimpleResultsDBRecord) {
+            const participant = cleanString(data.Participant)
+            if (!participant) {
+                return; // no participant was specified
+            }
+            const combinedParticipantList = settings.getSetting<string[]>(AppSettings.COMBINED_PARTICIPANT_LIST);
+            const lcParticipants = new Set(combinedParticipantList.map((mask) => mask.toLowerCase()));
+            if (!lcParticipants.has(participant.toLowerCase())) {
+                settings.saveSetting(AppSettings.COMBINED_PARTICIPANT_LIST, [...combinedParticipantList, participant].toSorted(enCaseInsensitiveCollator.compare));
+            }
+        }
+    }
+    dataCollector.addListener(participantListUpdater)
+
+    const combinedParticipantList = deduplicateValues(
+        [
+            ...settings.getSetting<string[]>(AppSettings.PARTICIPANT_LIST),
+            ...settings.getSetting<string[]>(AppSettings.COMBINED_PARTICIPANT_LIST),
+        ]
+    );
+    settings.saveSetting(AppSettings.COMBINED_PARTICIPANT_LIST, combinedParticipantList)
+    // todo: mimic mask list? update persistent list only if enabled in settings?
+    settings.saveSetting(AppSettings.PARTICIPANT_LIST, combinedParticipantList)
+}
+
+function initConfigDefaults() {
+    Object.entries(AppSettingsDefaults).forEach(([key, value]) => {
+        defaultConfigManager.setDefault(key, JSON.stringify(value))
+    })
+}
+
 async function init() {
+    initConfigDefaults()
     await settings.loadAllSettings()
     await RESULTS_DB.open() // start init process
     await RAW_DB.open()
@@ -280,6 +310,7 @@ async function init() {
     await scanHistoricalResults();
     initCurrentActivityListener();
     initMaskListUpdator();
+    initParticipantListUpdator();
     timingSignal.start();
 
     if (settings.getSetting<boolean>(AppSettings.ENABLE_AUTO_CONNECT)) {
@@ -291,24 +322,24 @@ async function init() {
 
 
 // support functions
-function cleanMaskName(mask: string | undefined) {
+function cleanString(mask: string | undefined) {
     // clean up mask names
     return ((mask as string) ?? "").replaceAll(/\s+/g, ' ');
 }
 
-function deduplicateMasks(maskNames: string[]) {
-    const lcMasks = new Set<string>();
-    const uniqueMasks = maskNames.reduce((masks, maskName) => {
-        const cleanMask = cleanMaskName(maskName)
-        const lcMask = cleanMask.toLowerCase()
-        if (lcMask && !lcMasks.has(lcMask)) {
-            lcMasks.add(lcMask);
-            masks.add(cleanMask)
+function deduplicateValues(rawValues: string[]) {
+    const lcValues = new Set<string>();
+    const uniqueValues = rawValues.reduce((results, value) => {
+        const cleanValue = cleanString(value)
+        const lcValue = cleanValue.toLowerCase()
+        if (lcValue && !lcValues.has(lcValue)) {
+            lcValues.add(lcValue);
+            results.add(cleanValue)
         }
-        return masks
+        return results
     }, new Set<string>())
 
-    return [...uniqueMasks].toSorted(enCaseInsensitiveCollator.compare)
+    return [...uniqueValues].toSorted(enCaseInsensitiveCollator.compare)
 }
 
 

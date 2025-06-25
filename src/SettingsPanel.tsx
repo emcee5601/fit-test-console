@@ -30,6 +30,7 @@ export function SettingsPanel() {
     const [dataToDownload, setDataToDownload] = useState<string>("all-raw-data")
     const [minutesPerParticipant, setMinutesPerParticipant] = useSetting<number>(AppSettings.MINUTES_ALLOTTED_PER_PARTICIPANT)
     const [maskList, setMaskList] = useSetting<string[]>(AppSettings.MASK_LIST)
+    const [todayParticipantList, setTodayParticipantList] = useSetting<string[]>(AppSettings.PARTICIPANT_LIST)
     const [colorScheme, setColorScheme] = useSetting<string>(AppSettings.COLOR_SCHEME)
     const [eventEndDate, setEventEndDate] = useState<Date>(appContext.settings.eventEndTime)
 
@@ -177,6 +178,20 @@ export function SettingsPanel() {
                                             onChange={(date) => date && setEventEndDate(date)}
                                 ></DatePicker>
                             </div>}
+                            <fieldset id={"today-participant-list"}>
+                                <legend>{"Participants"}</legend>
+                                <div style={{maxHeight: "50vh"}}>
+                                    <SmartTextArea
+                                        scrollable={true}
+                                        onChangeOnlyOnBlur={true}
+                                        initialValue={todayParticipantList.join("\n")}
+                                        onChange={(value) => {
+                                            if (value !== undefined) {
+                                                setTodayParticipantList(value.split(/\n/).map((line) => line.trim()).filter((line) => line.length > 0));
+                                            }
+                                        }}/>
+                                </div>
+                            </fieldset>
                         </fieldset>
                     </section>
                     <section id={"advanced-controls"}>
@@ -232,7 +247,7 @@ export function SettingsPanel() {
                     </section>
                     <fieldset id={"mask-list"}>
                         <legend>Mask list</legend>
-                        <div style={{height: "50vh"}}>
+                        <div style={{maxHeight: "50vh"}}>
                             <SmartTextArea
                                 scrollable={true}
                                 onChangeOnlyOnBlur={true}

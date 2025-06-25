@@ -2,12 +2,12 @@ import {SmartTextArea} from "src/SmartTextArea.tsx";
 import {useSetting} from "src/use-setting.ts";
 import {AppSettings} from "src/app-settings.ts";
 import {enCaseInsensitiveCollator} from "src/utils.ts";
-import {useCallback} from "react";
+import {ReactElement, useCallback} from "react";
 
 type MaskSelectorWidgetProps = {
     value?: string,
     onChange?: (mask: string) => void,
-    label?: string,
+    label?: string | ReactElement,
     id?: string,
     placeholder?: string,
 };
@@ -32,6 +32,7 @@ export function MaskSelectorWidget(props: MaskSelectorWidgetProps) {
     return (
         <SmartTextArea
             id={`mask-${props.id}`}
+            onChangeOnlyOnBlur={true}
             label={props.label}
             initialValue={props.value}
             autocompleteOptions={getAutocompleteOptions}

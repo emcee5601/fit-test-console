@@ -26,7 +26,7 @@ export function TestNotesSelectorWidget(props: TestNotesSelectorWidgetProps) {
     return (
         <SmartTextArea
             id={"notes"}
-            debounceDelay={5000} // todo: instead of increasing debounce delay, only update notes list when new test is started like for mask list
+            onChangeOnlyOnBlur={true}
             label={props.label}
             initialValue={props.value}
             autocompleteOptions={notesList.map((notes) => {

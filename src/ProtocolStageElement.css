@@ -1,0 +1,31 @@
+.protocol-stage-element {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    border-collapse: collapse;
+    border: 1px solid;
+}
+
+.stage-instructions {
+
+}
+
+.stage-segments {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    white-space-collapse: preserve;
+}
+.ambient-purge-segment {
+        background-color: yellow;
+}
+.ambient-sample-segment {
+    background-color: gold;
+}
+.mask-purge-segment {
+    background-color: yellowgreen;
+}
+.mask-sample-segment {
+    background-color: limegreen;
+}

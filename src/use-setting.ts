@@ -1,31 +1,27 @@
-import {Dispatch, SetStateAction, useContext, useEffect, useState} from "react";
-import {AppContext} from "./app-context.ts";
-import {AppSettings, AppSettingType, SettingsListener, ValidSettings} from "./app-settings.ts";
+import {Dispatch, SetStateAction, useEffect, useState} from "react";
+import {AppSettings, AppSettingType} from "./app-settings.ts";
+import {useConfig} from "src/config/use-config.tsx";
+import stringifyDeterministically from "json-stringify-deterministic";
 
 export function useSetting<T extends AppSettingType>(setting: AppSettings): [T, Dispatch<SetStateAction<T>>] {
-    // initialize the value from settings context
-    const settingsContext = useContext(AppContext).settings
-    const [value, setValue] = useState<T>(settingsContext.getSetting<T>(setting));
+    const [config, setConfig] = useConfig(setting, "[]");
+
+    function configToSetting(config: string): T {
+        return JSON.parse(config) as T;
+    }
+
+    function settingToConfig(setting: unknown): string {
+        return stringifyDeterministically(setting);
+    }
+
+    const [value, setValue] = useState(configToSetting(config))
 
     useEffect(() => {
-        // setValue(APP_SETTINGS_CONTEXT.getSetting<T>(setting, defaultValue))
-
-        const listener: SettingsListener = {
-            subscriptions: () => [setting],
-            settingsChanged(_changedSetting: ValidSettings, newValue: T) {
-                // when the setting changes, update the UI
-                // console.debug(`useSetting SettingsListener called for ${_changedSetting}: ${JSON.stringify(newValue)}`);
-                setValue(newValue);
-            }
-        }
-        settingsContext.addListener(listener);
-        return () => settingsContext.removeListener(listener)
-    }, []);
-
-    useEffect(() => {
-        // propagate changes to settings context
-        // console.debug(`useSetting() updating setting ${setting} -> ${JSON.stringify(value)}`)
-        settingsContext.saveSetting(setting, value);
+        setConfig(settingToConfig(value))
     }, [value]);
+    useEffect(() => {
+        setValue(configToSetting(config))
+    }, [config]);
+
     return [value, setValue]
 }

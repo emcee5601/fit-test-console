@@ -1,4 +1,4 @@
-import {useContext, useEffect, useRef, useState} from "react";
+import {useContext, useEffect, useMemo, useRef, useState} from "react";
 import {DataCollectorListener} from "./data-collector.ts";
 import {AppContext} from "./app-context.ts";
 
@@ -9,6 +9,13 @@ export function TestInstructionsPanel() {
     const [instructions, setInstructions] = useState<string>("")
     const ref = useRef<HTMLTextAreaElement>(null)
     const [dimensions, setDimensions] = useState([0, 0])
+    const startingHeight = useMemo(() => {
+        if(!ref.current) {
+            return minFontSizePx * 1.5
+        } else {
+            return ref.current.clientHeight;
+        }
+    }, [ref.current])
 
     /**
      * adjust font size so instructions fill the space available
@@ -42,15 +49,16 @@ export function TestInstructionsPanel() {
     function calculateFontSize(instructions: string) {
         let fontSize: number = 1;
         if (ref.current) {
+            const maxHeight = ref.current.clientHeight > window.innerHeight * 0.7 ? ref.current.clientHeight : startingHeight
+            console.debug(`calculateFontSize max height ${maxHeight}`)
             const width = ref.current.clientWidth;
-            const height = ref.current.clientHeight;
             const numChars = instructions.length;
             const minFontSize = width / numChars  // fit everything onto 1 row
-            const maxFontSize = Math.sqrt(width * height / numChars)
+            const maxFontSize = Math.sqrt(width * maxHeight / numChars)
             for (let candidate = minFontSize; candidate < maxFontSize; candidate++) {
                 const numRows = calculateNumRowsAtFontSize(candidate, instructions, width)
                 const heightAtFontSize = numRows * candidate
-                if (heightAtFontSize > height) {
+                if (heightAtFontSize > maxHeight) {
                     // done
                     break;
                 }

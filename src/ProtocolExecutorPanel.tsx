@@ -1,6 +1,6 @@
 import {SampleSource, StandardProtocolDefinition} from "./simple-protocol.ts";
 import {calculateSegmentConcentration, ProtocolExecutorListener, SegmentState} from "./protocol-executor.ts";
-import {HTMLAttributes, PropsWithChildren, ReactElement, useContext, useEffect, useRef, useState} from "react";
+import {HTMLAttributes, PropsWithChildren, useContext, useEffect, useRef, useState} from "react";
 import {AppContext, createDeviceSynchronizedProtocol} from "./app-context.ts";
 import {formatDuration, formatFitFactor} from "./utils.ts";
 import {
@@ -25,6 +25,8 @@ import {PiFaceMask, PiWatch} from "react-icons/pi";
 import {IoGlassesOutline} from "react-icons/io5";
 import {IconType} from "react-icons";
 import {ConnectionStatus} from "src/connection-status.ts";
+import {ProtocolStageElement} from "src/ProtocolStageElement.tsx";
+import {HiOutlineClipboardList} from "react-icons/hi";
 
 /**
  * Helper type. Maps from stage indexes or segment indexes to durations
@@ -73,14 +75,20 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
     const [deviceTestInProgress, setDeviceTestInProgress] = useState<boolean>(false)
 
     const [protocolDuration, setProtocolDuration] = useState<number>(0)
-    const [segmentElements, setSegmentElements] = useState<ReactElement[]>([])
-    const [stageElements, setStageElements] = useState<ReactElement[]>([])
     const [formattedProtocolElapsedTime, setFormattedProtocolElapsedTime] = useState<string>(formatDuration(0))
     const protocolPosPointerRef = useRef<HTMLDivElement>(null);
     const protocolExecutorPanelRef = useRef<HTMLFieldSetElement>(null);
+    const stageDivRef = useRef<HTMLDivElement>(null);
     const lastKnownAmbient = protocolExecutor.lastAmbientSegment ? calculateSegmentConcentration(protocolExecutor.lastAmbientSegment) : undefined
     const currentSegmentConcentration = currentSegment ? calculateSegmentConcentration(currentSegment) : undefined;
     const estimatedFitFactor = lastKnownAmbient && currentSegmentConcentration ? formatFitFactor(lastKnownAmbient / currentSegmentConcentration) : "?"
+
+    useEffect(() => {
+        // calculate segment text. but this has some real time dependencies
+        if (currentSegment) {
+            getSegmentText(currentSegment)
+        }
+    }, [currentSegment]);
 
     function getSegmentText(segment: ProtocolSegment) {
         const isExerciseSegment = isThisAnExerciseSegment(segment);
@@ -112,52 +120,14 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
     function calculateTotalExpectedProtocolTime() {
         const stageTimes: IndexedDurations = {}
         const segmentTimes: IndexedDurations = {}
-        const segmentDivs: ReactElement[] = []
-        const stageExerciseNum: (null | number)[] = [] // the exercise num of the stage, or null if the stage is not an
-                                                       // exercise stage
         // protocolExecutor does not set segments or stages until execution starts.
         const protocolTime: number = calculateProtocolDuration(segments)
         segments.forEach((segment: ProtocolSegment) => {
             // console.debug("rebuilding segment divs")
             segmentTimes[segment.index] = segment.duration
             stageTimes[segment.stageIndex] = (stageTimes[segment.stageIndex] ?? 0) + segment.duration
-            // seems flex items won't shrink smaller than 1 character if there is text inside
-            const isCurrentSegment = segment.index === currentSegment?.index;
-            // display segment time, time remaining, or fit factor for this stage.
-            segmentDivs.push(<div className={`segment-${segment.state} sample-source-${segment.source}`}
-                                  key={`segment-${segment.index}`}
-                                  style={{
-                                      display: "block",
-                                      flexGrow: `${segment.duration}`,
-                                      // flexShrink: `${segment.duration}`,
-                                      flexBasis: `${segment.duration}px`,
-                                      minWidth: "2px",
-                                      overflow: "clip",
-                                      animation: isCurrentSegment ? "pulse-background infinite 1s ease-in-out alternate" : ""
-                                  }}>{getSegmentText(segment)}</div>)
-            stageExerciseNum[segment.stageIndex] = segment.exerciseNumber
         })
-
-        const stageDivs: ReactElement[] = []
-        Object.entries(stageTimes).forEach(([index, duration]) => {
-            const stageIndex = Number(index);
-            // protocols with no customizations are of the form ambient-mask-....-ambient, so make sure we account for
-            // the auto-injected final ambient stage
-            stageDivs.push(<div key={`stage-${index}`} style={{
-                border: "1px solid",
-                display: "inline-block",
-                flexGrow: `${duration}`,
-                // flexShrink: `${duration}`,
-                flexBasis: `${duration}px`,
-                minWidth: "1px",
-                maxHeight: "3rem",
-                overflow: "clip",
-            }}>{stageExerciseNum[stageIndex] ? `Ex ${stageExerciseNum[stageIndex]}: ` : ""}{stages[stageIndex].instructions.split(".")[0]}</div>)
-        })
-
         setProtocolDuration(protocolTime)
-        setSegmentElements(segmentDivs)
-        setStageElements(stageDivs)
     }
 
     function updateSegment(segment: ProtocolSegment) {
@@ -202,23 +172,25 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
                     setCurrentSegment(undefined)
                 } else {
                     // got results. figure out the next segment.
-                    const nextSegment = segments.reduce((result:ProtocolSegment|null, candidate, index, segments) => {
-                        if(result) {
+                    const nextSegment = segments.reduce((result: ProtocolSegment | null, candidate, index, segments) => {
+                        if (result) {
                             return result; // found
                         }
-                        if(candidate.exerciseNumber === results.exerciseNum as number +1) {
+                        if (candidate.exerciseNumber === results.exerciseNum as number + 1) {
                             return segments[index]
                         }
                         return null;
                     }, null)
                     // console.debug(`next segment is`, nextSegment, "segments:", segments)
-                    setCurrentSegment(nextSegment|| undefined)
+                    setCurrentSegment(nextSegment || undefined)
                     setSegmentStartTimeMs(results.timestamp)
                 }
             },
         }
         portaCountClient.addListener(deviceTestObserver)
-        return () => {portaCountClient.removeListener(deviceTestObserver)}
+        return () => {
+            portaCountClient.removeListener(deviceTestObserver)
+        }
     }, [segments]);
 
     useEffect(() => {
@@ -308,10 +280,10 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
         }
     }
 
-    function calculateProtocolElapsedTimeMs(segmentDurationMs: number, capped:boolean = true) {
+    function calculateProtocolElapsedTimeMs(segmentDurationMs: number, capped: boolean = true) {
         const segmentElapsedTimeMs = Date.now() - segmentStartTimeMs;
         const cappedSegmentElapsedTimeMs = Math.min(segmentElapsedTimeMs, segmentDurationMs)
-        return currentSegment ? currentSegment.protocolStartTimeOffsetSeconds * 1000 + (capped?cappedSegmentElapsedTimeMs:segmentElapsedTimeMs) : 0;
+        return currentSegment ? currentSegment.protocolStartTimeOffsetSeconds * 1000 + (capped ? cappedSegmentElapsedTimeMs : segmentElapsedTimeMs) : 0;
     }
 
     useAnimationFrame(() => {
@@ -331,9 +303,14 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
             } else {
                 protocolPosPointerRef.current.classList.replace("paused", "in-progress")
             }
-            protocolPosPointerRef.current.style.right = `${100 - 0.1 * protocolElapsedTimeMs / protocolDuration}%`
+            if (currentSegment) {
+                // todo: try putting pointer in the stage component
+                // protocolPosPointerRef.current.style.left = `${stageDivRef.current.getBoundingClientRect().left +
+                // stageDivRef.current.clientWidth * (segmentElapsedTimeMs / segmentDurationMs)}px`
+                protocolPosPointerRef.current.style.right = `calc(${100 - 0.1 * protocolElapsedTimeMs / protocolDuration}% - 12px)`
+            }
         }
-    }, [protocolDuration, segmentStartTimeMs])
+    }, [isProtocolRunning, deviceTestInProgress, currentSegment]);
 
     function handleStopButtonClick() {
         protocolExecutor.cancel();
@@ -364,8 +341,12 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
         return lastKnownAmbient ? lastKnownAmbient.toFixed(0) : "?"
     }
 
+    function manualEntry() {
+        dataCollector.recordTestStart(ControlSource.Manual)
+    }
+
     return (
-        <section id="custom-control-panel" {...props}>
+        <section id="custom-control-panel" {...props} style={{paddingTop:"0.5em"}}>
             <fieldset id={"protocol-executor-panel-main"} ref={protocolExecutorPanelRef} className={"idle"}
                       style={{minWidth: 0, overflow: "auto", paddingBottom: "0.2em"}}>
                 <legend style={{
@@ -374,11 +355,19 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
                     flexWrap: "wrap",
                     paddingInline: "0.5rem",
                 }}>Protocol <ProtocolSelectorWidget0/>
-                    <button disabled={isProtocolRunning || portaCountClient.state.connectionStatus !== ConnectionStatus.RECEIVING} className={"start"}
-                            onClick={() => protocolExecutor.executeProtocol(segments)}>Start <ImPlay2/>
+                    <button
+                        disabled={isProtocolRunning || portaCountClient.state.connectionStatus !== ConnectionStatus.RECEIVING}
+                        className={"icon-button start"}
+                        onClick={() => protocolExecutor.executeProtocol(segments)}>Start <div
+                        className={"svg-container"}>
+                        <ImPlay2/></div>
                     </button>
                     <button disabled={!isProtocolRunning} onClick={() => handleStopButtonClick()}
-                            className={"stop"}>Stop <ImStop/></button>
+                            className={"icon-button stop"}>Stop <div className={"svg-container"}><ImStop/></div>
+                    </button>
+                    <button disabled={isProtocolRunning} onClick={() => manualEntry()}
+                            className={"icon-button"}>Manual <div className={"svg-container"}><HiOutlineClipboardList/>
+                    </div></button>
                     <div style={{display: "inline-flex"}}>
                         <IconText icon={PiWatch}
                                   text="Time:">{formattedProtocolElapsedTime} / {formatDuration(protocolDuration * 1000)}</IconText>
@@ -387,35 +376,24 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
                         <IconText icon={IoGlassesOutline} text={"Estimate:"}>{estimatedFitFactor}</IconText>
                     </div>
                 </legend>
-                <div id="protocol-visualizer-container" style={{minWidth: "fit-content"}}>
-                    <section id={"protocol-visualizer"} style={{position: 'relative'}}>
-                        <div id={"protocol-pos-pointer"} ref={protocolPosPointerRef}
-                             className={"protocol-position-pointer paused"}
-                             style={{
-                                 float: "inline-start",
-                                 zIndex: 1,
-                             }}>
-                        </div>
-                        <div style={{
-                            display: "flex",
-                            flexWrap: "nowrap",
-                            width: "100%",
-                            minWidth: "100%",
-                            // backgroundColor: "lightgray",
-                            height: "fit-content",
-                            minHeight: "1rem"
-                        }}>{stageElements}</div>
-                        <div style={{
-                            display: "flex",
-                            flexWrap: "nowrap",
-                            width: "100%",
-                            minWidth: "100%",
-                            // backgroundColor: "lightgray",
-                            height: "fit-content",
-                            minHeight: "1rem"
-                        }}>{segmentElements}</div>
-                    </section>
-                </div>
+                <section id={"protocol-visualizer"} style={{position: 'relative'}}>
+                    <div id={"protocol-pos-pointer"} ref={protocolPosPointerRef}
+                         className={"protocol-position-pointer paused"}
+                         style={{
+                             float: "inline-start",
+                             zIndex: 1,
+                         }}>
+                    </div>
+                    <div id={"new-protocol-visualizer-container"} style={{display: "flex", flexDirection: "row"}}>
+                        {stages.map((stage, index) => {
+                            if (currentSegment?.stageIndex === index) {
+                                return <ProtocolStageElement key={index} elementRef={stageDivRef} stage={stage}/>
+                            } else {
+                                return <ProtocolStageElement key={index} elementRef={stageDivRef} stage={stage}/>
+                            }
+                        })}
+                    </div>
+                </section>
             </fieldset>
         </section>
     )

@@ -63,7 +63,7 @@ export function useEditableExerciseResultColumn<T extends SimpleResultsDBRecord,
 
     const fitFactor = Number(value);
     const efficiencyPercentage = convertFitFactorToFiltrationEfficiency(fitFactor);
-    const classes = getFitFactorCssClass(fitFactor, protocolHasThisManyExercises)
+    const classes = getFitFactorCssClass(value as string, protocolHasThisManyExercises)
 
     return (
         <div className={classes} style={{width: "100%", display: "inline-flex", flexDirection: "column"}}>
@@ -116,6 +116,7 @@ export function useEditableColumn<T, V>({
     return (
         <SmartTextArea
             id={`${String(index)}-${id}`}
+            onChangeOnlyOnBlur={true}
             initialValue={value ? value as string : ""}
             onChange={v => setValue(v as V)}
             onBlur={onBlur}
