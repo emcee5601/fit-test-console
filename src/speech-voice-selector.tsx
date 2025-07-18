@@ -3,9 +3,9 @@
  */
 import {useEffect} from "react";
 import {SPEECH} from "./speech.ts";
-import {AppSettings} from "./app-settings.ts";
 import {BooleanToggleButton} from "./ToggleButton.tsx";
 import {useSetting} from "./use-setting.ts";
+import {AppSettings} from "src/app-settings-types.ts";
 
 export function EnableSpeechSwitch() {
     const [speechEnabled, setSpeechEnabled] = useSetting<boolean>(AppSettings.SPEECH_ENABLED);

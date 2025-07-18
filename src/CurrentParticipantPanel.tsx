@@ -1,26 +1,13 @@
-import {useCallback, useContext, useEffect, useState} from "react";
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
-import {AppSettings} from "./app-settings.ts";
 import {useSetting} from "./use-setting.ts";
 import {MaskSelectorWidget} from "src/MaskSelectorWidget.tsx";
 import {TodayParticipantSelectorWidget} from "src/TodayParticipantSelectorWidget.tsx";
 import {TestNotesSelectorWidget} from "src/TestNotesSelectorWidget.tsx";
 import {BsFastForwardBtnFill} from "react-icons/bs";
-import {AppContext} from "src/app-context.ts";
+import {AppSettings} from "src/app-settings-types.ts";
 
 export function CurrentParticipantPanel() {
-    const settings = useContext(AppContext).settings
-    const [testTemplate, setTestTemplate] = useSetting<Partial<SimpleResultsDBRecord>>(AppSettings.TEST_TEMPLATE)
-    const [, helpUpdateState] = useState({})
-    const updateState = useCallback(() => {
-        helpUpdateState({})
-    }, []);
-
-    useEffect(() => {
-        // update our ui state when the template updates
-        updateState()
-    }, [testTemplate]);
-
+    const [testTemplate, setTestTemplate, getTestTemplate] = useSetting<Partial<SimpleResultsDBRecord>>(AppSettings.TEST_TEMPLATE)
     function updateCurrentParticipant(value: string) {
         value = value.trim() // strip extraneous spaces
         updateTestTemplate({
@@ -43,12 +30,12 @@ export function CurrentParticipantPanel() {
         // propagate changes to settings (don't edit testTemplate directly since it's passed as reference from settings)
         const newTemplate = {}
         // get the realtime value of template here since changes otherwise propagate via useState is too slow.
-        Object.assign(newTemplate, settings.getTestTemplate()) // realtime
+        Object.assign(newTemplate, getTestTemplate()) // realtime
         Object.assign(newTemplate, props)
         console.debug(`updateTestTemplate -> ${JSON.stringify(newTemplate)}`);
         setTestTemplate(newTemplate) // copy to force React to see the update
         // update the template in realtime since propagation via useState is too slow.
-        settings.setTestTemplate(newTemplate) // realtime
+        // settings.setTestTemplate(newTemplate) // realtime
     }
 
     function nextParticipant() {

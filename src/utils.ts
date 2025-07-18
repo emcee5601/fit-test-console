@@ -60,21 +60,21 @@ export function getFitFactorCssClass(fitFactor: number|string, hasThisExercise: 
     // console.debug(`ff is ${fitFactor}`)
     if(!hasThisExercise && !fitFactor) {
         // we don't have this many exercises, and there's no value in the cell
-        return "result"
+        return "result-cell"
     }
     fitFactor = Number(fitFactor)
 
     if( isNaN(fitFactor) || fitFactor <= 0 ) {
         // if it's zero, it was probably parsed from empty string
-        return "result aborted"
+        return "result-cell aborted"
     }
     if (fitFactor >= 100) {
-        return "result high-fit-score"
+        return "result-cell high-fit-score"
     }
     if (fitFactor > 20) {
-        return "result moderate-fit-score"
+        return "result-cell moderate-fit-score"
     }
-    return "result low-fit-score"
+    return "result-cell low-fit-score"
 }
 
 export function sum(theNumbers: number[], startIndex: number = 0, endIndex: number = -1) {

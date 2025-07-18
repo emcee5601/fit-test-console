@@ -1,24 +1,32 @@
 import {Dispatch, SetStateAction, useContext, useEffect, useState} from "react";
 import {ConfigContext, ConfigListener} from "src/config/config-context.tsx";
 
-export function useConfig(name: string, defaultValue?:string): [string, Dispatch<SetStateAction<string>>] {
+export type Getter<T> = () => T;
+
+// todo: allow defaultValue to take a function so we can defer calculating it
+export function useConfig<T>(name: string, defaultValue:T = {} as T): [T, Dispatch<SetStateAction<T>>, Getter<T>] {
     const configManager = useContext(ConfigContext)
-    const [value, setValue] = useState<string>(configManager.getConfig(name) || defaultValue || "");
+    const [value, setValue] = useState<T>(configManager.getConfig(name, defaultValue));
 
     useEffect(() => {
         const listener: ConfigListener = {
             subscriptions: () => [name],
-            configChanged(_changedSetting: string, newValue: string): void {
-                setValue(newValue);
+            configChanged(_changedSetting: string, newValue: unknown): void {
+                setValue(newValue as T);
             }
         }
         configManager.addListener(listener);
         return () => configManager.removeListener(listener)
     }, []);
 
-    useEffect(() => {
-        // propagate changes to context
-        configManager.setConfig(name, value);
-    }, [value]);
-    return [value, setValue]
+    const setValueImmediate: Dispatch<SetStateAction<T>> = (param) => {
+        const result = (typeof param === "function")
+            // @ts-expect-error we know param is a function here
+            ? param(configManager.getConfig(name, defaultValue))
+            : param;
+        configManager.setConfig(name, result);
+        setValue(result);
+    }
+    const getValueImmediate: Getter<T> = () => configManager.getConfig(name);
+    return [value, setValueImmediate, getValueImmediate]
 }

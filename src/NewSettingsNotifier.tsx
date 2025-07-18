@@ -1,8 +1,9 @@
 import {useSetting} from "src/use-setting.ts";
-import {AppSettings, calculateSettingsKeysHash} from "src/app-settings.ts";
+import {calculateSettingsKeysHash} from "src/app-settings.ts";
 import {useContext, useEffect} from "react";
 import {useNavigate} from "react-router";
 import {AppContext} from "src/app-context.ts";
+import {AppSettings} from "src/app-settings-types.ts";
 
 /**
  * Show an alert dialog when there are new settings in this version of the app vs the last time we've run this check.

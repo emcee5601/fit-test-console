@@ -4,8 +4,8 @@ import {AppContext} from "./app-context.ts";
 import CreatableSelect from "react-select/creatable";
 import {BsTerminal} from "react-icons/bs";
 import {useSetting} from "src/use-setting.ts";
-import {AppSettings} from "src/app-settings.ts";
 import {ActionMenuWidget} from "src/ActionMenuWidget.tsx";
+import {AppSettings} from "src/app-settings-types.ts";
 
 export function PortaCountCommandWidget({compact = false}: { compact?: boolean }) {
     const appContext = useContext(AppContext)

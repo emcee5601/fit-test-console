@@ -5,8 +5,8 @@ import {HiLinkSlash} from "react-icons/hi2";
 import {PiPlugsConnectedLight} from "react-icons/pi";
 import {MdOutlinePending} from "react-icons/md";
 import {useSetting} from "src/use-setting.ts";
-import {AppSettings} from "src/app-settings.ts";
 import {ConnectionStatus} from "src/connection-status.ts";
+import {AppSettings} from "src/app-settings-types.ts";
 
 export function ConnectionStatusWidget() {
     const appContext = useContext(AppContext)

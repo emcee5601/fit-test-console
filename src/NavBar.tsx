@@ -3,7 +3,6 @@ import {useWakeLock} from "./use-wake-lock.ts";
 import {EventTimeWidget} from "src/EventTimeWidget.tsx";
 import {CurrentParticipantTimeWidget} from "src/CurrentParticipantTimeWidget.tsx";
 import {useSetting} from "src/use-setting.ts";
-import {AppSettings} from "src/app-settings.ts";
 import {SampleSourceWidget} from "src/SampleSourceWidget.tsx";
 import {ControlSourceWidget} from "src/ControlSourceWidget.tsx";
 import {PortaCountCommandWidget} from "src/PortaCountCommandWidget.tsx";
@@ -14,6 +13,7 @@ import {CurrentActivityWidget} from "src/CurrentActivityWidget.tsx";
 import {PortaCountLastLineWidget} from "src/PortaCountLastLineWidget.tsx";
 import {ReactNode, useEffect, useRef, useState} from "react";
 import {ColorSchemeSwitcher} from "src/ColorSchemeSwitcher.tsx";
+import {AppSettings} from "src/app-settings-types.ts";
 
 
 type NavBarState = "full-width" | "time-icons" | "2-lines" | "dropdown-tabs"

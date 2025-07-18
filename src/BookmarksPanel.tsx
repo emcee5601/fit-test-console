@@ -1,8 +1,8 @@
 import {QRCodeSVG} from "qrcode.react";
 import {useState} from "react";
 import {useSetting} from "src/use-setting.ts";
-import {AppSettings} from "src/app-settings.ts";
 import {SmartTextArea} from "src/SmartTextArea.tsx";
+import {AppSettings} from "src/app-settings-types.ts";
 
 type Bookmarks = { [title: string]: string }
 

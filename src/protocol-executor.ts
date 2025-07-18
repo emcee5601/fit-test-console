@@ -3,9 +3,9 @@ import {ParticleConcentrationEvent, PortaCountClient8020, PortaCountListener} fr
 import {ExternalController} from "./external-control.ts";
 import {DataCollector} from "./data-collector.ts";
 import {ControlSource} from "./control-source.ts";
-import {ProtocolSegment} from "./app-settings.ts";
 import {avg, formatFitFactor} from "src/utils.ts";
 import {deepCopy} from "json-2-csv/lib/utils";
+import {ProtocolSegment} from "src/app-settings-types.ts";
 
 export enum SegmentState {
     SAMPLE = "sample",

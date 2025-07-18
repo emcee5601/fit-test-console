@@ -3,9 +3,9 @@ import {useContext, useEffect, useState} from "react";
 import {AppContext} from "./app-context.ts";
 import {ControlSource} from "./control-source.ts";
 import {useSetting} from "src/use-setting.ts";
-import {AppSettings} from "src/app-settings.ts";
 import {FaLaptop} from "react-icons/fa";
 import {TfiTablet} from "react-icons/tfi";
+import {AppSettings} from "src/app-settings-types.ts";
 
 export function ControlSourceWidget() {
     const appContext = useContext(AppContext)

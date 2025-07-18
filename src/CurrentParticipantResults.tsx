@@ -2,9 +2,10 @@ import {useCallback, useContext, useEffect, useState} from "react";
 import {AppContext} from "src/app-context.ts";
 import {useSetting} from "src/use-setting.ts";
 import {RESULTS_DB, SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
-import {AppSettings, AppSettingType, SettingsListener} from "src/app-settings.ts";
+import {SettingsListener} from "src/app-settings.ts";
 import {LabeledSection} from "src/LabeledSection.tsx";
 import {ResultsTable} from "src/lazy-components.ts";
+import {AppSettings, AppSettingType} from "src/app-settings-types.ts";
 
 export function CurrentParticipantResults() {
     const appContext = useContext(AppContext)

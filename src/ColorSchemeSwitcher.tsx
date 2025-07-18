@@ -1,6 +1,6 @@
 import {useSetting} from "src/use-setting.ts";
-import {AppSettings} from "src/app-settings.ts";
 import {useEffect} from "react";
+import {AppSettings} from "src/app-settings-types.ts";
 
 export function ColorSchemeSwitcher() {
     const [colorScheme] = useSetting<string>(AppSettings.COLOR_SCHEME)

@@ -4,7 +4,6 @@ import {ChangeEvent, useCallback, useContext, useEffect, useState} from "react";
 import {downloadData} from "./download-helper.ts";
 import {RESULTS_DB} from "./SimpleResultsDB.ts";
 import {RAW_DB} from "./database.ts";
-import {AppSettings} from "./app-settings.ts";
 import {BooleanSettingToggleButton, BooleanToggleButton} from "./ToggleButton.tsx";
 import {useSetting} from "./use-setting.ts";
 import {SpeechVoiceSelectorWidget} from "./SpeechVoiceSelectorWidget.tsx";
@@ -17,6 +16,7 @@ import {ExternalController} from "src/external-control.ts";
 import {formatDuration} from "src/utils.ts";
 import {PortaCountListener} from "src/portacount-client-8020.ts";
 import {SmartTextArea} from "src/SmartTextArea.tsx";
+import {AppSettings} from "src/app-settings-types.ts";
 
 export function SettingsPanel() {
     const appContext = useContext(AppContext)

@@ -1,15 +1,16 @@
 import {createContext} from "react";
+import stringifyDeterministically from "json-stringify-deterministic";
 
-export type Config = { name: string, value: string }
+export type Config<T> = { name: string, value: T }
 
 export interface ConfigListener {
     subscriptions(): string[],
-    configChanged(name: string, value: string): void,
+    configChanged<T>(name: string, value: T): void,
 }
 
 class ConfigManager {
-    private cache = new Map<string, string>();
-    private defaults = new Map<string, string>()
+    private cache = new Map<string, unknown>();
+    private defaults = new Map<string, unknown>()
     private listeners: ConfigListener[] = []
 
     private getStorageKey(name: string): string {
@@ -25,46 +26,48 @@ class ConfigManager {
     }
 
 
-    setDefaults(configs: Config[]) {
+    setDefaults(configs: Config<unknown>[]) {
         configs.forEach((config) => {
             this.setDefault(config.name, config.value);
         });
     }
 
-    setDefault(name: string, value: string) {
+    setDefault<T>(name: string, value: T) {
         this.defaults.set(name, value);
     }
 
-    getConfig(name: string, defaultValue?: string) {
+    getConfig<T>(name: string, defaultValue: T = {} as T): T {
         const storageKey = this.getStorageKey(name);
         if (!this.cache.has(name)) {
             const storedValue = localStorage.getItem(storageKey);
-            const value = storedValue ?? this.getDefaultValue(name, defaultValue);
+            const value = storedValue === null ? this.getDefaultValue(name, defaultValue) : JSON.parse(storedValue) as T;
             this.cache.set(name, value);
         }
-        return this.cache.get(name);
+        return this.cache.get(name) as T;
     }
 
-    private getDefaultValue(name: string, defaultValue?: string): string {
-        const defValue = defaultValue ?? this.defaults.get(name)
+    private getDefaultValue<T>(name: string, defaultValue: T = {} as T): T {
+        const defValue: T = this.defaults.has(name) ? this.defaults.get(name) as T : defaultValue
         if (defValue === undefined) {
+            // this should never happen
             console.warn(`No default value for ${name}, using ""`)
         }
-        return defValue || ""
+        return defValue
     }
 
-    setConfig(name: string, value: string) {
+    setConfig<T>(name: string, value: T) {
         const prev = this.cache.get(name);
         if( prev === value ) {
+            // todo: deep compare
             // no change
             return;
         }
         this.cache.set(name, value);
-        localStorage.setItem(this.getStorageKey(name), value);
+        localStorage.setItem(this.getStorageKey(name), stringifyDeterministically(value));
         this.dispatch(name, value)
     }
 
-    private dispatch(name: string, value: string) {
+    private dispatch<T>(name: string, value: T) {
         this.listeners.forEach(listener => {
             if (listener.subscriptions().includes(name)) {
                 (async () => {

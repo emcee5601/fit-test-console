@@ -12,247 +12,14 @@ import {
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 import {DataSource} from "./data-source.ts";
 import {SegmentState} from "./protocol-executor.ts";
-import {ParticleConcentrationEvent} from "./portacount-client-8020.ts";
-import {Activity} from "src/activity.ts";
 import {defaultConfigManager} from "src/config/config-context.tsx";
-
-/**
- * this is for convenience. code outside of this module should use AppSettings enum.
- * Code within this module should ValidSettings and AppSettingsDefaults
- */
-export enum AppSettings {
-    SPEECH_ENABLED = "speech-enabled",
-    ADVANCED_MODE = "advanced-mode",
-    SPEECH_VOICE = "speech-voice",
-    VERBOSE = "verbose",
-    SAY_PARTICLE_COUNT = "say-particle-count",
-    RESULTS_TABLE_SORT = "results-table-sort",
-    PARTICIPANT_RESULTS_TABLE_SORT = "participant-results-table-sort",
-    SAY_ESTIMATED_FIT_FACTOR = "say-estimated-fit-factor",
-    SHOW_EXTERNAL_CONTROL = "show-external-control",
-    BAUD_RATE = "baud-rate",
-    PROTOCOL_INSTRUCTION_SETS = "protocol-instruction-sets",
-    SELECTED_PROTOCOL = "selected-protocol",
-    KEEP_SCREEN_AWAKE = "keep-screen-awake",
-    TEST_TEMPLATE = "test-template",
-    ENABLE_SIMULATOR = "enable-simulator",
-    ENABLE_AUTO_CONNECT = "enable-auto-connect",
-    SIMULATOR_FILE_SPEED = "simulator-file-speed",
-    SELECTED_DATA_SOURCE = "selected-data-source",
-    SYNC_DEVICE_STATE_ON_CONNECT = "sync-device-state-on-connect",
-    MINUTES_ALLOTTED_PER_PARTICIPANT = "minutes-allotted-per-participant",
-    EVENT_END_HHMM = "event-end-hhmm", // in local time
-    SHOW_ELAPSED_PARTICIPANT_TIME = "show-elapsed-participant-time",
-    SHOW_REMAINING_EVENT_TIME = "show-remaining-event-time",
-    AUTO_CREATE_FAST_PROTOCOLS = "auto-create-fast-protocols",
-    LAST_KNOWN_SETTINGS_KEYS_HASH = "last-known-settings-keys-hash", // hash of sorted settings keys
-    USE_COMPACT_UI = "use-compact-ui",
-    ENABLE_WEB_SERIAL_DRIVERS = "enable-webserial-drivers",
-    ENABLE_PROTOCOL_EDITOR = "enable-protocol-editor",
-    ENABLE_QR_CODE_SCANNER = "enable-qr-code-scanner",
-    ENABLE_STATS = "enable-stats",
-    ENABLE_TEST_INSTRUCTIONS_ZOOM = "enable-test-instructions-zoom",
-    BOOKMARKS = "bookmarks",
-    MASK_LIST = "mask-list",
-    PARTICIPANT_LIST = "participant-list",
-    AUTO_UPDATE_MASK_LIST = "auto-update-mask-list",
-    COLOR_SCHEME = "color-scheme",
-
-    // session only settings (these start with "so-". todo: can we merge these from another enum into this?
-    STATS_FIRST_DATE = "so-stats-first-date",
-    STATS_LAST_DATE = "so-stats-last-date",
-    RESULTS_TABLE_FILTER = "so-results-table-filter",
-    PARTICIPANT_RESULTS_TABLE_FILTER = "so-participant-results-table-filter",
-    COMBINED_MASK_LIST = "so-combined-mask-list",
-    COMBINED_PARTICIPANT_LIST = "so-combined-participant-list",
-    TEST_NOTES = "so-test-notes",
-    CONTROL_SOURCE_IN_VIEW = "so-control-source-in-view",
-    SAMPLE_SOURCE_IN_VIEW = "so-sample-source-in-view",
-    CONNECTION_STATUS_IN_VIEW = "so-connection-status-in-view",
-    ACTIVITY = "so-activity",
-
-    // these are deprecated:
-    DEFAULT_TO_PREVIOUS_PARTICIPANT = "default-to-previous-participant",
-    AUTO_ESTIMATE_FIT_FACTOR = "auto-estimate-fit-factor",
-    SHOW_PROTOCOL_EDITOR = "show-protocol-editor",
-    SHOW_SIMPLE_PROTOCOL_EDITOR = "show-simple-protocol-editor",
-    SHOW_SETTINGS = "show-settings",
-    SHOW_LOG_PANELS = "show-log-panels",
-    SHOW_HISTORICAL_TESTS = "show-historical-tests",
-    SHOW_CURRENT_TEST_PANEL = "show-current-test-panel",
-}
-
-/**
- * Settings can be of these types.
- */
-export type AppSettingType = unknown
-// boolean
-// | string
-// | string[]
-// | number
-// | JSONContent
-// | SortingState
-// | ColumnFiltersState
-// | Partial<SimpleResultsDBRecord>
-// | Date;
-
-/**
- * Settings names and default values.
- * Keys are the database keys, so we must preserve what we have previously used (or convert)
- */
-export const AppSettingsDefaults = {
-    "speech-enabled": false,
-    "advanced-mode": false,
-    "speech-voice": "default",
-    "verbose": false,
-    "say-particle-count": false,
-    "results-table-sort": [{
-        id: 'ID',
-        desc: true,
-    }],
-    "participant-results-table-sort": [{
-        id: 'ID',
-        desc: true,
-    }],
-    "auto-estimate-fit-factor": false,
-    "say-estimated-fit-factor": false,
-    "show-external-control": false,
-    "baud-rate": 1200,
-    "protocol-instruction-sets": {
-        "json": {
-            "w1": [
-                "Normal breathing. Breathe normally",
-                "Heavy breathing. Take deep breaths.",
-                [
-                    "Jaw movement.",
-                    "Read the rainbow passage:",
-                    "When the sunlight strikes raindrops in the air, they act as a prism and form a rainbow.",
-                    "The rainbow is a division of white light into many beautiful colors.",
-                    "These take the shape of a long round arch, with its path high above,",
-                    "and its two ends apparently beyond the horizon.",
-                    "There is, according to legend, a boiling pot of gold at one end.",
-                    "People look, but no one ever finds it.",
-                    "When a man looks for something beyond his reach,",
-                    "his friends say he is looking for the pot of gold at the end of the rainbow."
-                ].join(" "),
-                "Head movement. Look up, down, left, and right. Repeat."
-            ],
-            "Modified CNC Fit Protocol (B)": [
-                {
-                    "instructions": "prep",
-                    "ambient_purge": 4,
-                    "ambient_sample": 20,
-                    "mask_purge": 0,
-                    "mask_sample": 0
-                },
-                {
-                    "instructions": "Bending over. Bend at the waist as if going to touch your toes. Inhale 2 times at the bottom.",
-                    "ambient_purge": 0,
-                    "ambient_sample": 0,
-                    "mask_purge": 4,
-                    "mask_sample": 30
-                },
-                {
-                    "instructions": ["Talking.",
-                        "Talk out loud slowly and loud enough to be head by the test administrator.",
-                        "Count backwards from 100,",
-                        "or read the Rainbow Passage:",
-                        "When the sunlight strikes raindrops in the air, they act as a prism and form a rainbow.",
-                        "The rainbow is a division of white light into many beautiful colors.",
-                        "These take the shape of a long round arch, with its path high above,",
-                        "and its two ends apparently beyond the horizon.",
-                        "There is, according to legend, a boiling pot of gold at one end.",
-                        "People look, but no one ever finds it.",
-                        "When a man looks for something beyond his reach,",
-                        "his friends say he is looking for the pot of gold at the end of the rainbow."
-                    ].join(" "),
-                    "ambient_purge": 0,
-                    "ambient_sample": 0,
-                    "mask_purge": 4,
-                    "mask_sample": 30
-                },
-                {
-                    "instructions": "Head side-to-side. Slowly turn head from side to side. Inhale 2 times at each extreme.",
-                    "ambient_purge": 0,
-                    "ambient_sample": 0,
-                    "mask_purge": 4,
-                    "mask_sample": 30
-                },
-                {
-                    "instructions": "Head up-and-down. Slowly move head up and down. Inhale 2 times at each extreme.",
-                    "ambient_purge": 0,
-                    "ambient_sample": 0,
-                    "mask_purge": 4,
-                    "mask_sample": 30
-                },
-                {
-                    "instructions": "finalize",
-                    "ambient_purge": 4,
-                    "ambient_sample": 9,
-                    "mask_purge": 0,
-                    "mask_sample": 0
-                }
-            ],
-            "osha": [
-                "Normal breathing. In a normal standing position, without talking, the subject shall breathe normally",
-                "Deep breathing. In a normal standing position, the subject shall breathe slowly and deeply, taking caution so as not to hyperventilate",
-                "Turning head side to side. Standing in place, the subject shall slowly turn his/her head from side to side between the extreme positions on each side. The head shall be held at each extreme momentarily so the subject can inhale at each side.",
-                "Moving head up and down. Standing in place, the subject shall slowly move his/her head up and down. The subject shall be instructed to inhale in the up position (i.e., when looking toward the ceiling).",
-                "Talking. The subject shall talk out loud slowly and loud enough so as to be heard clearly by the test conductor. The subject can read from a prepared text such as the Rainbow Passage, count backward from 100, or recite a memorized poem or song.",
-                "Grimace. The test subject shall grimace by smiling or frowning. (This applies only to QNFT testing; it is not performed for QLFT)",
-                "Bending over. The test subject shall bend at the waist as if he/she were to touch his/her toes. Jogging in place shall be substituted for this exercise in those test environments such as shroud type QNFT or QLFT units that do not permit bending over at the waist.",
-                "Normal breathing. Same as exercise (1)."
-            ],
-        }
-    },
-    "selected-protocol": "w1",
-    "keep-screen-awake": true,
-    "test-template": {} as Partial<SimpleResultsDBRecord>,
-    "enable-simulator": false,
-    "enable-auto-connect": true,
-    "simulator-file-speed": 300, // baud
-    "selected-data-source": DataSource.WebSerial,
-    "sync-device-state-on-connect": false,
-    "minutes-allotted-per-participant": 20,
-    "event-end-hhmm": "13:30", // 1:30p. use a divider for easier parsing
-    "show-elapsed-participant-time": false,
-    "show-remaining-event-time": false,
-    "auto-create-fast-protocols": false,
-    "last-known-settings-keys-hash": "",
-    "use-compact-ui": true,
-    "enable-webserial-drivers": false, // I don't normally use this so disable by default.
-    "enable-protocol-editor": false,
-    "enable-qr-code-scanner": false,
-    "enable-stats": false,
-    "enable-test-instructions-zoom": false,
-    "bookmarks": {},
-    "mask-list": [],
-    "participant-list": [],
-    "auto-update-mask-list": true,
-    "color-scheme": "auto",
-
-    "so-stats-first-date": new Date(0), // epoch, sentinel value
-    "so-stats-last-date": new Date(), // today
-    "so-results-table-filter": [],
-    "so-participant-results-table-filter": [],
-    "so-combined-mask-list": [],
-    "so-combined-participant-list": [],
-    "so-test-notes": [],
-    "so-control-source-in-view": true,
-    "so-sample-source-in-view": true,
-    "so-connection-status-in-view": true,
-    "so-activity": Activity.Disconnected,
-
-    "default-to-previous-participant": false, // deprecated
-    "show-protocol-editor": false, // deprecated
-    "show-simple-protocol-editor": false, // deprecated
-    "show-settings": false, // deprecated
-    "show-log-panels": false, // deprecated
-    "show-historical-tests": false, // deprecated
-    "show-current-test-panel": false, // deprecated
-}
-// this class should use AppSettingsType for type checking/ validations to ensure every setting has a default.
-export type ValidSettings = keyof typeof AppSettingsDefaults;
+import {
+    AppSettings,
+    AppSettingsDefaults,
+    AppSettingType,
+    ProtocolSegment,
+    ValidSettings
+} from "src/app-settings-types.ts";
 
 function isSessionOnlySetting(setting: ValidSettings) {
     return setting.toLowerCase().startsWith("so-")
@@ -271,23 +38,6 @@ export function isThisAnExerciseSegment(segment: ProtocolSegment) {
 
 export function calculateNumberOfExercises(protocol: StandardProtocolDefinition) {
     return convertStagesToSegments(protocol).reduce((numExercises: number, segment: ProtocolSegment) => numExercises + (isThisAnExerciseSegment(segment) ? 1 : 0), 0);
-}
-
-// todo: rename this to phase? so we don't share the same first letter as Stage
-export type ProtocolSegment = {
-    index: number, // segment index
-    stage: StageDefinition,
-    stageIndex: number,
-    exerciseNumber: number | null, // this is usually stageIndex+1 (to be 1-based), but sometimes it's shifted by some
-                                   // amount, in order to skip 0-duration stages
-    state: SegmentState,
-    source: SampleSource,
-    protocolStartTimeOffsetSeconds: number, // to help with pointer
-    stageStartTimeOffsetSeconds: number, // helper
-    segmentStartTimeMs?: number, // epoch time
-    duration: number,
-    data: ParticleConcentrationEvent[], // todo: trim this down to timestamp and concentration?
-    calculatedScore?: number // FF. keep it here since we can revise it with more ambient info
 }
 
 // enums as keys doesn't force defaults, but maybe these can be used as keys but the type can be a separate declaration
@@ -578,7 +328,7 @@ class AppSettingsContext {
      * @private
      */
     getSetting<T extends AppSettingType>(setting: AppSettings): T {
-        return JSON.parse(defaultConfigManager.getConfig(setting) || "[]") as T;
+        return defaultConfigManager.getConfig(setting);
     }
 
     /**
@@ -604,7 +354,7 @@ class AppSettingsContext {
      * @private
      */
     saveSetting(setting: ValidSettings, value: AppSettingType) {
-        defaultConfigManager.setConfig(setting, JSON.stringify(value));
+        defaultConfigManager.setConfig(setting, value);
     }
 
 

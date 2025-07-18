@@ -4,8 +4,8 @@ import {AppContext} from "./app-context.ts";
 import {SampleSource} from "./simple-protocol.ts";
 import {PiFaceMask} from "react-icons/pi";
 import {useSetting} from "src/use-setting.ts";
-import {AppSettings} from "src/app-settings.ts";
 import {BsWind} from "react-icons/bs";
+import {AppSettings} from "src/app-settings-types.ts";
 
 export function SampleSourceWidget() {
     const appContext = useContext(AppContext)

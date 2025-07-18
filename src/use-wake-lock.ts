@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useRef} from "react";
-import {AppSettings} from "./app-settings.ts";
 import {useSetting} from "./use-setting.ts";
+import {AppSettings} from "src/app-settings-types.ts";
 
 /**
  * hook to prevent screen from going to sleep tied to a setting.
@@ -13,14 +13,22 @@ export const useWakeLock = () => {
 
     async function requestWakeLock() {
         console.debug("requestWakeLock()")
-        wakeLock.current = await navigator.wakeLock.request('screen');
+        if (wakeLock.current === null && document.visibilityState === 'visible') {
+            try {
+                wakeLock.current = await navigator.wakeLock.request('screen')
+            } catch (error) {
+                console.warn(error)
+            }
+        } else {
+            console.debug("not visible or already have a wakelock")
+        }
     }
 
     const handleVisibilityChange = useCallback(() => {
-        if (wakeLock.current !== null && document.visibilityState === 'visible' && keepScreenAwake) {
+        if (keepScreenAwake) {
             requestWakeLock();
         }
-    },[])
+    }, [keepScreenAwake])
 
     useEffect(() => {
         if (keepScreenAwake) {
@@ -33,5 +41,6 @@ export const useWakeLock = () => {
                 wakeLock.current = null;
             })
         }
-    }, [keepScreenAwake]);
+        return () => {document.removeEventListener('visibilitychange', handleVisibilityChange);}
+    }, [keepScreenAwake, handleVisibilityChange]);
 }

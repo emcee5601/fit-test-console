@@ -11,9 +11,9 @@ import {
 } from 'vanilla-jsoneditor';
 import {useEffect, useRef} from 'react';
 import "./simple-protocol-editor.css";
-import {AppSettings} from "./app-settings.ts";
 import stringifyDeterministically from "json-stringify-deterministic";
 import {useSetting} from "./use-setting.ts";
+import {AppSettings} from "src/app-settings-types.ts";
 
 export default function SimpleFitTestProtocolPanel(props: JSONEditorPropsOptional) {
     // TODO: extract default

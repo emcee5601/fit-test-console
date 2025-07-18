@@ -56,13 +56,13 @@ export interface DataCollectorListener {
 
 export class DataCollector {
     private readonly listeners: DataCollectorListener[] = [];
-    resultsDatabase;
+    private readonly resultsDatabase;
     // the last completed dataset
-    previousTestData: SimpleResultsDBRecord | null = null;
+    private previousTestData: SimpleResultsDBRecord | null = null;
     // the current in-progress dataset
-    currentTestData: SimpleResultsDBRecord | null = null;
-    lastExerciseNum: number = 0;
-    sampleSource: SampleSource = SampleSource.MASK; // defaults to mask, but if we connect in the middle, we need to check
+    private currentTestData: SimpleResultsDBRecord | null = null;
+    private lastExerciseNum: number = 0;
+    private sampleSource: SampleSource = SampleSource.MASK; // defaults to mask, but if we connect in the middle, we need to check
     private setResults: React.Dispatch<React.SetStateAction<SimpleResultsDBRecord[]>> | undefined;
 
     private inProgressTestPromiseChain: Promise<void> | undefined;

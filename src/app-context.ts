@@ -5,7 +5,7 @@ import {
     PortaCountListener,
     SerialPortLike
 } from "./portacount-client-8020.ts";
-import {APP_SETTINGS_CONTEXT, AppSettings, AppSettingsDefaults, calculateNumberOfExercises} from "./app-settings.ts";
+import {APP_SETTINGS_CONTEXT, calculateNumberOfExercises} from "./app-settings.ts";
 import {DataCollector, DataCollectorListener} from "./data-collector.ts";
 import {SPEECH} from "./speech.ts";
 import {RESULTS_DB, SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
@@ -20,6 +20,7 @@ import {Activity} from "src/activity.ts";
 import {ConnectionStatus} from "src/connection-status.ts";
 import {ProtocolDefaults, StandardProtocolDefinition, StandardStageDefinition} from "src/simple-protocol.ts";
 import {defaultConfigManager} from "src/config/config-context.tsx";
+import {AppSettings, AppSettingsDefaults} from "src/app-settings-types.ts";
 
 /**
  * Global context.
@@ -295,7 +296,7 @@ function initParticipantListUpdator() {
 
 function initConfigDefaults() {
     Object.entries(AppSettingsDefaults).forEach(([key, value]) => {
-        defaultConfigManager.setDefault(key, JSON.stringify(value))
+        defaultConfigManager.setDefault(key, value)
     })
 }
 

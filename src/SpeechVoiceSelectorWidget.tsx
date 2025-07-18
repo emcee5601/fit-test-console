@@ -1,7 +1,7 @@
 import {useSetting} from "./use-setting.ts";
-import {AppSettings} from "./app-settings.ts";
 import {useCallback, useEffect} from "react";
 import {SPEECH} from "./speech.ts";
+import {AppSettings} from "src/app-settings-types.ts";
 
 export function SpeechVoiceSelectorWidget() {
     const [selectedVoiceName, setSelectedVoiceName] = useSetting<string>(AppSettings.SPEECH_VOICE);

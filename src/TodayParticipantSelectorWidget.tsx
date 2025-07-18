@@ -1,7 +1,7 @@
 import {SmartTextArea} from "src/SmartTextArea.tsx";
 import {useSetting} from "src/use-setting.ts";
-import {AppSettings} from "src/app-settings.ts";
 import {ReactElement} from "react";
+import {AppSettings} from "src/app-settings-types.ts";
 
 type TodayParticipantSelectorWidgetProps = {
     value?: string,

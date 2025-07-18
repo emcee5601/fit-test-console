@@ -1,7 +1,6 @@
 import {PortaCountListener, SerialPortLike} from "./portacount-client-8020.ts";
 import {useContext, useEffect, useState} from "react";
 import {AppContext} from "./app-context.ts";
-import {AppSettings} from "./app-settings.ts";
 import {DataSource} from "./data-source.ts";
 import {UsbSerialDrivers} from "./web-usb-serial-drivers.ts";
 import {DataFilePushSource, getReadableStreamFromDataSource} from "./datasource-helper.ts";
@@ -13,6 +12,7 @@ import {ActionMenuWidget} from "src/ActionMenuWidget.tsx";
 import {HiLinkSlash} from "react-icons/hi2";
 import {MdOutlinePending} from "react-icons/md";
 import {HiLink} from "react-icons/hi";
+import {AppSettings} from "src/app-settings-types.ts";
 
 /**
  * Control for selecting the driver to use to connect to the PortaCount. Or to a simulator. Shows connection status.

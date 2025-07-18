@@ -7,9 +7,9 @@ import {useContext, useEffect, useState} from "react";
 import {avgArray, formatDuration, median} from "src/utils.ts";
 import {InfoBox} from "src/InfoBox.tsx";
 import {AppContext} from "src/app-context.ts";
-import {AppSettings} from "src/app-settings.ts";
 import {useSetting} from "src/use-setting.ts";
 import {RAW_DB, SimpleDBRecord} from "src/database.ts";
+import {AppSettings} from "src/app-settings-types.ts";
 
 type Tally = [string, number]
 const ONE_HOUR = 60*60*1000;

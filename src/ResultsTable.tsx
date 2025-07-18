@@ -26,7 +26,6 @@ import {
 } from "./use-editable-column-hook.tsx";
 import {useSkipper} from "./use-skipper-hook.ts";
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
-import {AppSettings} from "./app-settings.ts";
 import {AppContext} from "./app-context.ts";
 import {DataCollector, DataCollectorListener} from "./data-collector.ts";
 import {ResultsTableColumnFilter} from "./ResultsTableColumnFilter.tsx";
@@ -35,6 +34,7 @@ import {ReactTableQrCodeExportWidget} from "./ReactTableQrCodeExportWidget.tsx";
 import {useSetting} from "./use-setting.ts";
 import {BooleanToggleButton} from "src/ToggleButton.tsx";
 import {deepCopy} from "json-2-csv/lib/utils";
+import {AppSettings} from "src/app-settings-types.ts";
 
 //This is a dynamic row height example, which is more complicated, but allows for a more realistic table.
 //See https://tanstack.com/virtual/v3/docs/examples/react/table for a simpler fixed row height example.
@@ -82,7 +82,7 @@ export default function ResultsTable({
             sortUndefined: undefined,
             sortingFn: compareNumericString,
             sortDescFirst: true,
-            size: 65,
+            size: 70,
         };
     }
 
@@ -161,6 +161,9 @@ export default function ResultsTable({
             {
                 accessorKey: 'ID',
                 header: 'ID',
+                cell: info => {
+                    return <div className={"table-cell"}>{info.cell.getValue()}</div>
+                },
                 enableColumnFilter: false,
                 size: 50,
             },
@@ -169,11 +172,7 @@ export default function ResultsTable({
                 header: 'Date',
                 cell: info => {
                     const date = info.getValue<Date>();
-                    if (date) {
-                        return dateTimeFormat.format(new Date(date))// date.toLocaleString()
-                    } else {
-                        return null;
-                    }
+                    return <div className={"table-cell"}>{date ? dateTimeFormat.format(new Date(date)) : null}</div>;
                 },
                 enableColumnFilter: searchableColumns.includes('Time'),
                 filterFn: (row, columnId, filterValue) => {
@@ -211,8 +210,9 @@ export default function ResultsTable({
                 accessorKey: 'ProtocolName',
                 enableColumnFilter: searchableColumns.includes('ProtocolName'),
                 filterFn: safeRegExpFilter,
-                accessorFn: (record) => {
-                    return `${record.ProtocolName} - ${record.TestController}`
+                cell: info => {
+                    const record = info.row.original
+                    return <div className={"table-cell"}>{`${record.ProtocolName} - ${record.TestController}`}</div>
                 },
                 header: 'Protocol',
             },

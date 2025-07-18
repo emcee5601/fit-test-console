@@ -4,10 +4,10 @@
 import {formatDuration} from "src/utils.ts";
 import {useSetting} from "src/use-setting.ts";
 import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
-import {AppSettings} from "src/app-settings.ts";
 import {HTMLAttributes, useState} from "react";
 import {useTimingSignal} from "src/timing-signal.ts";
 import {IoPersonSharp} from "react-icons/io5";
+import {AppSettings} from "src/app-settings-types.ts";
 
 export function CurrentParticipantTimeWidget({useIcons = false, ...props}: {
     useIcons?: boolean

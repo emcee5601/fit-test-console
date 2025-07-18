@@ -28,12 +28,6 @@ type SmartTextAreaProps = {
  * @param initialValue
  * @param placeholder
  * @constructor
- *
- * todo:
- * - option to confirm changes before calling onChange - useful for filtered data so partial updates don't get saved
- *     and fall off the filter
- * - control to show all options regardless of autocompletion (toggle?)
- * - control to clear the current value
  */
 export function SmartTextArea({
     debounce = true,
@@ -48,6 +42,7 @@ export function SmartTextArea({
     oneLine = false,
     scrollable = false,
     onChangeOnlyOnBlur,
+    className,
 }: SmartTextAreaProps & Omit<HTMLAttributes<HTMLTextAreaElement>, 'onChange' | 'value' | 'style'>) {
     const [value, setValue] = React.useState(initialValue)
     const labelRef = useRef<HTMLLabelElement>(null);
@@ -428,7 +423,7 @@ export function SmartTextArea({
 
     const textAreaId = `smart-text-area-${id}-textarea`;
     return (
-        <label id={`smart-text-area-${id}-container`} className="smart-text-area-container"
+        <label id={`smart-text-area-${id}-container`} className={`smart-text-area-container ${className}`}
                ref={smartTextAreaContainerRef}>
             {label && (
                 isString(label)
@@ -439,7 +434,7 @@ export function SmartTextArea({
             )}
             <label id={`smart-text-area-${id}-textarea-resizer`} className={"textarea-resizer"} ref={labelRef}>
                 <textarea id={textAreaId}
-                          className={`smart-text-area-textarea ${oneLine && "one-line"} ${scrollable && "scrollable"}`}
+                          className={`smart-text-area-textarea ${oneLine ? "one-line" : ""} ${scrollable ? "scrollable" : ""}`}
                           placeholder={placeholder}
                           value={value as string}
                           ref={textAreaRef}

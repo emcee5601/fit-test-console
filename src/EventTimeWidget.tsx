@@ -5,9 +5,9 @@ import {formatDuration} from "src/utils.ts";
 import {HTMLAttributes, useContext, useState} from "react";
 import {AppContext} from "src/app-context.ts";
 import {useSetting} from "src/use-setting.ts";
-import {AppSettings} from "src/app-settings.ts";
 import {useTimingSignal} from "src/timing-signal.ts";
 import {IoToday} from "react-icons/io5";
+import {AppSettings} from "src/app-settings-types.ts";
 
 export function EventTimeWidget({useIcons = false, ...props}: { useIcons?: boolean } & HTMLAttributes<HTMLDivElement>) {
     const appContext = useContext(AppContext)

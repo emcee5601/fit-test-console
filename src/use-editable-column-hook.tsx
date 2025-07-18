@@ -66,7 +66,7 @@ export function useEditableExerciseResultColumn<T extends SimpleResultsDBRecord,
     const classes = getFitFactorCssClass(value as string, protocolHasThisManyExercises)
 
     return (
-        <div className={classes} style={{width: "100%", display: "inline-flex", flexDirection: "column"}}>
+        <div className={[classes, "table-cell"].join(" ")} style={{width: "100%", display: "inline-flex", flexDirection: "column"}}>
             <div className={"inline-flex"}>
                 {editable
                     ? <SmartTextArea
@@ -114,7 +114,7 @@ export function useEditableColumn<T, V>({
     }, [value]);
 
     return (
-        <SmartTextArea
+        <SmartTextArea className={"table-cell"}
             id={`${String(index)}-${id}`}
             onChangeOnlyOnBlur={true}
             initialValue={value ? value as string : ""}
@@ -145,7 +145,7 @@ export function useEditableMaskColumn<T, V>({
 
 
     return (
-        <MaskSelectorWidget id={String(index)} value={(value as string) ?? ""} onChange={(v) => onChange(v)}/>
+        <MaskSelectorWidget id={String(index)} className={"table-cell"} value={(value as string) ?? ""} onChange={(v) => onChange(v)}/>
     )
 }
 

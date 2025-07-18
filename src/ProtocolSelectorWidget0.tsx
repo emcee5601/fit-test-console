@@ -1,7 +1,7 @@
 import {useContext} from "react";
 import {AppContext} from "./app-context.ts";
-import {AppSettings} from "./app-settings.ts";
 import {useSetting} from "./use-setting.ts";
+import {AppSettings} from "src/app-settings-types.ts";
 
 /**
  * Protocol selector. Is aware of control source and removes disallowed protocols from selection if in internal control

@@ -70,6 +70,7 @@ export function ResultsTableColumnFilter<V>({column, dates}: {
         case 'mask': {
             const curFilter = column.getFilterValue() as string || "";
             return <MaskSelectorWidget
+                className={"table-cell"}
                 id={"filter"}
                 value={curFilter}
                 placeholder={"Search..."}
@@ -78,7 +79,7 @@ export function ResultsTableColumnFilter<V>({column, dates}: {
         default:
             return <SmartTextArea
                 id={`${column.id}-filter`}
-                className="filterInput"
+                className="table-cell"
                 onChange={value => column.setFilterValue(value)}
                 placeholder={`Search...`}
                 initialValue={(columnFilterValue ?? '') as string}

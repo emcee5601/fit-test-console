@@ -1,11 +1,11 @@
 import {PortaCountClient8020, PortaCountListener} from "./portacount-client-8020.ts";
 import {useContext, useEffect, useState} from "react";
 import {AppContext} from "./app-context.ts";
-import {AppSettings} from "./app-settings.ts";
 import {ToggleButton} from "./ToggleButton.tsx";
 import {ControlSource} from "./control-source.ts";
 import {SampleSource} from "./simple-protocol.ts";
 import {useSetting} from "./use-setting.ts";
+import {AppSettings} from "src/app-settings-types.ts";
 
 /**
  * Displays current state and some controls.

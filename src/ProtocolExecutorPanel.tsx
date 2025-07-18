@@ -1,14 +1,12 @@
 import {SampleSource, StandardProtocolDefinition} from "./simple-protocol.ts";
 import {calculateSegmentConcentration, ProtocolExecutorListener, SegmentState} from "./protocol-executor.ts";
-import {HTMLAttributes, PropsWithChildren, useContext, useEffect, useRef, useState} from "react";
+import {HTMLAttributes, PropsWithChildren, ReactElement, useContext, useEffect, useRef, useState} from "react";
 import {AppContext, createDeviceSynchronizedProtocol} from "./app-context.ts";
 import {formatDuration, formatFitFactor} from "./utils.ts";
 import {
-    AppSettings,
     calculateProtocolDuration,
     convertStagesToSegments,
-    isThisAnExerciseSegment,
-    ProtocolSegment
+    isThisAnExerciseSegment
 } from "./app-settings.ts";
 import {ControlSource} from "./control-source.ts";
 import {FitFactorResultsEvent, PortaCountListener} from "./portacount-client-8020.ts";
@@ -20,13 +18,17 @@ import {ImPlay2, ImStop} from "react-icons/im";
 import {useTimingSignal} from "src/timing-signal.ts";
 import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
 import {DataCollectorListener} from "src/data-collector.ts";
-import {BsWind} from "react-icons/bs";
+import {BsArrowsFullscreen, BsWind} from "react-icons/bs";
 import {PiFaceMask, PiWatch} from "react-icons/pi";
 import {IoGlassesOutline} from "react-icons/io5";
 import {IconType} from "react-icons";
 import {ConnectionStatus} from "src/connection-status.ts";
 import {ProtocolStageElement} from "src/ProtocolStageElement.tsx";
 import {HiOutlineClipboardList} from "react-icons/hi";
+import {TestInstructionsPanel} from "src/TestInstructionsPanel.tsx";
+import {MdCloseFullscreen} from "react-icons/md";
+import {Activity} from "src/activity.ts";
+import {AppSettings, ProtocolSegment} from "src/app-settings-types.ts";
 
 /**
  * Helper type. Maps from stage indexes or segment indexes to durations
@@ -82,6 +84,10 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
     const lastKnownAmbient = protocolExecutor.lastAmbientSegment ? calculateSegmentConcentration(protocolExecutor.lastAmbientSegment) : undefined
     const currentSegmentConcentration = currentSegment ? calculateSegmentConcentration(currentSegment) : undefined;
     const estimatedFitFactor = lastKnownAmbient && currentSegmentConcentration ? formatFitFactor(lastKnownAmbient / currentSegmentConcentration) : "?"
+    const [enableInstructionsZoom] = useSetting<boolean>(AppSettings.ENABLE_TEST_INSTRUCTIONS_ZOOM);
+    const [activity] = useSetting<Activity>(AppSettings.ACTIVITY)
+    const [zoomInstructions, setZoomInstructions] = useSetting<boolean>(AppSettings.ZOOM_INSTRUCTIONS)
+    const [enableExternalControl] = useSetting<boolean>(AppSettings.SHOW_EXTERNAL_CONTROL)
 
     useEffect(() => {
         // calculate segment text. but this has some real time dependencies
@@ -89,6 +95,9 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
             getSegmentText(currentSegment)
         }
     }, [currentSegment]);
+    useEffect(() => {
+        setZoomInstructions(enableInstructionsZoom && activity === Activity.Testing)
+    }, [enableInstructionsZoom, activity]);
 
     function getSegmentText(segment: ProtocolSegment) {
         const isExerciseSegment = isThisAnExerciseSegment(segment);
@@ -345,8 +354,40 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
         dataCollector.recordTestStart(ControlSource.Manual)
     }
 
+
+    useEffect(() => {
+        setZoomInstructions(enableInstructionsZoom && activity === Activity.Testing)
+    }, [activity, enableInstructionsZoom]);
+
+    function handleZoomInstructions() {
+        // toggle
+        setZoomInstructions((prev) => !prev)
+    }
+
+    function getProtocolStageElements() {
+        const elements: ReactElement[] = []
+        let exerciseNum = 0;
+        stages.forEach((stage, index) => {
+            if (stage.mask_sample) {
+                exerciseNum++;
+            }
+            elements.push(<ProtocolStageElement key={index} elementRef={stageDivRef} stage={stage}
+                                                exerciseNum={exerciseNum}
+                                                currentTestResults={currentTestData}
+                                                currentEstimate={currentSegment && currentSegment.stageIndex === index ? estimatedFitFactor: undefined}
+            />)
+        });
+        return elements;
+    }
+
     return (
-        <section id="custom-control-panel" {...props} style={{paddingTop:"0.5em"}}>
+        <section id="custom-control-panel" {...props} style={{
+            paddingTop: "0.5em",
+            height: zoomInstructions ? "inherit" : "auto",
+            boxSizing: "border-box",
+            display: "flex",
+            flexDirection: "column"
+        }}>
             <fieldset id={"protocol-executor-panel-main"} ref={protocolExecutorPanelRef} className={"idle"}
                       style={{minWidth: 0, overflow: "auto", paddingBottom: "0.2em"}}>
                 <legend style={{
@@ -355,16 +396,17 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
                     flexWrap: "wrap",
                     paddingInline: "0.5rem",
                 }}>Protocol <ProtocolSelectorWidget0/>
-                    <button
+                    {enableExternalControl && <button
                         disabled={isProtocolRunning || portaCountClient.state.connectionStatus !== ConnectionStatus.RECEIVING}
                         className={"icon-button start"}
                         onClick={() => protocolExecutor.executeProtocol(segments)}>Start <div
                         className={"svg-container"}>
                         <ImPlay2/></div>
-                    </button>
-                    <button disabled={!isProtocolRunning} onClick={() => handleStopButtonClick()}
-                            className={"icon-button stop"}>Stop <div className={"svg-container"}><ImStop/></div>
-                    </button>
+                    </button>}
+                    {enableExternalControl &&
+                        <button disabled={!isProtocolRunning} onClick={() => handleStopButtonClick()}
+                                className={"icon-button stop"}>Stop <div className={"svg-container"}><ImStop/></div>
+                        </button>}
                     <button disabled={isProtocolRunning} onClick={() => manualEntry()}
                             className={"icon-button"}>Manual <div className={"svg-container"}><HiOutlineClipboardList/>
                     </div></button>
@@ -385,16 +427,26 @@ export function ProtocolExecutorPanel({...props}: {} & HTMLAttributes<HTMLElemen
                          }}>
                     </div>
                     <div id={"new-protocol-visualizer-container"} style={{display: "flex", flexDirection: "row"}}>
-                        {stages.map((stage, index) => {
-                            if (currentSegment?.stageIndex === index) {
-                                return <ProtocolStageElement key={index} elementRef={stageDivRef} stage={stage}/>
-                            } else {
-                                return <ProtocolStageElement key={index} elementRef={stageDivRef} stage={stage}/>
-                            }
-                        })}
+                        {getProtocolStageElements()}
                     </div>
                 </section>
             </fieldset>
+            <div id={"testing-mode-container"}
+                 className={`test-instructions-container ${zoomInstructions && "test-in-progress"}`}>
+                <div style={{
+                    padding: "0.2em",
+                    position: "absolute",
+                    right: 0,
+                    backgroundColor: "inherit",
+                    aspectRatio: 1,
+                    zIndex: 10,
+                }}
+                     onClick={() => handleZoomInstructions()}
+                >
+                    {zoomInstructions ? <MdCloseFullscreen/> : <BsArrowsFullscreen/>}
+                </div>
+                <TestInstructionsPanel/>
+            </div>
         </section>
     )
 }

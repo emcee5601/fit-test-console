@@ -210,10 +210,8 @@ td.results {
     text-align: end;
 }
 
-.result {
-    width: 100%;
+.table-cell {
     padding-inline: 0.3em;
-    box-sizing: border-box;
 }
 
 .efficiency {
@@ -230,7 +228,10 @@ td.results {
     color: white;
 }
 
-.result {
+.result-cell {
+    width: 100%;
+    box-sizing: border-box;
+
     &.low-fit-score {
         background-color: darkred;
         color: whitesmoke;
@@ -423,9 +424,7 @@ td input.simple-mask-selector {
 }
 
 .test-in-progress {
-    position: absolute;
-    top: 0;
-    left: 0;
+    flex-grow: 1;
     height: inherit;
 }
 

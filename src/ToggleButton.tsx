@@ -1,6 +1,6 @@
 import React, {Dispatch, SetStateAction} from "react";
-import {AppSettings} from "./app-settings.ts";
 import {useSetting} from "./use-setting.ts";
+import {AppSettings} from "src/app-settings-types.ts";
 
 /**
  * Toggle button tied to a setting.
