@@ -22,7 +22,7 @@ type State =
     | "done"
 
 export function DailyChecksPanel() {
-    const purgeTimeMs = 5*1000
+    const purgeTimeMs = 7*1000 // should only need 4-5 seconds to purge, but we only have 1 second resolution on the data stream.
     const requiredMaskSampleTimeMs = 11 * 1000
     const requiredAmbientSampleTimeMs = 5 * 1000
     const minimumRequiredParticles = 1000;
