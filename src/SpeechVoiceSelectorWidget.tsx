@@ -7,9 +7,10 @@ export function SpeechVoiceSelectorWidget() {
     const [selectedVoiceName, setSelectedVoiceName] = useSetting<string>(AppSettings.SPEECH_VOICE);
 
     const updateSelectedVoice = useCallback((voiceName: string) => {
-        const foundVoice = findVoiceByName(voiceName);
+        const foundVoice = SPEECH.findVoiceByName(voiceName);
         console.log(`looking for voice '${voiceName}'; found voice ${foundVoice?.name}`)
-        if (foundVoice) {
+        const currentVoice = SPEECH.getSelectedVoice()
+        if (foundVoice && (!currentVoice || currentVoice.name !== foundVoice.name)) {
             SPEECH.setSelectedVoice(foundVoice);
             setSelectedVoiceName(voiceName)
             SPEECH.sayItLater(`This is ${foundVoice.name} speaking.`)
@@ -19,7 +20,7 @@ export function SpeechVoiceSelectorWidget() {
     useEffect(() => {
         // on first load, set a default voice if found
         // todo: don't override voice loaded from db
-        const defaultVoice = findDefaultVoice()
+        const defaultVoice = SPEECH.findDefaultVoice()
         if (defaultVoice) {
             setSelectedVoiceName(defaultVoice.name);
         }
@@ -27,17 +28,6 @@ export function SpeechVoiceSelectorWidget() {
     useEffect(() => {
         updateSelectedVoice(selectedVoiceName)
     }, [selectedVoiceName, updateSelectedVoice])
-
-    function findDefaultVoice() {
-        const allVoices = SPEECH.allVoices;
-        const foundVoice = allVoices.find((voice) => voice.default);
-        return foundVoice ? foundVoice : null;
-    }
-
-    function findVoiceByName(name: string) {
-        return SPEECH.allVoices.find((voice) => voice.name === name) || null;
-    }
-
 
     return (
         <>

@@ -40,6 +40,13 @@ function initDataCollector() {
 }
 
 function initSpeech() {
+    SPEECH.synth.getVoices() // ignore. this forces speech to initialize
+    SPEECH.setSpeechEnabled(settings.getSetting(AppSettings.SPEECH_ENABLED))
+    const voice = SPEECH.findVoiceByName(settings.getSetting(AppSettings.SPEECH_VOICE));
+    if(voice) {
+        SPEECH.setSelectedVoice(voice)
+    }
+
     portaCountClient.addListener({
         particleConcentrationReceived(event: ParticleConcentrationEvent) {
             if (SPEECH.isSayingSomething()) {

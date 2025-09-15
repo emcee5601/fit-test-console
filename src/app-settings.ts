@@ -12,7 +12,7 @@ import {
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 import {DataSource} from "./data-source.ts";
 import {SegmentState} from "./protocol-executor.ts";
-import {defaultConfigManager} from "src/config/config-context.tsx";
+import {ConfigListener, defaultConfigManager} from "src/config/config-context.tsx";
 import {
     AppSettings,
     AppSettingsDefaults,
@@ -26,9 +26,8 @@ function isSessionOnlySetting(setting: ValidSettings) {
 }
 
 export interface SettingsListener {
-    subscriptions?(): AppSettings[],
-
-    settingsChanged?(setting: ValidSettings, value: AppSettingType): void
+    subscriptions(): AppSettings[],
+    settingsChanged(setting: ValidSettings, value: AppSettingType): void
 }
 
 // todo put these into utils?
@@ -53,10 +52,11 @@ export function calculateNumberOfExercises(protocol: StandardProtocolDefinition)
  * - When the cache updates, dispatch an event if the value has changed.
  */
 class AppSettingsContext {
-    private readonly listeners: SettingsListener[] = [];
     private _protocolStages: StageDefinition[] = []; // kept in sync with selected protocol
     private _protocolSegments: ProtocolSegment[] = []; // kept in sync with protocol stages
     readonly numExercisesForProtocol: { [key: string]: number } = {}
+
+    private _listenerMap: Map<SettingsListener, ConfigListener> = new Map();
 
     constructor() {
         this.addListener({
@@ -108,17 +108,29 @@ class AppSettingsContext {
     }
 
     public addListener(listener: SettingsListener): void {
-        this.listeners.push(listener);
+        const configListener: ConfigListener = {
+            subscriptions: () => {
+                if (listener.subscriptions) {
+                    return listener.subscriptions()
+                } else {
+                    return []
+                }
+            },
+            configChanged<T>(name: string, value: T) {
+                if (listener.settingsChanged) {
+                    listener.settingsChanged(name as ValidSettings, value);
+                }
+            }
+        };
+        this._listenerMap.set(listener, configListener);
+        defaultConfigManager.addListener(configListener)
     }
 
     public removeListener(listener: SettingsListener): void {
-        this.listeners.filter((value, index, array) => {
-            if (value === listener) {
-                array.splice(index, 1);
-                return true
-            }
-            return false;
-        })
+        const configListener = this._listenerMap.get(listener);
+        if (configListener) {
+            defaultConfigManager.removeListener(configListener);
+        }
     }
 
 
@@ -211,6 +223,7 @@ class AppSettingsContext {
     getProtocolDefinition(protocolName: string): StandardProtocolDefinition {
         return this.protocolDefinitions[protocolName] || [];
     }
+
     getProtocolNames(): string[] {
         return Object.keys(this.protocolDefinitions)
     }
@@ -356,7 +369,6 @@ class AppSettingsContext {
     saveSetting(setting: ValidSettings, value: AppSettingType) {
         defaultConfigManager.setConfig(setting, value);
     }
-
 
 
     private updateProtocolStages(selectedProtocol: string) {

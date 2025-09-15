@@ -192,6 +192,29 @@ export const AppSettingsDefaults = {
                 "Bending over. The test subject shall bend at the waist as if he/she were to touch his/her toes. Jogging in place shall be substituted for this exercise in those test environments such as shroud type QNFT or QLFT units that do not permit bending over at the waist.",
                 "Normal breathing. Same as exercise (1)."
             ],
+            "Singing": [
+                {
+                    "ambient_purge": 4,
+                    "ambient_sample": 20,
+                    "instructions": "prep",
+                    "mask_purge": 0,
+                    "mask_sample": 0
+                },
+                {
+                    "ambient_purge": 0,
+                    "ambient_sample": 0,
+                    "instructions": "Sing!",
+                    "mask_purge": 4,
+                    "mask_sample": 240
+                },
+                {
+                    "ambient_purge": 4,
+                    "ambient_sample": 9,
+                    "instructions": "finalize",
+                    "mask_purge": 0,
+                    "mask_sample": 0
+                }
+            ],
         }
     },
     "selected-protocol": "w1",

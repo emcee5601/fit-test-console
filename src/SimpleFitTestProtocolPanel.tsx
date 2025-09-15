@@ -54,7 +54,7 @@ export default function SimpleFitTestProtocolPanel(props: JSONEditorPropsOptiona
                                   "ambient_purge": {type: "integer", minimum: 0, maximum: 10},
                                   "ambient_sample": {type: "integer", minimum: 0, maximum: 60},
                                   "mask_purge": {type: "integer", minimum: 0, maximum: 10},
-                                  "mask_sample": {type: "integer", minimum: 0, maximum: 60},
+                                  "mask_sample": {type: "integer", minimum: 0, maximum: 600},
                               },
                                 required: ["instructions"],
                                 additionalProperties: false

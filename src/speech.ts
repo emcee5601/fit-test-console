@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 export const SPEECH = new class {
     private _synth?: SpeechSynthesis;
@@ -10,11 +10,21 @@ export const SPEECH = new class {
 
     constructor() {
     }
+    findDefaultVoice() {
+        const allVoices = this.allVoices;
+        const foundVoice = allVoices.find((voice) => voice.default);
+        return foundVoice ? foundVoice : null;
+    }
+
+    findVoiceByName(name: string) {
+        return this.allVoices.find((voice) => voice.name === name) || null;
+    }
 
 
     private ensureSynthInitialized() {
         if(!this._synth) {
             this._synth = this.initSynth();
+            console.debug("init synth")
         }
     }
 
@@ -86,7 +96,7 @@ export const SPEECH = new class {
         if (!this.speechEnabled) {
             return;
         }
-        console.log(`using ${this.selectedVoice?.name} say it ${message}`)
+        console.log(`using voice ${this.selectedVoice?.name} say it ${message}`)
         const utterThis = new SpeechSynthesisUtterance(message);
         utterThis.voice = this.selectedVoice;
         utterThis.rate = this.speechRate;
