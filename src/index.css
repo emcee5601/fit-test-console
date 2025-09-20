@@ -233,17 +233,22 @@ td.results {
     box-sizing: border-box;
 
     &.low-fit-score {
-        background-color: darkred;
-        color: whitesmoke;
-    }
-
-    &.moderate-fit-score {
         background-color: darkorange;
         color: whitesmoke;
     }
 
+    &.moderate-fit-score {
+        background-color: yellowgreen;
+        color: black;
+    }
+
     &.high-fit-score {
         background-color: green;
+        color: whitesmoke
+    }
+
+    &.very-high-fit-score {
+        background-color: darkgreen;
         color: whitesmoke
     }
 

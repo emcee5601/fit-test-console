@@ -16,11 +16,10 @@ import {UsbSerialDrivers} from "./web-usb-serial-drivers.ts";
 import {DataSource} from "./data-source.ts";
 import {timingSignal} from "src/timing-signal.ts";
 import {enCaseInsensitiveCollator} from "src/utils.ts";
-import {Activity} from "src/activity.ts";
-import {ConnectionStatus} from "src/connection-status.ts";
 import {ProtocolDefaults, StandardProtocolDefinition, StandardStageDefinition} from "src/simple-protocol.ts";
 import {defaultConfigManager} from "src/config/config-context.tsx";
 import {AppSettings, AppSettingsDefaults} from "src/app-settings-types.ts";
+import {Activity, ConnectionStatus} from "src/portacount/porta-count-state.ts";
 
 /**
  * Global context.
@@ -181,8 +180,13 @@ async function scanHistoricalResults() {
     function isToday(time: string) {
         // compare in localtime.  maybe we can compare in utc?
         const recordDate = new Date(time);
-        const recordYyyymmdd = new Date(recordDate.getTime() - recordDate.getTimezoneOffset() * 60 * 1000).toISOString().substring(0, 10);
-        return recordYyyymmdd === todayYyyymmdd
+        try {
+            const recordYyyymmdd = new Date(recordDate.getTime() - recordDate.getTimezoneOffset() * 60 * 1000).toISOString().substring(0, 10);
+            return recordYyyymmdd === todayYyyymmdd
+        } catch {
+            // couldn't parse time
+            return false
+        }
     }
 
     return RESULTS_DB.getData().then((results) => {

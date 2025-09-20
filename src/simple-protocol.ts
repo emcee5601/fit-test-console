@@ -51,11 +51,6 @@ export type StandardizedProtocolDefinitions = {
     [protocol_name: string]: StandardProtocolDefinition
 }
 
-export enum SampleSource {
-    MASK = "mask",
-    AMBIENT = "ambient"
-}
-
 export const ProtocolDefaults = {
     defaultAmbientPurgeDuration: 4,
     defaultAmbientSampleDuration: 5,

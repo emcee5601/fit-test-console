@@ -2,7 +2,6 @@ import {JSONContent} from "vanilla-jsoneditor";
 import {
     ProtocolDefaults,
     ProtocolDefinitions,
-    SampleSource,
     StageDefinition,
     StandardizedProtocolDefinitions,
     standardizeProtocolDefinitions,
@@ -20,6 +19,7 @@ import {
     ProtocolSegment,
     ValidSettings
 } from "src/app-settings-types.ts";
+import {SampleSource} from "src/portacount/porta-count-state.ts";
 
 function isSessionOnlySetting(setting: ValidSettings) {
     return setting.toLowerCase().startsWith("so-")

@@ -1,6 +1,6 @@
 import {useSetting} from "src/use-setting.ts";
-import {Activity} from "src/activity.ts";
 import {AppSettings} from "src/app-settings-types.ts";
+import {Activity} from "src/portacount/porta-count-state.ts";
 
 /**
  * Displays current activity

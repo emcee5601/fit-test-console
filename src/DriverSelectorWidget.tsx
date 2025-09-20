@@ -7,12 +7,12 @@ import {DataFilePushSource, getReadableStreamFromDataSource} from "./datasource-
 import {getConnectionStatusCssClass} from "./utils.ts";
 import {useSetting} from "./use-setting.ts";
 import {useInView} from "react-intersection-observer";
-import {ConnectionStatus} from "src/connection-status.ts";
 import {ActionMenuWidget} from "src/ActionMenuWidget.tsx";
 import {HiLinkSlash} from "react-icons/hi2";
 import {MdOutlinePending} from "react-icons/md";
 import {HiLink} from "react-icons/hi";
 import {AppSettings} from "src/app-settings-types.ts";
+import {ConnectionStatus} from "src/portacount/porta-count-state.ts";
 
 /**
  * Control for selecting the driver to use to connect to the PortaCount. Or to a simulator. Shows connection status.
@@ -190,7 +190,7 @@ export function DriverSelectorWidget({compact = false}: { compact?: boolean }) {
         )
     }
 
-    const compactWidget = <ActionMenuWidget options={options}
+    const compactWidget = <ActionMenuWidget id={"compact-driver-selector-widget"} options={options}
                                             onChange={(value) => handleWidgetSelection(value)}>
         {connectionStatus === ConnectionStatus.DISCONNECTED && <HiLinkSlash color={"red"}/>}
         {connectionStatus === ConnectionStatus.WAITING && <MdOutlinePending color={"orange"}/>}

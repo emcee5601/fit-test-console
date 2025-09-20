@@ -9,31 +9,22 @@ import {
     toJSONContent,
     toTextContent
 } from 'vanilla-jsoneditor';
-import {useEffect, useRef} from 'react';
+import {useContext, useEffect, useRef} from 'react';
 import "./simple-protocol-editor.css";
 import stringifyDeterministically from "json-stringify-deterministic";
 import {useSetting} from "./use-setting.ts";
 import {AppSettings} from "src/app-settings-types.ts";
+import {AppContext} from "src/app-context.ts";
 
 export default function SimpleFitTestProtocolPanel(props: JSONEditorPropsOptional) {
-    // TODO: extract default
     const [protocolInstructionSets, setProtocolInstructionSets] = useSetting<JSONContent>(AppSettings.PROTOCOL_INSTRUCTION_SETS)
+    const appContext = useContext(AppContext)
 
-    // map of string to list of strings. This represents sets of instructions keyed by the name of the sets.
-    /*
-    {
-        "protocol-name": {
-            [
-                "breathe normally (v1 only has instructions)",
-                {
-                    "instructions": "heavy breathing (v2 includes purge and sample duration)",
-                    "purge-duration": 4,
-                    "sample-duration": 40,
-                },
-            ]
-        }
+    function resetToDefault() {
+        console.debug("resetting protocols to defaults")
+        setProtocolInstructionSets(appContext.settings.getDefault(AppSettings.PROTOCOL_INSTRUCTION_SETS))
     }
-     */
+
     const schema = {
         type: "object",
         properties: {},
@@ -115,10 +106,19 @@ export default function SimpleFitTestProtocolPanel(props: JSONEditorPropsOptiona
         }
     } // defaults
 
-    return JsonEditorPanel(props)
+    return (
+        <>
+            <section id={"controls"}>
+                <button id={"reset"} onDoubleClick={resetToDefault}>Reset to default (double click)</button>
+            </section>
+            <section id={"editor"}>
+                <JsonEditorPanel props={props} />
+            </section>
+        </>
+    )
 }
 
-function JsonEditorPanel(props: JSONEditorPropsOptional) {
+function JsonEditorPanel({props}: {props:JSONEditorPropsOptional}) {
     const refContainer = useRef<HTMLDivElement | null>(null);
     const refEditor = useRef<JsonEditor | null>(null);
     const refPrevProps = useRef<JSONEditorPropsOptional>(props);

@@ -1,11 +1,10 @@
 /**
  * Pretends to be a PortaCount8020
  */
-import {PortaCountState, SerialPortLike} from "./portacount-client-8020.ts";
+import {SerialPortLike} from "./portacount-client-8020.ts";
 import {logSource} from "./datasource-helper.ts";
-import {SampleSource} from "./simple-protocol.ts";
 import {ExternalController} from "./external-control.ts";
-import {ControlSource} from "./control-source.ts";
+import {ControlSource, PortaCountState, SampleSource} from "src/portacount/porta-count-state.ts";
 
 class SimulatorPort {
     readable: ReadableStream;

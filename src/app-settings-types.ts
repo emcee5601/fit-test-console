@@ -1,9 +1,9 @@
 import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
 import {DataSource} from "src/data-source.ts";
-import {Activity} from "src/activity.ts";
-import {SampleSource, StageDefinition} from "src/simple-protocol.ts";
+import {StageDefinition} from "src/simple-protocol.ts";
 import {SegmentState} from "src/protocol-executor.ts";
 import {ParticleConcentrationEvent} from "src/portacount-client-8020.ts";
+import {Activity, SampleSource} from "src/portacount/porta-count-state.ts";
 
 /**
  * this is for convenience. code outside of this module should use AppSettings enum.

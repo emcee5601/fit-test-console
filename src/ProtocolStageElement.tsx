@@ -1,9 +1,10 @@
-import {SampleSource, StandardStageDefinition} from "src/simple-protocol.ts";
+import {StandardStageDefinition} from "src/simple-protocol.ts";
 import "./ProtocolStageElement.css"
 import {SegmentState} from "src/protocol-executor.ts";
 import {RefObject} from "react";
 import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
 import {formatDuration} from "src/utils.ts";
+import {SampleSource} from "src/portacount/porta-count-state.ts";
 
 function ProtocolSegmentElement({duration, source, state, override}: {
     duration: number,

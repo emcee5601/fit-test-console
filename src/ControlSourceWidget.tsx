@@ -1,11 +1,11 @@
 import {PortaCountClient8020, PortaCountListener} from "./portacount-client-8020.ts";
 import {useContext, useEffect, useState} from "react";
 import {AppContext} from "./app-context.ts";
-import {ControlSource} from "./control-source.ts";
 import {useSetting} from "src/use-setting.ts";
 import {FaLaptop} from "react-icons/fa";
 import {TfiTablet} from "react-icons/tfi";
 import {AppSettings} from "src/app-settings-types.ts";
+import {ControlSource} from "src/portacount/porta-count-state.ts";
 
 export function ControlSourceWidget() {
     const appContext = useContext(AppContext)

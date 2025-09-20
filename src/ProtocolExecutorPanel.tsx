@@ -1,4 +1,4 @@
-import {SampleSource, StandardProtocolDefinition} from "./simple-protocol.ts";
+import {StandardProtocolDefinition} from "./simple-protocol.ts";
 import {calculateSegmentConcentration, ProtocolExecutorListener, SegmentState} from "./protocol-executor.ts";
 import {HTMLAttributes, PropsWithChildren, ReactElement, useContext, useEffect, useRef, useState} from "react";
 import {AppContext, createDeviceSynchronizedProtocol} from "./app-context.ts";
@@ -8,7 +8,6 @@ import {
     convertStagesToSegments,
     isThisAnExerciseSegment
 } from "./app-settings.ts";
-import {ControlSource} from "./control-source.ts";
 import {FitFactorResultsEvent, PortaCountListener} from "./portacount-client-8020.ts";
 import "./protocol-executor.css"
 import {useAnimationFrame} from "./assets/use-animation-frame.ts";
@@ -22,13 +21,12 @@ import {BsArrowsFullscreen, BsWind} from "react-icons/bs";
 import {PiFaceMask, PiWatch} from "react-icons/pi";
 import {IoGlassesOutline} from "react-icons/io5";
 import {IconType} from "react-icons";
-import {ConnectionStatus} from "src/connection-status.ts";
 import {ProtocolStageElement} from "src/ProtocolStageElement.tsx";
 import {HiOutlineClipboardList} from "react-icons/hi";
 import {TestInstructionsPanel} from "src/TestInstructionsPanel.tsx";
 import {MdCloseFullscreen} from "react-icons/md";
-import {Activity} from "src/activity.ts";
 import {AppSettings, ProtocolSegment} from "src/app-settings-types.ts";
+import {Activity, ConnectionStatus, ControlSource, SampleSource} from "src/portacount/porta-count-state.ts";
 
 /**
  * Helper type. Maps from stage indexes or segment indexes to durations

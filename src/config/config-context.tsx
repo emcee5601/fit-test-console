@@ -46,7 +46,7 @@ class ConfigManager {
         return this.cache.get(name) as T;
     }
 
-    private getDefaultValue<T>(name: string, defaultValue: T = {} as T): T {
+    getDefaultValue<T>(name: string, defaultValue: T = {} as T): T {
         const defValue: T = this.defaults.has(name) ? this.defaults.get(name) as T : defaultValue
         if (defValue === undefined) {
             // this should never happen

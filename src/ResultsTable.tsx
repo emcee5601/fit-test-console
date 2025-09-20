@@ -35,11 +35,13 @@ import {useSetting} from "./use-setting.ts";
 import {BooleanToggleButton} from "src/ToggleButton.tsx";
 import {deepCopy} from "json-2-csv/lib/utils";
 import {AppSettings} from "src/app-settings-types.ts";
+import {exportFile, importFile} from "src/results-transfer-util.ts";
 
 //This is a dynamic row height example, which is more complicated, but allows for a more realistic table.
 //See https://tanstack.com/virtual/v3/docs/examples/react/table for a simpler fixed row height example.
 export default function ResultsTable({
-    tableData, setTableData,
+    tableData,
+    setTableData,
     searchableColumns = ["Time", "Participant", "Mask", "Notes", "ProtocolName"],
     hideColumns = [],
     minExercisesToShow = 0,
@@ -386,7 +388,16 @@ export default function ResultsTable({
                 {enableSelection && deleteRowsCallback &&
                     <button onClick={() => deleteSelectedRecords()}>Delete selected</button>}
                 <ReactTableCsvExportWidget table={table}/>
-                <ReactTableQrCodeExportWidget table={table} tableData={tableData} columnFilters={columnFilters}/>
+                <ReactTableQrCodeExportWidget table={table}/>
+                <button onClick={() => exportFile(table)}>Export JSON</button>
+                <button onClick={() => {
+                    importFile().then((results) => {
+                        if(results.newRecords.length > 0) {
+                            setTableData(results.allRecords)
+                        }
+                    })
+                }}>Import JSON</button>
+
             </div>
             <div
                 className="container"

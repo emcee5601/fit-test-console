@@ -2,7 +2,7 @@ import LZString from "lz-string";
 import {useNavigate, useSearchParams} from "react-router";
 import {useEffect, useState} from "react";
 import {RESULTS_DB, SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
-import {getStoredData, updateStoredData} from "./results-transfer-util.ts";
+import {getStoredData, importRecords} from "./results-transfer-util.ts";
 import {ResultsTable} from "src/lazy-components.ts";
 
 export function ResultViewer() {
@@ -23,7 +23,7 @@ export function ResultViewer() {
                 console.log(`got url data: ${dataFromUrl}`);
                 const dataRecords = JSON.parse(dataFromUrl) as SimpleResultsDBRecord[];
                 console.log(`data records: ${JSON.stringify(dataRecords, null, 2)}`);
-                const allRecords = await updateStoredData(dataRecords);
+                const {allRecords} = await importRecords(dataRecords);
                 setResults(allRecords)
             } else {
                 console.log("no data from url")

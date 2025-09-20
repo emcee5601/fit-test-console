@@ -6,14 +6,13 @@ Collect data from PortaCount 8020a
 import {SPEECH} from "./speech.ts";
 import React from "react";
 import {
-    DataTransmissionState,
     FitFactorResultsEvent,
     ParticleConcentrationEvent,
     PortaCountClient8020,
     PortaCountListener
 } from "./portacount-client-8020.ts";
 import {RESULTS_DB, SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
-import {InstructionOrStage, SampleSource} from "./simple-protocol.ts";
+import {InstructionOrStage} from "./simple-protocol.ts";
 import {APP_SETTINGS_CONTEXT} from "./app-settings.ts";
 import {FitFactorEstimator} from "./fit-factor-estimator.ts";
 import {
@@ -30,7 +29,7 @@ import {
 } from "./data-collector-events.ts";
 import {RAW_DB} from "./database.ts";
 import {DataSource} from "./data-source.ts";
-import {ControlSource} from "./control-source.ts";
+import {ControlSource, DataTransmissionState, SampleSource} from "src/portacount/porta-count-state.ts";
 
 
 export interface DataCollectorListener {

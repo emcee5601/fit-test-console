@@ -8,6 +8,7 @@ import {AppSettings} from "src/app-settings-types.ts";
 
 export function CurrentParticipantPanel() {
     const [testTemplate, setTestTemplate, getTestTemplate] = useSetting<Partial<SimpleResultsDBRecord>>(AppSettings.TEST_TEMPLATE)
+
     function updateCurrentParticipant(value: string) {
         value = value.trim() // strip extraneous spaces
         updateTestTemplate({
@@ -63,7 +64,7 @@ export function CurrentParticipantPanel() {
                             onChange={(value) => updateCurrentParticipant(value || "")}
                             label={
                                 <span id={`smart-text-area-participant-label`}
-                                       className={"smart-text-area-label"}>Name <div className={"svg-container"}>
+                                      className={"smart-text-area-label"}>Name <div className={"svg-container"}>
                                     <BsFastForwardBtnFill onClick={() => nextParticipant()}/>
                                 </div></span>
                             }
@@ -75,7 +76,7 @@ export function CurrentParticipantPanel() {
                                             onChange={(value) => updateCurrentMask(value || "")}
                                             label={
                                                 <span id={`smart-text-area-mask-label`}
-                                                       className={"smart-text-area-label"}>Mask <div
+                                                      className={"smart-text-area-label"}>Mask <div
                                                     className={"svg-container"}>
                                                     <BsFastForwardBtnFill onClick={() => nextMask()}/>
                                                 </div></span>

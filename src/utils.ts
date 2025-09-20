@@ -1,7 +1,161 @@
 import {isNull, isUndefined} from "json-2-csv/lib/utils";
 
 import {RefObject} from "react";
-import {ConnectionStatus} from "src/connection-status.ts";
+
+import {ConnectionStatus} from "src/portacount/porta-count-state.ts";
+
+const aliases = {
+    medium: "M",
+    small: "S",
+    large: "L", // always abbreviate sizes
+    "ear loop": "earloop", // mask name parts should be a single word
+    "head strap": "headstrap",
+}
+const _MaskAttachmentType = ["headstrap", "earloop", "adhesive"] as const
+type MaskAttachmentType = typeof _MaskAttachmentType[number]
+
+const _MaskShape = ["bifold", "trifold", "boat", "duckbill", "cup"]
+type MaskShape = typeof _MaskShape[number]
+
+const _MaskSize = ["unspecified"
+    , "XXS"
+    , "XS"
+    , "S"
+    , "M"
+    , "L"
+    , "XL"
+    , "XXL"
+    , "Kids"
+    , "Adult Regular"
+] as const
+type MaskSize = typeof _MaskSize[number]
+
+const _MaskMaker = ["unknown"
+    , "3M"
+    , "ACI"
+    , "BNX"
+    , "Benehal"
+    , "Blox"
+    , "Bluna"
+    , "Breatheteq"
+    , "Champak"
+    , "Drager"
+    , "Envo"
+    , "Flo"
+    , "Gerson"
+    , "Jackson"
+    , "Laianzhi"
+    , "Lighthouse"
+    , "Omnimask"
+    , "Powecom"
+    , "Rackmask"
+    , "Readimask"
+    , "Trident"
+    , "Vitacore"
+    , "Vog"
+    , "WellBefore"
+    , "Zero"
+    , "Zimi"]
+type MaskMaker = typeof _MaskMaker[number]
+
+type StructuredMaskName = {
+    maker: MaskMaker,
+    model: string,
+    size: MaskSize,
+    color: string,
+    attachmentType: MaskAttachmentType,
+    shape?: MaskShape,
+}
+
+/**
+ * Generally the taxonomy is mfr + model number + size (if model number doesn't indicate) + color (I've been tracking
+ * for Zimis to see if there's a difference in FF) + ear loop vs head strap
+ *
+ * Assume a few things about the mask name and parts:
+ * - maker, size, color, attachmentType are all single words
+ * - case and spaces don't matter
+ * - commas and semicolons are the same as spaces
+ * @param maskName
+ */
+export function normalizeMaskName(maskName: string): string {
+    const structuredName: StructuredMaskName = {} as StructuredMaskName
+    // collapse whitespace
+    const spaceFixedName = (maskName ?? "").replaceAll(/\s+/g, " ")
+    // resolve aliases
+    const unaliasedName = Object.entries(aliases).reduce((result, [alias, value]) => {
+        return result.replaceAll(new RegExp(`${alias}`, "ig"), value)
+    }, spaceFixedName)
+    let originalName = unaliasedName
+    let loweredName = originalName.toLowerCase();
+
+    // look for parts in order, splice out found pieces from both lower case and original version
+    _MaskMaker.find((maker) => {
+        const match = loweredName.match(new RegExp(`\\b${maker.toLowerCase()}\\b`, "i"))
+        if (match && match.index !== undefined) {
+            // found
+            const index = match.index
+            structuredName.maker = maker
+            loweredName = loweredName.slice(0, index) + loweredName.slice(index + maker.length)
+            originalName = originalName.slice(0, index) + originalName.slice(index + maker.length)
+            return true;
+
+        } else {
+            return false
+        }
+    })
+
+    _MaskSize.find((size) => {
+        const match = loweredName.match(new RegExp(`\\b${size}\\b`, "i"))
+        if (match && match.index !== undefined) {
+            // found
+            const index = match.index
+            structuredName.size = size
+            loweredName = loweredName.slice(0, index) + loweredName.slice(index + size.length)
+            originalName = originalName.slice(0, index) + originalName.slice(index + size.length)
+            return true;
+        } else {
+            return false;
+        }
+    })
+
+    _MaskAttachmentType.find((attachmentType) => {
+        const match = loweredName.match(new RegExp(`\\b${attachmentType}\\b`, "i"))
+        if (match && match.index !== undefined) {
+            // found
+            const index = match.index
+            structuredName.attachmentType = attachmentType
+            loweredName = loweredName.slice(0, index) + loweredName.slice(index + attachmentType.length)
+            originalName = originalName.slice(0, index) + originalName.slice(index + attachmentType.length)
+            return true;
+        } else {
+            return false;
+        }
+    })
+
+    // do any of these remaining parts look like a color?
+    loweredName.split(/\s+/).find((part) => {
+        if (CSS.supports('color', part)) {
+            // looks like a color
+            structuredName.color = part
+            // remove from the remainder of the name strings
+            loweredName = loweredName.replace(part, '')
+            originalName = originalName.replace(new RegExp(part, "i"), '') // case-insensitively replace 1 instance
+
+            return true
+        } else {
+            return false
+        }
+    })
+
+    if (originalName.length > 0) {
+        structuredName.model = originalName.replaceAll(/\s+/g, ' ').trim()
+        originalName = ""
+    }
+
+    console.debug("structuredName: ", structuredName)
+    // concatenate remainders from the original version to build normalized string
+    return `${structuredName.maker ?? ""} ${structuredName.model ?? ""} ${structuredName.size ?? ""} ${structuredName.color ?? ""} ${structuredName.attachmentType ?? ""} ${originalName}`.replaceAll(/\s+/g, " ")
+}
 
 /**
  * Format a duration into hh:mm:ss:uuu
@@ -32,9 +186,17 @@ export function formatTime(date: Date, includeSeconds: boolean = false): string 
     return `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}${includeSeconds ? `:${date.getSeconds().toString().padStart(2, "0")}` : ""}`;
 }
 
+/**
+ * Convert FitFactor to filtration efficiency equivalent.
+ * @param fitFactor
+ */
+export function ffToFe(fitFactor: number) {
+    return 100 * (1.0 - 1.0 / fitFactor);
+}
+
 export function convertFitFactorToFiltrationEfficiency(fitFactor: number) {
-    const efficiency = 100 * (1.0 - 1.0 / fitFactor);
-    const efficiencyPercentage: string = Number(efficiency).toFixed(efficiency < 99 ? 0 : 3)
+    const efficiency = ffToFe(fitFactor);
+    const efficiencyPercentage: string = fitFactor <= 100 ? Math.floor(Number(efficiency)).toFixed(0) : Number(efficiency).toFixed(3)
     return efficiencyPercentage;
 }
 
@@ -56,22 +218,64 @@ export function getConnectionStatusCssClass(connectionStatus: ConnectionStatus):
     }
 }
 
-export function getFitFactorCssClass(fitFactor: number|string, hasThisExercise: boolean): string {
+export function getColorForFitFactor(fitFactor: number | string, hasThisExercise: boolean) {
+    if (!hasThisExercise && !fitFactor) {
+        // we don't have this many exercises, and there's no value in the cell
+        return ""
+    }
+    fitFactor = Number(fitFactor)
+    if (isNaN(fitFactor) || fitFactor <= 0) {
+        // if it's zero, it was probably parsed from empty string
+        return ""
+    }
+    const efficiency = 100 * (1.0 - 1.0 / fitFactor);
+    if (efficiency > 99) {
+        return "darkgreen"
+    }
+    if (efficiency >= 95) {
+        // 20 == 95%
+        const pctLowColor = Math.round(100 * (99 - efficiency) / (99 - 95))
+        const pctHighColor = 100 - pctLowColor
+        return `color-mix(in oklch, yellowgreen ${pctLowColor}%, darkgreen ${pctHighColor}%)`
+    }
+    if (efficiency >= 80) {
+        // 5 == 95%
+        const pctLowColor = Math.round(100 * (95 - efficiency) / (95 - 80))
+        const pctHighColor = 100 - pctLowColor
+        return `color-mix(in oklch, darkorange ${pctLowColor}%, yellowgreen ${pctHighColor}%)`
+    }
+    if( efficiency > 0) {
+        // 1 == 0%
+        const pctLowColor = Math.round(100 * (80 - efficiency) / (80 - 0))
+        const pctHighColor = 100 - pctLowColor
+        return `color-mix(in oklch, darkred ${pctLowColor}%, darkorange ${pctHighColor}%)`
+    }
+    console.debug("efficiency", efficiency, "fit factor", fitFactor)
+    return "darkred"
+}
+
+export function getFitFactorCssClass(fitFactor: number | string, hasThisExercise: boolean): string {
     // console.debug(`ff is ${fitFactor}`)
-    if(!hasThisExercise && !fitFactor) {
+    if (!hasThisExercise && !fitFactor) {
         // we don't have this many exercises, and there's no value in the cell
         return "result-cell"
     }
     fitFactor = Number(fitFactor)
 
-    if( isNaN(fitFactor) || fitFactor <= 0 ) {
+    if (isNaN(fitFactor) || fitFactor <= 0) {
         // if it's zero, it was probably parsed from empty string
         return "result-cell aborted"
     }
     if (fitFactor >= 100) {
+        // 99+%
+        return "result-cell very-high-fit-score"
+    }
+    if (fitFactor >= 33) {
+        // 33 == 97%
         return "result-cell high-fit-score"
     }
-    if (fitFactor > 20) {
+    if (fitFactor >= 20) {
+        // 20 == 95%
         return "result-cell moderate-fit-score"
     }
     return "result-cell low-fit-score"

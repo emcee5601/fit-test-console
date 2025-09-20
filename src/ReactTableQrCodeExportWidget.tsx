@@ -1,7 +1,7 @@
-import {ColumnFiltersState, Table} from "@tanstack/react-table";
+import {Table} from "@tanstack/react-table";
 import React, {useEffect, useState} from "react";
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
-import {sanitizeRecord} from "./results-transfer-util.ts";
+import {getRecordsToExport} from "./results-transfer-util.ts";
 import LZString from "lz-string";
 import {useHref} from "react-router";
 import {QRCodeSVG} from "qrcode.react";
@@ -12,13 +12,9 @@ import {QRCodeSVG} from "qrcode.react";
  */
 export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({
     table,
-    tableData,
-    columnFilters,
     ...props
 }: {
     table: Table<T>,
-    tableData: T[],
-    columnFilters: ColumnFiltersState
 } & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'>) {
     const [qrcodeUrl, setQrcodeUrl] = useState<string>("")
     const origin = location.origin
@@ -26,7 +22,8 @@ export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({
     // const origin = "https://emcee5601.github.io"
     // sometimes location has a trailing '/', remove it so we don't get a '//'. This behavior is different between
     // local and prod for some reason
-    // use useHref here so it can insert the # needed by HashRouter. HashRouter and BrowserRouter are not drop-in replacements for each other, so maybe the hash can be hardcoded.
+    // use useHref here so it can insert the # needed by HashRouter. HashRouter and BrowserRouter are not drop-in
+    // replacements for each other, so maybe the hash can be hardcoded.
     const baseLocation = origin + location.pathname + useHref("/view-results");
 
     useEffect(() => {
@@ -48,16 +45,7 @@ export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({
 
     function generateQRCode() {
         // first, extract data and compress it with lz-string
-
-        // The table is filtered, so look at the filtered table data for which record IDs to include. Then grab these
-        // from localTableData
-        const rows = table.getSortedRowModel().rows
-        const rowData = rows.map((row) => row.original)
-        const recordIdsToInclude: number[] = rowData.map(rd => rd.ID)
-
-        const recordsToExport: SimpleResultsDBRecord[] = tableData
-            .filter((row) => recordIdsToInclude.includes(row.ID))
-            .map((record) => sanitizeRecord(record));
+        const recordsToExport = getRecordsToExport(table);
 
         const str = LZString.compressToEncodedURIComponent(JSON.stringify(recordsToExport));
         const url = `${baseLocation}?data=${str}`;
@@ -74,6 +62,7 @@ export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({
      * Returns a string summarising the filters in effect.
      */
     function getFilterSummary(): string {
+        const columnFilters = table.getState().columnFilters
         let dateFilter = "";
         let participantFilter = "";
         columnFilters.forEach((columnFilter) => {

@@ -1,11 +1,10 @@
-import {SampleSource} from "./simple-protocol.ts";
 import {ParticleConcentrationEvent, PortaCountClient8020, PortaCountListener} from "./portacount-client-8020.ts";
 import {ExternalController} from "./external-control.ts";
 import {DataCollector} from "./data-collector.ts";
-import {ControlSource} from "./control-source.ts";
 import {avg, formatFitFactor} from "src/utils.ts";
 import {deepCopy} from "json-2-csv/lib/utils";
 import {ProtocolSegment} from "src/app-settings-types.ts";
+import {ControlSource, SampleSource} from "src/portacount/porta-count-state.ts";
 
 export enum SegmentState {
     SAMPLE = "sample",
@@ -112,6 +111,7 @@ export class ProtocolExecutor {
 
                 // make sure we're in the expected state for this segment
                 if (this.currentSegment.source !== concentrationEvent.sampleSource) {
+                    // todo: if this happens too often try changing the source again
                     console.debug(`segment expecting data to be from source ${this.currentSegment.source} but received data from ${concentrationEvent.sampleSource}. ignoring.`)
                     return
                 }

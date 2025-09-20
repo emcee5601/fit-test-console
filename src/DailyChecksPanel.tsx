@@ -1,11 +1,11 @@
 import {useCallback, useContext, useEffect, useState} from "react";
 import {AppContext} from "src/app-context.ts";
 import {ParticleConcentrationEvent, PortaCountListener} from "src/portacount-client-8020.ts";
-import {SampleSource} from "src/simple-protocol.ts";
 import MovingAverage from "moving-average";
 import {InfoBox} from "src/InfoBox.tsx";
 import {BsCheckCircleFill, BsXCircleFill} from "react-icons/bs";
 import {formatFitFactor} from "src/utils.ts";
+import {SampleSource} from "src/portacount/porta-count-state.ts";
 
 type State =
     "idle"

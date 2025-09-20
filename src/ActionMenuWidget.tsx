@@ -11,16 +11,18 @@ type ActionMenuWidgetProps = {
     options: SelectOption[];
     onChange: (value: string) => void;
     value?: string;
+    id?: string;
 }
 
-export function ActionMenuWidget({options, children, onChange, value}: PropsWithChildren<ActionMenuWidgetProps>) {
+export function ActionMenuWidget({options, children, onChange, value, id}: PropsWithChildren<ActionMenuWidgetProps>) {
     const CompactDropdownIndicator = (
         dropdownIndicatorProps: DropdownIndicatorProps<SelectOption, true>
     ) => {
-        return (
-            <components.DropdownIndicator {...dropdownIndicatorProps} >
-                {children}
-            </components.DropdownIndicator>
+        return (<div id={id} style={{width:'100%', height:'100%'}}>
+                <components.DropdownIndicator {...dropdownIndicatorProps} >
+                    {children}
+                </components.DropdownIndicator>
+            </div>
         );
     };
 
@@ -28,7 +30,7 @@ export function ActionMenuWidget({options, children, onChange, value}: PropsWith
         <Select
             components={{DropdownIndicator: CompactDropdownIndicator}}
             options={options}
-            value={value ? {value:value, label:value}: null}
+            value={value ? {value: value, label: value} : null}
             styles={{
                 control: () => ({
                     height: "inherit",

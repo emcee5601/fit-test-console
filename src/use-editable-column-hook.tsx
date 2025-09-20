@@ -4,12 +4,16 @@ import {useInView} from "react-intersection-observer";
 import {numberInputClasses, Unstable_NumberInput as NumberInput} from "@mui/base/Unstable_NumberInput";
 import {useTheme} from '@mui/system';
 import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
-import {convertFitFactorToFiltrationEfficiency, getFitFactorCssClass} from "src/utils.ts";
-import {ControlSource} from "src/control-source.ts";
+import {
+    convertFitFactorToFiltrationEfficiency,
+    getColorForFitFactor,
+    getFitFactorCssClass,
+    normalizeMaskName
+} from "src/utils.ts";
 import {AppContext} from "src/app-context.ts";
-import {SampleSource} from "src/simple-protocol.ts";
 import {SmartTextArea} from "src/SmartTextArea.tsx";
 import {MaskSelectorWidget} from "src/MaskSelectorWidget.tsx";
+import {ControlSource, SampleSource} from "src/portacount/porta-count-state.ts";
 
 declare module '@tanstack/react-table' {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -64,9 +68,10 @@ export function useEditableExerciseResultColumn<T extends SimpleResultsDBRecord,
     const fitFactor = Number(value);
     const efficiencyPercentage = convertFitFactorToFiltrationEfficiency(fitFactor);
     const classes = getFitFactorCssClass(value as string, protocolHasThisManyExercises)
+    const color = getColorForFitFactor(value as string, protocolHasThisManyExercises)
 
     return (
-        <div className={[classes, "table-cell"].join(" ")} style={{width: "100%", display: "inline-flex", flexDirection: "column"}}>
+        <div className={[classes, "table-cell"].join(" ")} style={{width: "100%", display: "inline-flex", flexDirection: "column", backgroundColor: color}}>
             <div className={"inline-flex"}>
                 {editable
                     ? <SmartTextArea
@@ -143,6 +148,7 @@ export function useEditableMaskColumn<T, V>({
         }
     }, [value, id, index, table.options.meta, initialValue])
 
+    console.debug(`normalizing ${value} => ${normalizeMaskName(value as string)}`)
 
     return (
         <MaskSelectorWidget id={String(index)} className={"table-cell"} value={(value as string) ?? ""} onChange={(v) => onChange(v)}/>

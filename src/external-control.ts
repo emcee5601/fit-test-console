@@ -6,9 +6,8 @@
 
 import {SPEECH} from "./speech.ts";
 
-import {ControlSource} from "./control-source.ts";
-import {SampleSource} from "./simple-protocol.ts";
 import {PortaCountClient8020, PortaCountListener} from "./portacount-client-8020.ts";
+import {ControlSource, SampleSource} from "src/portacount/porta-count-state.ts";
 
 export class ExternalControlResponsePatterns {
     // 2024-10-24T17:38:02.876Z 005138.88
@@ -74,83 +73,92 @@ export class ExternalController {
 
     // has retry support
     sendCommand(command: string, maxRetries: number = 1) {
+        if (!this.writer) {
+            console.log("external control writer not available")
+            return
+        }
+        // todo: queue commands until the previous command has a response. if it was an error, retry before the queued command
+
         const terminalCommand = `${command}\r`;
         // most commands are echoed back
         const expectedResponse = ExternalController.expectedCommandResponses.get(command) || RegExp(`^${command}`)
         const chunk = this.encoder.encode(terminalCommand);
-        if (this.writer) {
-            const fun = () => {
-                return new Promise<void>((resolve, reject) => {
-                    let gotExpectedResponse = false;
-                    let numRetriesRemaining = maxRetries;
-                    let timerId: NodeJS.Timeout | undefined = undefined;
+        const fun = () => {
+            return new Promise<void>((resolve, reject) => {
+                let gotExpectedResponse = false;
+                let numRetriesRemaining = maxRetries;
+                let timerId: NodeJS.Timeout | undefined = undefined;
 
-                    const cleanup = (): void => {
-                        clearTimeout(timerId) // todo: try-catch?
-                        this.portaCountClient.removeListener(listener)
-
-                    }
-                    const listener: PortaCountListener = {
-                        lineReceived: (line: string) => {
-                            if (expectedResponse ? expectedResponse.exec(line) : (command === line)) {
-                                // got response, done looking. either regexp, or response exactly matches command
-                                // (backup)
-                                gotExpectedResponse = true;
-                                cleanup()
-                                // we can continue
-                                resolve()
-                                console.debug(`received expected response to command '${command}'`)
-                            }
-                        }
-                    }
-                    const attemptSendCommand = (): void => {
-                        console.debug(`sending command '${command}', expecting '${expectedResponse}' in response, retries remaining ${numRetriesRemaining}`)
-                        this.writer!.write(chunk) // catch and reject?
-                    }
-                    const setUpRetry = (): void => {
-                        timerId = setTimeout(retryHandler, 3000) // 1 second to respond
-                    }
-                    const retryHandler = (): void => {
-                        if (gotExpectedResponse) {
-                            // timer triggered after we got the response, ignore
-                            console.debug(`retry handler triggered but we've already received the expected response for command '${command}'`)
-                            return;
-                        }
-                        if (numRetriesRemaining > 0) {
-                            console.debug(`retrying command '${command}'`)
-                            numRetriesRemaining--
-                            attemptSendCommand()
-                            setUpRetry()
-                        } else {
-                            // no retries left
-                            if (expectedResponse) {
-                                reject(`too many retries, giving up on command '${command}'`)
-                            } else {
-                                // don't have an explicit expected response; don't complain
-                                console.debug(`no explicit expected response for command '${command}', but also didn't receive any other recognized response`)
-                                resolve()
-                            }
+                const cleanup = (): void => {
+                    clearTimeout(timerId) // todo: try-catch?
+                    this.portaCountClient.removeListener(listener)
+                }
+                const listener: PortaCountListener = {
+                    lineReceived: (line: string) => {
+                        if (expectedResponse ? expectedResponse.exec(line) : (command === line)) {
+                            // got response, done looking. either regexp, or response exactly matches command
+                            // (backup)
+                            gotExpectedResponse = true;
                             cleanup()
+                            // we can continue
+                            resolve()
+                            console.debug(`received expected response to command '${command}'`)
+                        } else if(line.startsWith("E")) {
+                            console.debug(`got an error response for command ${command}: ${line}`)
+                            // got an error
+                            // retry immediately
+                            retryHandler()
                         }
                     }
-
-                    this.portaCountClient.addListener(listener)
-                    attemptSendCommand()
-                    if (numRetriesRemaining > 0) {
-                        setUpRetry()
+                }
+                const attemptSendCommand = (): void => {
+                    console.debug(`sending command '${command}', expecting '${expectedResponse}' in response, retries remaining ${numRetriesRemaining}`)
+                    this.writer!.write(chunk) // catch and reject?
+                }
+                const setUpRetry = (): void => {
+                    if(timerId) {
+                        clearTimeout(timerId)
                     }
-                })
-            };
-            if (this.commandChain) {
-                console.debug(`chaining command ${command}`)
-                this.commandChain = this.commandChain.then(fun).catch(() => {
-                    // ignore
-                });
-            } else {
-                this.commandChain = fun()
-            }
+                    timerId = setTimeout(retryHandler, 3000) // 1 second to respond
+                }
+                const retryHandler = (): void => {
+                    if (gotExpectedResponse) {
+                        // timer triggered after we got the response, ignore
+                        console.debug(`retry handler triggered but we've already received the expected response for command '${command}'`)
+                        return;
+                    }
+                    if (numRetriesRemaining > 0) {
+                        console.debug(`retrying command '${command}'`)
+                        numRetriesRemaining--
+                        attemptSendCommand()
+                        setUpRetry()
+                    } else {
+                        // no retries left
+                        if (expectedResponse) {
+                            reject(`too many retries, giving up on command '${command}'`)
+                        } else {
+                            // don't have an explicit expected response; don't complain
+                            console.debug(`no explicit expected response for command '${command}', but also didn't receive any other recognized response`)
+                            resolve()
+                        }
+                        cleanup()
+                    }
+                }
+
+                this.portaCountClient.addListener(listener)
+                attemptSendCommand()
+                if (numRetriesRemaining > 0) {
+                    setUpRetry()
+                }
+            })
+        };
+        if (this.commandChain) {
+            console.debug(`chaining command ${command}`)
+            this.commandChain = this.commandChain.then(fun).catch(() => {
+                // ignore
+            });
         } else {
-            console.log("writer not available")
+            this.commandChain = fun()
         }
     }
 
@@ -219,7 +227,7 @@ export class ExternalController {
     /**
      *
      */
-    beep(tenthsOfSeconds:number = 2) {
+    beep(tenthsOfSeconds: number = 2) {
         this.sendCommand(`B${String(tenthsOfSeconds).padStart(2, "0")}`);
     }
 

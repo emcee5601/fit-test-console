@@ -4,12 +4,14 @@
 import {RESULTS_DB, SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
 import DatePicker from "react-datepicker";
 import {useContext, useEffect, useState} from "react";
-import {avgArray, formatDuration, median} from "src/utils.ts";
+import {avgArray, ffToFe, formatDuration, median} from "src/utils.ts";
 import {InfoBox} from "src/InfoBox.tsx";
 import {AppContext} from "src/app-context.ts";
 import {useSetting} from "src/use-setting.ts";
 import {RAW_DB, SimpleDBRecord} from "src/database.ts";
 import {AppSettings} from "src/app-settings-types.ts";
+import {FunctionPlot} from "src/FunctionPlot.tsx";
+import {FunctionPlotDatum, FunctionPlotDatumScope} from "function-plot";
 
 type Tally = [string, number]
 const ONE_HOUR = 60*60*1000;
@@ -34,7 +36,12 @@ export function StatsPanel() {
     const [averageMasksPerParticipant, setAverageMasksPerParticipant] = useState<number>(0)
 
     function dateToLocalTime(date: Date) {
-        return new Date(date.getTime() - date.getTimezoneOffset() * 60 * 1000);
+        try {
+            return new Date(date.getTime() - date.getTimezoneOffset() * 60 * 1000);
+        }catch(e) {
+            console.warn("could not parse date: ", date, e)
+            return new Date()
+        }
     }
 
     function dateToLocalYyyymmdd(date: Date) {
@@ -306,7 +313,54 @@ export function StatsPanel() {
         }
     }
 
+    /**
+     * use interval arithmetic plotter to plot a band for a FF range
+     * @param low
+     * @param high
+     */
+    function getFeRangePlotData(low: number, high: number): FunctionPlotDatum {
+        return {
+            fn: (scope:FunctionPlotDatumScope) => {
+                return {
+                    hi: 100 * (1 - 1 / scope.x.hi),
+                    lo: ffToFe(low),
+                }
+            },
+            range: [low, high],
+        }
+    }
+
     return (<div id={"stats-panel"}>
+        <FunctionPlot
+            height={300}
+            width={1000}
+            grid={true}
+            disableZoom={true}
+            tip={{
+                xLine: true,
+                yLine: true,
+                renderer: (x, y) => {
+                    return `${y.toFixed(y < 90 ? 0 : y < 99 ? 1 : 2)}% = FF:${x.toFixed(x < 10 ? 1 : 0)}`
+                },
+            }}
+            yAxis={{
+                domain: [0, 110],
+                type: "linear",
+                label: "Filtration %",
+            }}
+            xAxis={{
+                domain: [1, 1000],
+                type: "log",
+                label: "Fit Factor",
+            }}
+            data={[
+                {fn: "100*(1-1/x)"},
+                getFeRangePlotData(1.3, 4.6), // cloth
+                getFeRangePlotData(2.5, 9.6), // surgical https://pmc.ncbi.nlm.nih.gov/articles/PMC7115281/
+                getFeRangePlotData(3, 39), // ear loop respirators (kn95, etc) https://pmc.ncbi.nlm.nih.gov/articles/PMC8289716/
+                getFeRangePlotData(35, 171), // head strap respirators (n95, etc) https://pmc.ncbi.nlm.nih.gov/articles/PMC6380834/
+            ]}
+        />
         <section id={"stats-date-range-selection"} style={{display: "flex", justifySelf: "center"}}>
             from
             <DatePicker id={"stats-first-date-picker"}

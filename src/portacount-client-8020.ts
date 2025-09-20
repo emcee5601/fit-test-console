@@ -1,11 +1,14 @@
 import {getLines} from "./datasource-helper.ts";
 import {ReadableStreamDefaultReader} from "node:stream/web";
 import {ExternalController, ExternalControlResponsePatterns} from "./external-control.ts";
-import {SampleSource} from "./simple-protocol.ts";
-import {ControlSource} from "./control-source.ts";
-import {ConnectionStatus} from "src/connection-status.ts";
-import {Activity} from "src/activity.ts";
 import {formatDuration} from "src/utils.ts";
+import {
+    Activity,
+    ConnectionStatus, ControlSource,
+    DataTransmissionState,
+    PortaCountState,
+    SampleSource
+} from "src/portacount/porta-count-state.ts";
 
 
 const Patterns = class {
@@ -187,13 +190,7 @@ class StateChangedEvent extends PortaCountEvent {
     }
 }
 
-export enum DataTransmissionState {
-    Paused = "Paused",
-    Transmitting = "Transmitting",
-}
-
 type MatchGroups = { [key: string]: string }
-type GoodBad = "Good" | "Bad" | "?"
 
 export class PortaCountSettings {
     numExercises: number = 4;
@@ -205,90 +202,6 @@ export class PortaCountSettings {
     serialNumber: string = "?";
     runTimeSinceFactoryServiceSeconds: number = 0; // convert this from 10 second increments to seconds
     lastServiceDate: Date = new Date(0); // convert this to a Date
-}
-
-export class PortaCountState {
-    private _connectionStatus: ConnectionStatus = ConnectionStatus.DISCONNECTED;
-    private _controlSource: ControlSource = ControlSource.Internal;
-    private _sampleSource: SampleSource = SampleSource.MASK;
-    private _dataTransmissionState: DataTransmissionState = DataTransmissionState.Transmitting;
-
-    private _batteryStatus: GoodBad = "?";
-    private _pulseStatus: GoodBad = "?";
-    private _componentVoltages: Map<string, number> = new Map()
-
-    // derived
-    private _lastLine: string = "";
-    private _activity: Activity = Activity.Disconnected;
-
-    get componentVoltages(): Map<string, number> {
-        return this._componentVoltages;
-    }
-
-    get batteryStatus(): GoodBad {
-        return this._batteryStatus;
-    }
-
-    set batteryStatus(value: GoodBad) {
-        this._batteryStatus = value;
-    }
-
-    get pulseStatus(): GoodBad {
-        return this._pulseStatus;
-    }
-
-    set pulseStatus(value: GoodBad) {
-        this._pulseStatus = value;
-    }
-
-    get connectionStatus(): ConnectionStatus {
-        return this._connectionStatus;
-    }
-
-    set connectionStatus(value: ConnectionStatus) {
-        this._connectionStatus = value;
-    }
-
-    get controlSource(): ControlSource {
-        return this._controlSource;
-    }
-
-    set controlSource(value: ControlSource) {
-        this._controlSource = value;
-    }
-
-    get sampleSource(): SampleSource {
-        return this._sampleSource;
-    }
-
-    set sampleSource(value: SampleSource) {
-        this._sampleSource = value;
-    }
-
-    get dataTransmissionState(): DataTransmissionState {
-        return this._dataTransmissionState;
-    }
-
-    set dataTransmissionState(value: DataTransmissionState) {
-        this._dataTransmissionState = value;
-    }
-
-    get activity(): Activity {
-        return this._activity;
-    }
-
-    set activity(value: Activity) {
-        this._activity = value;
-        // console.debug(`activity is now ${value}`)
-    }
-
-    get lastLine(): string {
-        return this._lastLine;
-    }
-
-    set lastLine(value: string) {
-        this._lastLine = value;
-    }
 }
 
 /**
@@ -675,23 +588,22 @@ export class PortaCountClient8020 {
 
         const line: string = rawLine
 
-        const matched = this.orderedLineProcessors.reduce((done: boolean, [regexp, handler]) => {
-            if (!done) {
-                const match = regexp.exec(line)
-                if (match) {
-                    // dispatch
-                    if (match.groups) {
-                        handler(match.groups)
-                    } else {
-                        // some patterns don't need groups
-                        handler({})
-                    }
-                    return true
+        const firstMatch = this.orderedLineProcessors.find(([regexp, handler]) => {
+            const match = regexp.exec(line)
+            if (match) {
+                // dispatch
+                if (match.groups) {
+                    handler(match.groups)
+                } else {
+                    // some patterns don't need groups
+                    handler({})
                 }
+                return true
+            } else {
+                return false
             }
-            return done
-        }, false)
-        if (matched) {
+        })
+        if (firstMatch) {
             return
         }
 

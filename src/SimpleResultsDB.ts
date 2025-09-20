@@ -1,7 +1,6 @@
 import AbstractDB from "./abstract-db.ts";
-import {SampleSource} from "src/simple-protocol.ts";
-import {ControlSource} from "src/control-source.ts";
 import {DataSource} from "src/data-source.ts";
+import {ControlSource, SampleSource} from "src/portacount/porta-count-state.ts";
 
 type ParticleCount = {type: SampleSource, count: number}
 export interface SimpleResultsDBRecord {
