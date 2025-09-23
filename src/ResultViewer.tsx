@@ -35,7 +35,6 @@ export function ResultViewer() {
         }
     }
 
-
     useEffect(() => {
         // handle data sent via url
         // TODO: use context instead of results_db directly

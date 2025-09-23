@@ -5,16 +5,19 @@ import {RefObject} from "react";
 import {ConnectionStatus} from "src/portacount/porta-count-state.ts";
 
 const aliases = {
+    med: "M",
     medium: "M",
     small: "S",
     large: "L", // always abbreviate sizes
     "ear loop": "earloop", // mask name parts should be a single word
     "head strap": "headstrap",
+    "head loop": "heeadstrap",
+    "headloop": "headstrap",
 }
 const _MaskAttachmentType = ["headstrap", "earloop", "adhesive"] as const
 type MaskAttachmentType = typeof _MaskAttachmentType[number]
 
-const _MaskShape = ["bifold", "trifold", "boat", "duckbill", "cup"]
+const _MaskShape = ["bifold", "trifold", "boat", "duckbill", "cup", "unspecified"] as const
 type MaskShape = typeof _MaskShape[number]
 
 const _MaskSize = ["unspecified"
@@ -58,13 +61,75 @@ const _MaskMaker = ["unknown"
     , "Zimi"]
 type MaskMaker = typeof _MaskMaker[number]
 
-type StructuredMaskName = {
-    maker: MaskMaker,
-    model: string,
-    size: MaskSize,
-    color: string,
-    attachmentType: MaskAttachmentType,
-    shape?: MaskShape,
+class StructuredMaskName {
+    private _maker: MaskMaker;
+    private _model: string;
+    private _size: MaskSize;
+    private _color: string;
+    private _attachmentType: MaskAttachmentType;
+    private _shape: MaskShape;
+
+    constructor(maker?: MaskMaker, model?: string, size?: MaskSize, color?: string, attachmentType?: MaskAttachmentType, shape: MaskShape = "unspecified") {
+        this._maker = maker as MaskMaker;
+        this._model = model as string;
+        this._size = size as MaskSize;
+        this._color = color as string;
+        this._attachmentType = attachmentType as MaskAttachmentType;
+        this._shape = shape;
+    }
+
+    get shortName(): string {
+        // console.debug("structured name for ", JSON.stringify(this._model, null, 2));
+        return `${this.maker} ${this.model}`
+    }
+
+    get maker(): MaskMaker {
+        return this._maker;
+    }
+
+    set maker(value: MaskMaker) {
+        this._maker = value;
+    }
+
+    get model(): string {
+        return this._model;
+    }
+
+    set model(value: string) {
+        this._model = value;
+    }
+
+    get size(): MaskSize {
+        return this._size;
+    }
+
+    set size(value: MaskSize) {
+        this._size = value;
+    }
+
+    get color(): string {
+        return this._color;
+    }
+
+    set color(value: string) {
+        this._color = value;
+    }
+
+    get attachmentType(): MaskAttachmentType {
+        return this._attachmentType;
+    }
+
+    set attachmentType(value: MaskAttachmentType) {
+        this._attachmentType = value;
+    }
+
+    get shape(): MaskShape {
+        return this._shape;
+    }
+
+    set shape(value: MaskShape) {
+        this._shape = value;
+    }
 }
 
 /**
@@ -78,7 +143,14 @@ type StructuredMaskName = {
  * @param maskName
  */
 export function normalizeMaskName(maskName: string): string {
-    const structuredName: StructuredMaskName = {} as StructuredMaskName
+    const structuredName = getStructuredMaskName(maskName);
+    // console.debug("structuredName: ", structuredName)
+    // concatenate remainders from the original version to build normalized string
+    return `${structuredName.maker ?? ""} ${structuredName.model ?? ""} ${structuredName.size ?? ""} ${structuredName.color ?? ""} ${structuredName.attachmentType ?? ""}`.replaceAll(/\s+/g, " ")
+}
+
+export function getStructuredMaskName(maskName: string): StructuredMaskName {
+    const structuredName: StructuredMaskName = new StructuredMaskName();
     // collapse whitespace
     const spaceFixedName = (maskName ?? "").replaceAll(/\s+/g, " ")
     // resolve aliases
@@ -152,9 +224,7 @@ export function normalizeMaskName(maskName: string): string {
         originalName = ""
     }
 
-    console.debug("structuredName: ", structuredName)
-    // concatenate remainders from the original version to build normalized string
-    return `${structuredName.maker ?? ""} ${structuredName.model ?? ""} ${structuredName.size ?? ""} ${structuredName.color ?? ""} ${structuredName.attachmentType ?? ""} ${originalName}`.replaceAll(/\s+/g, " ")
+    return structuredName
 }
 
 /**
@@ -194,10 +264,20 @@ export function ffToFe(fitFactor: number) {
     return 100 * (1.0 - 1.0 / fitFactor);
 }
 
+export function feToFf(filtrationEfficiency: number) {
+    return 1.0 / (1.0 - filtrationEfficiency / 100.0)
+}
+
+export function formatFe(efficiency: number): string {
+    return efficiency.toFixed(efficiency < 90 ? 0 : efficiency < 99.9 ? 1 : efficiency < 99.99 ? 2 : 3)
+}
+
+export function formatFF(fitFactor: number): string {
+    return fitFactor.toFixed(fitFactor < 10 ? 1 : 0)
+}
+
 export function convertFitFactorToFiltrationEfficiency(fitFactor: number) {
-    const efficiency = ffToFe(fitFactor);
-    const efficiencyPercentage: string = fitFactor <= 100 ? Math.floor(Number(efficiency)).toFixed(0) : Number(efficiency).toFixed(3)
-    return efficiencyPercentage;
+    return formatFe(ffToFe(fitFactor));
 }
 
 
@@ -244,13 +324,13 @@ export function getColorForFitFactor(fitFactor: number | string, hasThisExercise
         const pctHighColor = 100 - pctLowColor
         return `color-mix(in oklch, darkorange ${pctLowColor}%, yellowgreen ${pctHighColor}%)`
     }
-    if( efficiency > 0) {
+    if (efficiency > 0) {
         // 1 == 0%
         const pctLowColor = Math.round(100 * (80 - efficiency) / (80 - 0))
         const pctHighColor = 100 - pctLowColor
         return `color-mix(in oklch, darkred ${pctLowColor}%, darkorange ${pctHighColor}%)`
     }
-    console.debug("efficiency", efficiency, "fit factor", fitFactor)
+    // console.debug("efficiency", efficiency, "fit factor", fitFactor)
     return "darkred"
 }
 

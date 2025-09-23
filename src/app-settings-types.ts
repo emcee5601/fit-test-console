@@ -46,6 +46,7 @@ export enum AppSettings {
     PARTICIPANT_LIST = "participant-list",
     AUTO_UPDATE_MASK_LIST = "auto-update-mask-list",
     COLOR_SCHEME = "color-scheme",
+    SHOW_MASK_PERF_GRAPH = "show-mask-perf-graph",
 
     // session only settings (these start with "so-". todo: can we merge these from another enum into this?
     STATS_FIRST_DATE = "so-stats-first-date",
@@ -242,6 +243,7 @@ export const AppSettingsDefaults = {
     "participant-list": [],
     "auto-update-mask-list": true,
     "color-scheme": "auto",
+    "show-mask-perf-graph": true,
 
     "so-stats-first-date": new Date(0), // epoch, sentinel value
     "so-stats-last-date": new Date(), // today

@@ -1,10 +1,6 @@
 import {useEffect, useRef} from 'react'
 import functionPlot, {FunctionPlotOptions} from 'function-plot'
 
-export interface FunctionPlotProps {
-    options?: FunctionPlotOptions
-}
-
 export function FunctionPlot(props: Omit<FunctionPlotOptions, 'target'>) {
     const rootEl = useRef(null)
 

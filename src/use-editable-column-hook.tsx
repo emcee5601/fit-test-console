@@ -4,12 +4,7 @@ import {useInView} from "react-intersection-observer";
 import {numberInputClasses, Unstable_NumberInput as NumberInput} from "@mui/base/Unstable_NumberInput";
 import {useTheme} from '@mui/system';
 import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
-import {
-    convertFitFactorToFiltrationEfficiency,
-    getColorForFitFactor,
-    getFitFactorCssClass,
-    normalizeMaskName
-} from "src/utils.ts";
+import {convertFitFactorToFiltrationEfficiency, getColorForFitFactor, getFitFactorCssClass} from "src/utils.ts";
 import {AppContext} from "src/app-context.ts";
 import {SmartTextArea} from "src/SmartTextArea.tsx";
 import {MaskSelectorWidget} from "src/MaskSelectorWidget.tsx";
@@ -148,7 +143,7 @@ export function useEditableMaskColumn<T, V>({
         }
     }, [value, id, index, table.options.meta, initialValue])
 
-    console.debug(`normalizing ${value} => ${normalizeMaskName(value as string)}`)
+    // console.debug(`normalizing ${value} => ${normalizeMaskName(value as string)}`)
 
     return (
         <MaskSelectorWidget id={String(index)} className={"table-cell"} value={(value as string) ?? ""} onChange={(v) => onChange(v)}/>

@@ -22,7 +22,8 @@ import {
     EstimatedFitFactorChangedEvent,
     EstimatedMaskConcentrationChangedEvent,
     InstructionsChangedEvent,
-    LogEvent, NewTestStartedEvent,
+    LogEvent,
+    NewTestStartedEvent,
     ProcessedDataEvent,
     RawLineEvent,
     TickEvent
@@ -61,7 +62,8 @@ export class DataCollector {
     // the current in-progress dataset
     private currentTestData: SimpleResultsDBRecord | null = null;
     private lastExerciseNum: number = 0;
-    private sampleSource: SampleSource = SampleSource.MASK; // defaults to mask, but if we connect in the middle, we need to check
+    private sampleSource: SampleSource = SampleSource.MASK; // defaults to mask, but if we connect in the middle, we
+                                                            // need to check
     private setResults: React.Dispatch<React.SetStateAction<SimpleResultsDBRecord[]>> | undefined;
 
     private inProgressTestPromiseChain: Promise<void> | undefined;
@@ -76,7 +78,8 @@ export class DataCollector {
 
 
     constructor() {
-        this.settings = APP_SETTINGS_CONTEXT; // can't take this from appContext because appContext refers to data collector (this)
+        this.settings = APP_SETTINGS_CONTEXT; // can't take this from appContext because appContext refers to data
+                                              // collector (this)
         this.resultsDatabase = RESULTS_DB;
         this._fitFactorEstimator = new FitFactorEstimator(this)
         this.fitFactorEstimator.resetChart();
@@ -149,8 +152,9 @@ export class DataCollector {
             : instructionsOrStageInfo as string
 
         if (instructions) {
-            // We don't know the number of exercises the portacount will run. Just assume the currently selected protocol matches the portacount setting.
-            // So if there are no more instructions for this exercise num, assume we're done.
+            // We don't know the number of exercises the portacount will run. Just assume the currently selected
+            // protocol matches the portacount setting. So if there are no more instructions for this exercise num,
+            // assume we're done.
             this.setInstructions(`Perform exercise ${exerciseNum}: ${instructions}`);
         }
     }
@@ -199,7 +203,10 @@ export class DataCollector {
             return;
         }
         this.lastExerciseNum = 0;
-        const newTestData = await this.resultsDatabase.createNewTest(timestamp, this.settings.selectedProtocol, controlSource, this.dataSource);
+        const newTestData = await this.resultsDatabase.createNewTest(timestamp,
+            this.settings.selectedProtocol,
+            controlSource,
+            controlSource === ControlSource.Manual ? DataSource.Manual : this.dataSource);
         this.currentTestData = newTestData;
 
         const testTemplate = this.settings.getTestTemplate()
@@ -308,7 +315,7 @@ export class DataCollector {
             // console.log(`dispatch event ${event.constructor.name}`)
             switch (event.constructor.name) {
                 case NewTestStartedEvent.name: {
-                    if(listener.newTestStarted) {
+                    if (listener.newTestStarted) {
                         listener.newTestStarted((event as NewTestStartedEvent).record)
                     }
                     break;
@@ -458,7 +465,7 @@ export class DataCollector {
     }
 
     recordParticleCount(event: ParticleConcentrationEvent) {
-        if(!this.currentTestData) {
+        if (!this.currentTestData) {
             return
         }
         if (!this.currentTestData.ParticleCounts) {

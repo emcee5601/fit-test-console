@@ -61,7 +61,7 @@ export async function importRecords(newRecords: SimpleResultsDBRecord[]): Promis
     // try to make sure new records are valid records and not garbage
     const attemptedRecordCount = newRecords.length;
     newRecords = newRecords.filter((record) => {
-        return "Time" in record && "ID" in record && "Final" in record;
+        return "Time" in record && "ID" in record && "Ex 1" in record;
     })
     const rejectedRecordCount = attemptedRecordCount - newRecords.length;
 

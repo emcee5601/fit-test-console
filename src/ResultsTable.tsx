@@ -36,6 +36,7 @@ import {BooleanToggleButton} from "src/ToggleButton.tsx";
 import {deepCopy} from "json-2-csv/lib/utils";
 import {AppSettings} from "src/app-settings-types.ts";
 import {exportFile, importFile} from "src/results-transfer-util.ts";
+import {MaskPerfFunctionPlot} from "src/MaskPerfFunctionPlot.tsx";
 
 //This is a dynamic row height example, which is more complicated, but allows for a more realistic table.
 //See https://tanstack.com/virtual/v3/docs/examples/react/table for a simpler fixed row height example.
@@ -137,8 +138,6 @@ export default function ResultsTable({
 
     const [selectedRows, setSelectedRows] = useState<number[]>([])
 
-    useEffect(() => {
-    }, [selectedRows]);
     const columns = React.useMemo<ColumnDef<SimpleResultsDBRecord, string | number | boolean>[]>(
         () => [
             {
@@ -225,6 +224,7 @@ export default function ResultsTable({
     const [enableSelection, setEnableSelection] = useState<boolean>(false)
     const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
     const [columnFilters, setColumnFilters] = useSetting<ColumnFiltersState>(columnFilterSettingKey)
+    const [showMaskPerfGraph] = useSetting<boolean>(AppSettings.SHOW_MASK_PERF_GRAPH)
     const [sorting, setSorting] = useSetting<SortingState>(columnSortingSettingKey)
     const [columnVisibility, setColumnVisibility] = useState(hideColumns.reduce((result: {
         [key: string]: boolean
@@ -500,6 +500,7 @@ export default function ResultsTable({
                     </tbody>
                 </table>
             </div>
+            {showMaskPerfGraph && <MaskPerfFunctionPlot records={table.getSortedRowModel().flatRows.map((row) => row.original)}/>}
         </div>
     )
 }

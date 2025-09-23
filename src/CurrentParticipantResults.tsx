@@ -16,9 +16,9 @@ export function CurrentParticipantResults() {
         helpUpdateState({})
     }, []);
 
+    const [selectedProtocol] = useSetting<string>(AppSettings.SELECTED_PROTOCOL)
     const [testTemplate] = useSetting<Partial<SimpleResultsDBRecord>>(AppSettings.TEST_TEMPLATE)
     const [currentParticipantResults, setCurrentParticipantResults] = useState([] as SimpleResultsDBRecord[])
-    const [selectedProtocol] = useSetting<string>(AppSettings.SELECTED_PROTOCOL)
 
     useEffect(() => {
         const settingsListener: SettingsListener = {
@@ -50,7 +50,7 @@ export function CurrentParticipantResults() {
      */
     function updateCurrentParticipantTests(participant: string | undefined) {
         const today = new Date();
-        participant = (participant??"").trim()
+        participant = (participant ?? "").trim()
 
         // convert time back to local time
         const todayYyyymmdd = new Date(today.getTime() - today.getTimezoneOffset() * 60 * 1000).toISOString().substring(0, 10)
@@ -61,9 +61,11 @@ export function CurrentParticipantResults() {
             const recordTime = new Date(recordDate.getTime() - recordDate.getTimezoneOffset() * 60 * 1000).toISOString().substring(0, 10);
             // console.debug(`yyyymmdd is ${todayYyyymmdd}, record time is ${recordTime}; looking for
             // '${participant}', found '${record.Participant}'`)
-            return (record.Participant??"").trim() === participant
+            return (record.Participant ?? "").trim() === participant
                 && recordTime.startsWith(todayYyyymmdd)
-        }).then(setCurrentParticipantResults)
+        }).then((results) => {
+            setCurrentParticipantResults(results)
+        })
     }
 
     async function deleteRows(rows: number[]) {

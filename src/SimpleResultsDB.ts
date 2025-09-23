@@ -24,7 +24,7 @@ export interface SimpleResultsDBRecord {
     Final?: number,
     ProtocolName?: string,
     TestController?: ControlSource,
-    DataSource?: string,
+    DataSource?: DataSource,
     ParticleCounts?: ParticleCount[],
     [key: string]: string | number | undefined | ParticleCount[],
 }
