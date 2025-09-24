@@ -3,8 +3,10 @@ import {ExternalController} from "./external-control.ts";
 import {DataCollector} from "./data-collector.ts";
 import {avg, formatFitFactor} from "src/utils.ts";
 import {deepCopy} from "json-2-csv/lib/utils";
-import {ProtocolSegment} from "src/app-settings-types.ts";
+import {AppSettings, ProtocolSegment} from "src/app-settings-types.ts";
 import {ControlSource, SampleSource} from "src/portacount/porta-count-state.ts";
+import {APP_SETTINGS_CONTEXT} from "src/app-settings.ts";
+import {AmbientCollector} from "src/ambient-collector.ts";
 
 export enum SegmentState {
     SAMPLE = "sample",
@@ -76,12 +78,14 @@ export class ProtocolExecutor {
     private _lastAmbientSegment: ProtocolSegment | undefined;
     private dataCollector: DataCollector;
     private _protocolStartTime: number | null = null
+    private ambientCollector = new AmbientCollector();
 
     constructor(portaCountClient: PortaCountClient8020, dataCollector: DataCollector) {
         this._portaCountClient = portaCountClient
         this.dataCollector = dataCollector
         this.controller = portaCountClient.externalController;
         this._portaCountClient.addListener(this.getPortaCountListener())
+        this._portaCountClient.addListener(this.ambientCollector)
     }
 
     private getPortaCountListener(): PortaCountListener {
@@ -133,9 +137,13 @@ export class ProtocolExecutor {
         // schedule next segment. We need this segment to complete. We'll figure out if there is a next segment in
         // executeSegment()
         this.startTimer(() => {
-            this.closeSegment(segment)
-            this.executeSegment(segment.index + 1)
+            this.advanceToNextSegment(segment);
         }, segment.duration)
+    }
+
+    private advanceToNextSegment(segment: ProtocolSegment) {
+        this.closeSegment(segment)
+        this.executeSegment(segment.index + 1)
     }
 
     get segments(): ProtocolSegment[] {
@@ -217,7 +225,30 @@ export class ProtocolExecutor {
         const startTime = new Date();
         this.protocolStartTime = startTime.getTime()
         await this.dataCollector.recordTestStart(ControlSource.External, startTime.toLocaleString())
-        this.executeSegment(0)
+
+        if( APP_SETTINGS_CONTEXT.getSetting(AppSettings.USE_IDLE_AMBIENT_VALUES)) {
+            console.debug("trying to use idle ambient values")
+            if(this.segments.length>2
+                && this.segments[0].source === SampleSource.AMBIENT
+                && this.segments[1].source === SampleSource.AMBIENT
+                && this.segments[1].state === SegmentState.SAMPLE
+            ) {
+                // duration is in seconds. in external control mode, samples are 1 second appart.
+                const idleAmbientEvents = this.ambientCollector.getEvents(60000, this.segments[1].duration)
+                if( idleAmbientEvents.length ) {
+                    console.debug("using ambient values collected while idle")
+                    this.segments[1].data.push(...idleAmbientEvents)
+                    this.advanceToNextSegment(this.segments[1])
+                    this.controller.beep()
+                } else {
+                    this.executeSegment(0)
+                }
+            } else {
+                this.executeSegment(0)
+            }
+        } else {
+            this.executeSegment(0)
+        }
         this.controller.beep()
         this.dispatch(new ProtocolStartedEvent());
     }
@@ -238,7 +269,7 @@ export class ProtocolExecutor {
                     break;
                 }
                 case ProtocolStartedEvent.name: {
-                    if(listener.started) {
+                    if (listener.started) {
                         listener.started();
                     }
                     break;
@@ -278,6 +309,7 @@ export class ProtocolExecutor {
             this.dispatch(new ProtocolCompletedEvent())
             this.controller.beep()
             this.controller.beep()
+            this.updateValvePosition();
             return;
         }
 
@@ -296,11 +328,23 @@ export class ProtocolExecutor {
         }
 
         if (segment.duration > 0) {
-            if(segment.exerciseNumber) {
+            if (segment.exerciseNumber) {
                 this.dataCollector.setInstructions(`Perform exercise ${segment.exerciseNumber}: ${segment.stage.instructions}`)
             } else {
                 this.dataCollector.setInstructions("Breathe normally")
             }
+        }
+    }
+
+    private updateValvePosition() {
+        if (APP_SETTINGS_CONTEXT.getSetting(AppSettings.SAMPLE_MASK_WHEN_IDLE)) {
+            // sample from mask when idle so we can get ff estimates
+            this.controller.sampleMask()
+            console.debug("sample mask when idle in effect")
+        } else if(APP_SETTINGS_CONTEXT.getSetting(AppSettings.USE_IDLE_AMBIENT_VALUES)) {
+            // sample from ambient when idle so we can have tests start faster
+            this.controller.sampleAmbient()
+            console.debug("use idle ambient values in effect")
         }
     }
 
@@ -311,6 +355,7 @@ export class ProtocolExecutor {
         this.dataCollector.recordTestAborted()
         this.dispatch(new ProtocolAbortedEvent())
         this.controller.beep()
+        this.updateValvePosition();
     }
 
     private calculateFinalFitFactor(): number {

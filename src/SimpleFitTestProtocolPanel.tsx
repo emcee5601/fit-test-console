@@ -1,24 +1,14 @@
-import {
-    Content,
-    createAjvValidator,
-    createJSONEditor,
-    JSONContent,
-    JsonEditor,
-    JSONEditorPropsOptional,
-    Mode,
-    toJSONContent,
-    toTextContent
-} from 'vanilla-jsoneditor';
-import {useContext, useEffect, useRef} from 'react';
+import {createAjvValidator, JSONContent, toJSONContent} from 'vanilla-jsoneditor';
+import {useContext, useState} from 'react';
 import "./simple-protocol-editor.css";
-import stringifyDeterministically from "json-stringify-deterministic";
 import {useSetting} from "./use-setting.ts";
 import {AppSettings} from "src/app-settings-types.ts";
 import {AppContext} from "src/app-context.ts";
 
-export default function SimpleFitTestProtocolPanel(props: JSONEditorPropsOptional) {
+export default function SimpleFitTestProtocolPanel() {
     const [protocolInstructionSets, setProtocolInstructionSets] = useSetting<JSONContent>(AppSettings.PROTOCOL_INSTRUCTION_SETS)
     const appContext = useContext(AppContext)
+    const [content, setContent] = useState<string>(JSON.stringify(protocolInstructionSets.json, null, 2))
 
     function resetToDefault() {
         console.debug("resetting protocols to defaults")
@@ -83,93 +73,25 @@ export default function SimpleFitTestProtocolPanel(props: JSONEditorPropsOptiona
     }
     const validator = createAjvValidator({schema})
 
-    props = {
-        ...props,
-        mode: props.mode || Mode.text,
-        validator: props.validator || validator,
-        content: toTextContent(protocolInstructionSets, 2),
-        onChange: (content: Content,previousContent, status) => {
-            if (!status.contentErrors) {
-                // only save if there were no errors
-                const jsonContent = toJSONContent(content);
-                if(stringifyDeterministically(jsonContent.json) === stringifyDeterministically(toJSONContent(previousContent).json)) {
-                    // only whitespace difference, ignore. otherwise updating the UI would remove the new whitespace
-                    console.log("no non-whitespace change")
-                    return;
-                }
-                if(jsonContent) {
-                    // only save if we have some value
-                    console.debug(`saved : ${JSON.stringify(jsonContent)}`);
-                    setProtocolInstructionSets(jsonContent)
-                }
-            }
+    function valueChanged(newValue: string) {
+        const validationErrors = validator(JSON.parse(newValue));
+        setContent(newValue);
+        if(validationErrors.length > 0) {
+            console.error(validationErrors);
+        } else {
+            setProtocolInstructionSets(toJSONContent({text:newValue}))
         }
-    } // defaults
-
+    }
     return (
         <>
             <section id={"controls"}>
                 <button id={"reset"} onDoubleClick={resetToDefault}>Reset to default (double click)</button>
             </section>
-            <section id={"editor"}>
-                <JsonEditorPanel props={props} />
+            <section id={"editor"} style={{display:"contents"}}>
+                <textarea style={{height:"90%", width:"90%"}} onChange={(e) => valueChanged(e.target.value)} value={content}>
+                </textarea>
+                {/*<JsonEditorPanel props={props} />*/}
             </section>
         </>
     )
-}
-
-function JsonEditorPanel({props}: {props:JSONEditorPropsOptional}) {
-    const refContainer = useRef<HTMLDivElement | null>(null);
-    const refEditor = useRef<JsonEditor | null>(null);
-    const refPrevProps = useRef<JSONEditorPropsOptional>(props);
-
-    useEffect(() => {
-        // create editor
-        console.log('create editor', refContainer.current);
-        refEditor.current = createJSONEditor({
-            target: refContainer.current as HTMLDivElement,
-            props,
-        });
-
-        return () => {
-            // destroy editor
-            if (refEditor.current) {
-                console.log('destroy editor');
-                refEditor.current.destroy();
-                refEditor.current = null;
-            }
-        };
-    }, []);
-
-    // update props
-    useEffect(() => {
-        if (refEditor.current) {
-            // only pass the props that actually changed
-            // since the last time to prevent syncing issues
-            const changedProps = filterUnchangedProps(props, refPrevProps.current);
-            console.log('update props', changedProps);
-            refEditor.current.updateProps(changedProps);
-            refPrevProps.current = props;
-        }
-    }, [props]);
-
-    return (
-        <>
-            This simple editor just maps exercise number to instructions.
-            <div className="simple-protocol-editor-container" ref={refContainer}>
-            </div>
-        </>
-    );
-}
-
-function filterUnchangedProps(
-    props: JSONEditorPropsOptional,
-    prevProps: JSONEditorPropsOptional
-): JSONEditorPropsOptional {
-    return Object.fromEntries(
-        Object.entries(props).filter(
-            ([key, value]) =>
-                value !== prevProps[key as keyof JSONEditorPropsOptional]
-        )
-    );
 }

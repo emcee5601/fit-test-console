@@ -47,6 +47,8 @@ export enum AppSettings {
     AUTO_UPDATE_MASK_LIST = "auto-update-mask-list",
     COLOR_SCHEME = "color-scheme",
     SHOW_MASK_PERF_GRAPH = "show-mask-perf-graph",
+    SAMPLE_MASK_WHEN_IDLE = "sample-mask-when-idle",
+    USE_IDLE_AMBIENT_VALUES = "use-idle-ambient-values",
 
     // session only settings (these start with "so-". todo: can we merge these from another enum into this?
     STATS_FIRST_DATE = "so-stats-first-date",
@@ -243,7 +245,9 @@ export const AppSettingsDefaults = {
     "participant-list": [],
     "auto-update-mask-list": true,
     "color-scheme": "auto",
-    "show-mask-perf-graph": true,
+    "show-mask-perf-graph": false,
+    "sample-mask-when-idle": false,
+    "use-idle-ambient-values": false,
 
     "so-stats-first-date": new Date(0), // epoch, sentinel value
     "so-stats-last-date": new Date(), // today
@@ -266,8 +270,9 @@ export const AppSettingsDefaults = {
     "show-historical-tests": false, // deprecated
     "show-current-test-panel": false, // deprecated
 }
-export type ValidSettings = keyof typeof AppSettingsDefaults; // todo: rename this to phase? so we don't share the same
-                                                              // first letter as Stage
+export type ValidSettings = keyof typeof AppSettingsDefaults;
+
+// todo: rename this to phase? so we don't share the same first letter as Stage
 export type ProtocolSegment = {
     index: number, // segment index
     stage: StageDefinition,

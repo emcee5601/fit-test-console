@@ -224,6 +224,8 @@ export function SettingsPanel() {
                                 <BooleanSettingToggleButton setting={AppSettings.ENABLE_TEST_INSTRUCTIONS_ZOOM}/>
                                 <BooleanSettingToggleButton setting={AppSettings.USE_COMPACT_UI}/>
                                 <BooleanSettingToggleButton setting={AppSettings.SHOW_MASK_PERF_GRAPH}/>
+                                <BooleanSettingToggleButton setting={AppSettings.USE_IDLE_AMBIENT_VALUES}/>
+                                <BooleanSettingToggleButton setting={AppSettings.SAMPLE_MASK_WHEN_IDLE}/>
                                 <BooleanSettingToggleButton setting={AppSettings.ENABLE_WEB_SERIAL_DRIVERS}/>
                                 <BooleanSettingToggleButton setting={AppSettings.ENABLE_PROTOCOL_EDITOR}/>
                                 <BooleanSettingToggleButton setting={AppSettings.ENABLE_QR_CODE_SCANNER}/>

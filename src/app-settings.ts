@@ -340,7 +340,7 @@ class AppSettingsContext {
      * @param defaultValue
      * @private
      */
-    getSetting<T extends AppSettingType>(setting: AppSettings): T {
+    getSetting<T extends AppSettingType>(setting: ValidSettings): T {
         return defaultConfigManager.getConfig(setting);
     }
 
