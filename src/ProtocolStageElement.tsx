@@ -1,26 +1,11 @@
+import {RefObject} from "react";
+import {SampleSource} from "src/portacount/porta-count-state.ts";
+import {SegmentState} from "src/protocol-executor/segment-state.ts";
+import {getStageDuration} from "src/protocol-executor/utils.ts";
+import {ProtocolSegmentElement} from "src/ProtocolSegmentElement.tsx";
 import {StandardStageDefinition} from "src/simple-protocol.ts";
 import "./ProtocolStageElement.css"
-import {SegmentState} from "src/protocol-executor.ts";
-import {RefObject} from "react";
 import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
-import {formatDuration} from "src/utils.ts";
-import {SampleSource} from "src/portacount/porta-count-state.ts";
-
-function ProtocolSegmentElement({duration, source, state, override}: {
-    duration: number,
-    state: SegmentState,
-    source: SampleSource,
-    override?: string,
-}) {
-    return <div
-        className={`${source}-${state}-segment`}
-        style={{
-            flexBasis: `${duration}px`,
-            flexGrow: duration,
-            minWidth: "0px"
-        }}
-    >{(source === SampleSource.MASK && state === SegmentState.SAMPLE) && formatDuration(1000*duration)}{override && ` (${override})`}</div>
-}
 
 export function ProtocolStageElement({stage, elementRef, currentTestResults, exerciseNum, currentEstimate}: {
     stage: StandardStageDefinition,
@@ -29,12 +14,13 @@ export function ProtocolStageElement({stage, elementRef, currentTestResults, exe
     exerciseNum?: number,
     currentEstimate?: string,  // present if this is the current stage
 }) {
-    const stageDuration = stage.ambient_purge + stage.ambient_sample + stage.mask_purge + stage.mask_sample;
+    const stageDuration = getStageDuration(stage);
     const override = currentEstimate !== undefined
         ? currentEstimate // we are the current stage, show estimate
         : exerciseNum && currentTestResults // we're not the current stage, show results if any
             ? currentTestResults[`Ex ${exerciseNum}`] as string
             : undefined; // we don't have results for this stage
+
     return (
         <div className={"protocol-stage-element"}
              ref={elementRef}
@@ -44,7 +30,8 @@ export function ProtocolStageElement({stage, elementRef, currentTestResults, exe
                  overflow: "hidden",
              }}
         >
-            <div className={"stage-instructions"}>{stage.instructions.split(".")[0]}</div>
+            <div
+                className={"stage-name"}>{exerciseNum ? `Ex ${exerciseNum}:` : null} {stage.instructions.split(".")[0]}</div>
             <div className={"stage-segments"}>
                 <ProtocolSegmentElement duration={stage.ambient_purge} source={SampleSource.AMBIENT}
                                         state={SegmentState.PURGE}/>

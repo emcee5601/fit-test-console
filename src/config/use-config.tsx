@@ -1,5 +1,6 @@
 import {Dispatch, SetStateAction, useContext, useEffect, useState} from "react";
-import {ConfigContext, ConfigListener} from "src/config/config-context.tsx";
+import {ConfigContext} from "src/config/config-context.tsx";
+import {ConfigListener} from "src/config/config-manager.ts";
 
 export type Getter<T> = () => T;
 

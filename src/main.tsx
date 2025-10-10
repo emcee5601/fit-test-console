@@ -1,7 +1,7 @@
 import {StrictMode, Suspense} from 'react'
 import {createRoot} from 'react-dom/client'
 import './index.css'
-import HomePanel from './HomePanel.tsx'
+import {ParticipantPanel} from './ParticipantPanel.tsx'
 import {registerSW} from "virtual:pwa-register";
 import {HashRouter, Route, Routes} from "react-router";
 import {SettingsPanel} from "./SettingsPanel.tsx";
@@ -10,9 +10,11 @@ import {StatsPanel} from "src/StatsPanel.tsx";
 import {UnsupportedBrowser} from './UnsupportedBrowser.tsx';
 import MainLayout from "src/MainLayout.tsx";
 import {ResultViewer} from "src/ResultViewer.tsx";
-import {QRScanner, SimpleFitTestProtocolPanel} from "src/lazy-components.ts";
+import {SimpleFitTestProtocolPanel} from "src/SimpleFitTestProtocolPanel.tsx";
+import {QRScanner} from "src/QRScanner.tsx";
 import {DailyChecksPanel} from "src/DailyChecksPanel.tsx";
 import {BookmarksPanel} from "src/BookmarksPanel.tsx";
+import {TestPanel} from "src/TestPanel.tsx";
 
 // add this to prompt for a refresh
 const updateSW = registerSW({
@@ -32,7 +34,8 @@ createRoot(document.getElementById('root')!).render(
             <Suspense fallback={"..."}>
                 <Routes>
                     <Route path="" element={<MainLayout/>}>
-                        <Route index element={<HomePanel/>}/>
+                        <Route index element={<ParticipantPanel/>}/>
+                        <Route path="test" element={<TestPanel/>}/>
                         <Route path="view-results" element={<ResultViewer/>}/>
                         <Route path="settings" element={<SettingsPanel/>}/>
                         <Route path="protocols" element={<SimpleFitTestProtocolPanel/>}/>

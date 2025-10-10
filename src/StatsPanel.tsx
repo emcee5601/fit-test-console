@@ -186,7 +186,7 @@ export function StatsPanel() {
         const masksTally: { [key: string]: number } = {}
         Object.values(eventParticipantMaskResults).forEach((record: SimpleResultsDBRecord) => {
             const structuredMaskName = getStructuredMaskName(record.Mask ?? "");
-            const mask = `${structuredMaskName.maker} ${structuredMaskName.model}`.trim();
+            const mask = structuredMaskName.shortName
             masksTally[mask] = 1 + (masksTally[mask] ?? 0)
         })
         console.debug(`mask tally: ${JSON.stringify(masksTally)}`)

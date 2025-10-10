@@ -5,6 +5,7 @@
 .sample-source-mask {
     background-color: light-dark(palegreen, green);
 }
+
 .sample-source-mask.segment-purge {
     background-image: repeating-linear-gradient(
             45deg,
@@ -18,6 +19,7 @@
 .sample-source-ambient {
     background-color: light-dark(lightskyblue, royalblue);
 }
+
 .sample-source-ambient.segment-purge {
     background-image: repeating-linear-gradient(
             -45deg,
@@ -61,25 +63,53 @@
     initial-value: -60deg;
 }
 
+#protocol-visualizer-container {
+    display: grid;
+    flex-grow: 1;
+    grid-auto-rows: min-content;
+    max-height: 3em;
+    min-height: 3em;
+    width: 100%;
+    overflow: scroll;
+    scrollbar-gutter: stable;
+    padding-block: 0.2em;
+
+    &::-webkit-scrollbar {
+        -webkit-appearance: none;
+        width: 7px;
+        background-color: inherit;
+        height: 0;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        border-radius: 4px;
+        background-color: rgba(0, 0, 0, .5);
+        -webkit-box-shadow: 0 0 1px rgba(255, 255, 255, .5);
+    }
+}
+
 .protocol-position-pointer {
     opacity: 90%;
     overflow: hidden;
+    z-index: 1;
     border-top: 10px solid var(--color);
     border-bottom: 10px solid var(--color);
     border-left: 10px solid transparent;
     border-right: 10px solid transparent;
 
     position: absolute;
-    top: -3px;
-    bottom: -3px;
+    top: 0;
+    bottom: -1px;
     width: 5px;
-    right: calc(100% - 13px);
+    left: -3px;
+    right: calc(100%);
     transition: --color 0.4s linear;
 }
 
 *.protocol-position-pointer.paused {
     --color: firebrick;
 }
+
 *.protocol-position-pointer.in-progress {
     --color: green;
 }
@@ -97,7 +127,19 @@
 }
 
 #protocol-executor-panel-main {
+    position:relative;
+    display: flex;
+    width: inherit;
+    overflow: hidden;
+    padding-inline-start: 0.5em;
+    padding-inline-end: 0;
+    align-items: center;
+    gap: 0.5em;
     transition: background-color 1s ease-in-out, opacity 1s ease-in-out, filter 1s ease-in-out;
+}
+
+#protocol-executor-panel-main.paused {
+    filter: sepia(100%);
 }
 
 #protocol-executor-panel-main.in-progress {

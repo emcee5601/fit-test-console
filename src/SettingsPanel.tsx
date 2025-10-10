@@ -17,15 +17,16 @@ import {formatDuration} from "src/utils.ts";
 import {PortaCountListener} from "src/portacount-client-8020.ts";
 import {SmartTextArea} from "src/SmartTextArea.tsx";
 import {AppSettings} from "src/app-settings-types.ts";
+import {FaRadiation} from "react-icons/fa";
+import {PiWarningOctagonBold} from "react-icons/pi";
+import {DriverSelectorWidget} from "src/DriverSelectorWidget.tsx";
+import {ConnectionStatus} from "src/portacount/porta-count-state.ts";
 
 export function SettingsPanel() {
     const appContext = useContext(AppContext)
     const portaCountState = appContext.portaCountClient.state;
     const portaCountSettings = appContext.portaCountClient.settings
     const [baudRate, setBaudRate] = useSetting<number>(AppSettings.BAUD_RATE)
-    const [showAdvancedControls] = useSetting<boolean>(AppSettings.ADVANCED_MODE);
-    const [showRemainingEventTime] = useSetting<boolean>(AppSettings.SHOW_REMAINING_EVENT_TIME)
-    const [showElapsedParticipantTime] = useSetting<boolean>(AppSettings.SHOW_ELAPSED_PARTICIPANT_TIME)
     const [showDangerZoneSettings, setShowDangerZoneSettings] = useState<boolean>(false); // don't persist this setting
     const [dataToDownload, setDataToDownload] = useState<string>("all-raw-data")
     const [minutesPerParticipant, setMinutesPerParticipant] = useSetting<number>(AppSettings.MINUTES_ALLOTTED_PER_PARTICIPANT)
@@ -33,6 +34,7 @@ export function SettingsPanel() {
     const [todayParticipantList, setTodayParticipantList] = useSetting<string[]>(AppSettings.PARTICIPANT_LIST)
     const [colorScheme, setColorScheme] = useSetting<string>(AppSettings.COLOR_SCHEME)
     const [eventEndDate, setEventEndDate] = useState<Date>(appContext.settings.eventEndTime)
+    const [connectionStatus] = useSetting<ConnectionStatus>(AppSettings.CONNECTION_STATUS)
 
     const [, helpUpdateState] = useState({})
     const updateState = useCallback(() => {
@@ -118,10 +120,10 @@ export function SettingsPanel() {
     }
 
     return (
-        <div id="settings-panel">
-            <fieldset>
-                {`mftc v${__APP_VERSION__} ${import.meta.env.MODE}`}
-            </fieldset>
+        <div id="settings-panel" style={{display: "flex", height: "inherit"}}>
+            {/*<fieldset>*/}
+            {/*    {`mftc v${__APP_VERSION__} ${import.meta.env.MODE}`}*/}
+            {/*</fieldset>*/}
             <fieldset>
                 <legend>Settings</legend>
                 <section id="settings" style={{
@@ -131,41 +133,45 @@ export function SettingsPanel() {
                     justifyContent: "center",
                     alignItems: "stretch",
                 }}>
-                    <section id={"basic-controls"}>
+                    <section id={"display-settings"}>
                         <fieldset>
-                            <legend>Basic</legend>
-                            <BooleanSettingToggleButton
-                                setting={AppSettings.KEEP_SCREEN_AWAKE}/>
-                            <EnableSpeechSwitch/>
-                            <BooleanSettingToggleButton
-                                setting={AppSettings.SAY_PARTICLE_COUNT}/>
-                            <BooleanSettingToggleButton
-                                setting={AppSettings.SAY_ESTIMATED_FIT_FACTOR}/>
-                            <div className={"labeled-setting"}>
-                                <select id="download-file-format-selector" defaultValue={dataToDownload}
-                                        onChange={downloadFileFormatChanged}>
-                                    <option value="all-raw-data">All Raw data as JSON</option>
-                                    <option value="all-results-as-json">All results as JSON</option>
-                                </select>
-                                <input className="button" type="button" value="Download!" id="download-button"
-                                       onClick={downloadButtonClickHandler}/>
-                            </div>
+                            <legend>Display</legend>
+                            <BooleanSettingToggleButton setting={AppSettings.KEEP_SCREEN_AWAKE}/>
+                            <SettingsSelect label={"Color Scheme"} value={colorScheme}
+                                            setValue={(value) => setColorScheme(value)}
+                                            options={[
+                                                {"Auto": "light dark"},
+                                                {"Dark": "dark"},
+                                                {"Light": "light"},
+                                            ]}/>
+                            <BooleanSettingToggleButton setting={AppSettings.ENABLE_TEST_INSTRUCTIONS_ZOOM}/>
+                            <BooleanSettingToggleButton setting={AppSettings.SHOW_MASK_PERF_GRAPH}/>
                         </fieldset>
                     </section>
-                    <section id={"event settings"}>
+                    <section id={"speech-controls"}>
                         <fieldset>
-                            <legend>Event settings</legend>
+                            <legend>Speech</legend>
+                            <EnableSpeechSwitch/>
+                            <BooleanSettingToggleButton setting={AppSettings.SAY_PARTICLE_COUNT}/>
+                            <BooleanSettingToggleButton setting={AppSettings.SAY_ESTIMATED_FIT_FACTOR}/>
+                            <SpeechVoiceSelectorWidget/>
+                            <BooleanSettingToggleButton trueLabel={"Verbose speech"} setting={AppSettings.VERBOSE}/>
+                        </fieldset>
+                    </section>
+                    <section id={"event-settings"}>
+                        <fieldset>
+                            <legend>Event</legend>
                             <BooleanSettingToggleButton setting={AppSettings.SHOW_ELAPSED_PARTICIPANT_TIME}/>
-                            {showElapsedParticipantTime && <div className={"labeled-setting"}>
+                            <div className={"labeled-setting"}>
                                 <label htmlFor={"minutes-per-participant-input"}>Minutes per participant:</label>
                                 <DebouncedInput style={{width: "8ch"}} id={"minutes-per-participant-input"}
                                                 value={minutesPerParticipant}
                                                 onChange={handleMinutesPerParticipantChanged}
                                                 type="number" min={1} max={60}
                                 />
-                            </div>}
+                            </div>
                             <BooleanSettingToggleButton setting={AppSettings.SHOW_REMAINING_EVENT_TIME}/>
-                            {showRemainingEventTime && <div className={"labeled-setting"}>
+                            <div className={"labeled-setting"}>
                                 <label>Event end time</label>
                                 <DatePicker className={"date-time-input"} selected={eventEndDate}
                                             showTimeSelect
@@ -177,7 +183,7 @@ export function SettingsPanel() {
                                             placeholderText={"Pick end time"}
                                             onChange={(date) => date && setEventEndDate(date)}
                                 ></DatePicker>
-                            </div>}
+                            </div>
                             <fieldset id={"today-participant-list"}>
                                 <legend>{"Participants"}</legend>
                                 <div style={{maxHeight: "50vh"}}>
@@ -194,12 +200,10 @@ export function SettingsPanel() {
                             </fieldset>
                         </fieldset>
                     </section>
-                    <section id={"advanced-controls"}>
+                    <section id={"connection"}>
                         <fieldset>
-                            <legend><BooleanSettingToggleButton trueLabel={"Advanced settings"}
-                                                                setting={AppSettings.ADVANCED_MODE}/>
-                            </legend>
-                            <div style={{display: showAdvancedControls ? "inline-block" : "none"}}>
+                            <legend>Connection</legend>
+                            <div style={{display: "inline-block"}}>
                                 <SettingsSelect label={"Baud Rate"} value={baudRate.toString()}
                                                 setValue={(value) => setBaudRate(Number(value))}
                                     // todo: make these values numbers
@@ -210,32 +214,38 @@ export function SettingsPanel() {
                                                     {"2400": "2400"},
                                                     {"9600": "9600"}
                                                 ]}/>
-                                <SettingsSelect label={"Color Scheme"} value={colorScheme}
-                                                setValue={(value) => setColorScheme(value)}
-                                                options={[
-                                                    {"Auto": "light dark"},
-                                                    {"Dark": "dark"},
-                                                    {"Light": "light"},
-                                                ]}/>
-                                <SpeechVoiceSelectorWidget/>
-                                <BooleanSettingToggleButton trueLabel={"Verbose speech"} setting={AppSettings.VERBOSE}/>
-                                <BooleanSettingToggleButton
-                                    setting={AppSettings.SHOW_EXTERNAL_CONTROL}/>
-                                <BooleanSettingToggleButton setting={AppSettings.ENABLE_TEST_INSTRUCTIONS_ZOOM}/>
-                                <BooleanSettingToggleButton setting={AppSettings.USE_COMPACT_UI}/>
-                                <BooleanSettingToggleButton setting={AppSettings.SHOW_MASK_PERF_GRAPH}/>
+                                <BooleanSettingToggleButton setting={AppSettings.AUTO_DETECT_BAUD_RATE}/>
+                                <BooleanSettingToggleButton setting={AppSettings.ENABLE_WEB_SERIAL_DRIVERS}/>
+                                <BooleanSettingToggleButton setting={AppSettings.ENABLE_AUTO_CONNECT}/>
+                            </div>
+                        </fieldset>
+                    </section>
+                    <section id={"data-settings"}>
+                        <fieldset>
+                            <legend>Data</legend>
+                            <div style={{display: "inline-block"}}>
+                                <BooleanSettingToggleButton setting={AppSettings.SYNC_DEVICE_STATE_ON_CONNECT}/>
+                                <BooleanSettingToggleButton setting={AppSettings.AUTO_UPDATE_MASK_LIST}/>
+                                <BooleanSettingToggleButton setting={AppSettings.NORMALIZE_MASK_LIST_NAMES}/>
+                                <BooleanSettingToggleButton setting={AppSettings.AUTO_CREATE_FAST_PROTOCOLS}/>
+                                <div className={"labeled-setting"}>
+                                    <select id="download-file-format-selector" defaultValue={dataToDownload}
+                                            onChange={downloadFileFormatChanged}>
+                                        <option value="all-raw-data">All Raw data as JSON</option>
+                                        <option value="all-results-as-json">All results as JSON</option>
+                                    </select>
+                                    <input className="button" type="button" value="Download!" id="download-button"
+                                           onClick={downloadButtonClickHandler}/>
+                                </div>
+                            </div>
+                        </fieldset>
+                    </section>
+                    <section id={"advanced-controls"}>
+                        <fieldset>
+                            <legend>Advanced</legend>
+                            <div style={{display: "inline-block"}}>
                                 <BooleanSettingToggleButton setting={AppSettings.USE_IDLE_AMBIENT_VALUES}/>
                                 <BooleanSettingToggleButton setting={AppSettings.SAMPLE_MASK_WHEN_IDLE}/>
-                                <BooleanSettingToggleButton setting={AppSettings.ENABLE_WEB_SERIAL_DRIVERS}/>
-                                <BooleanSettingToggleButton setting={AppSettings.ENABLE_PROTOCOL_EDITOR}/>
-                                <BooleanSettingToggleButton setting={AppSettings.ENABLE_QR_CODE_SCANNER}/>
-                                <BooleanSettingToggleButton setting={AppSettings.ENABLE_STATS}/>
-                                <BooleanSettingToggleButton setting={AppSettings.AUTO_UPDATE_MASK_LIST}/>
-                                <BooleanSettingToggleButton
-                                    setting={AppSettings.ENABLE_AUTO_CONNECT}/>
-                                <BooleanSettingToggleButton
-                                    setting={AppSettings.SYNC_DEVICE_STATE_ON_CONNECT}/>
-                                <BooleanSettingToggleButton setting={AppSettings.AUTO_CREATE_FAST_PROTOCOLS}/>
                                 <BooleanSettingToggleButton
                                     setting={AppSettings.ENABLE_SIMULATOR}/>
                                 <BooleanToggleButton trueLabel={"Show Danger Zone"} value={showDangerZoneSettings}
@@ -243,7 +253,9 @@ export function SettingsPanel() {
                             </div>
                         </fieldset>
                         {showDangerZoneSettings && <fieldset>
-                            <legend>Danger Zone</legend>
+                            <legend className={"svg-container"} style={{backgroundColor: "red", color: "whitesmoke"}}>
+                                <PiWarningOctagonBold/><FaRadiation/> Danger Zone <FaRadiation/><PiWarningOctagonBold/>
+                            </legend>
                             <input type={"button"} value={"Clear Local Storage"}
                                    onClick={() => localStorage.clear()}/>
                         </fieldset>}
@@ -264,7 +276,13 @@ export function SettingsPanel() {
                     </fieldset>
                     <fieldset id={"settings-state"}>
                         <legend>Settings & State</legend>
-                        <button onClick={fetchSettingsAndStateInfo}>Fetch settings & state info</button>
+                        <div className={"inline-flex"}>
+                            <DriverSelectorWidget compact={true}/>
+                            <button onClick={fetchSettingsAndStateInfo}
+                                    disabled={connectionStatus !== ConnectionStatus.RECEIVING}>Fetch settings & state
+                                info
+                            </button>
+                        </div>
                         <InfoBox label={"Serial Number"}>{portaCountSettings.serialNumber}</InfoBox>
                         <InfoBox
                             label={"Last Service Date"}>{portaCountSettings.lastServiceDate.toISOString()}</InfoBox>

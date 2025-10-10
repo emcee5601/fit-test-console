@@ -4,8 +4,9 @@ import {useSetting} from "src/use-setting.ts";
 import {RESULTS_DB, SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
 import {SettingsListener} from "src/app-settings.ts";
 import {LabeledSection} from "src/LabeledSection.tsx";
-import {ResultsTable} from "src/lazy-components.ts";
+import {ResultsTable} from "src/ResultsTable.tsx";
 import {AppSettings, AppSettingType} from "src/app-settings-types.ts";
+import {ManualEntryButton} from "src/ManualEntryButton.tsx";
 
 export function CurrentParticipantResults() {
     const appContext = useContext(AppContext)
@@ -76,7 +77,10 @@ export function CurrentParticipantResults() {
     return (
         <div id="current-participant-info">
             <LabeledSection>
-                <legend>Results{(testTemplate.Participant ? ` for ${testTemplate.Participant}` : "")}</legend>
+                <legend><div style={{display:"inline-flex", gap:"0.7em"}}>
+                    Results{(testTemplate.Participant ? ` for ${testTemplate.Participant}` : "")} <ManualEntryButton text={"Manual Entry"}/>
+                </div>
+                </legend>
                 <div style={{justifySelf: "center", maxWidth: "100%"}}>
                     <ResultsTable tableData={currentParticipantResults} setTableData={setCurrentParticipantResults}
                                   searchableColumns={[]} hideColumns={["Participant", "Time"]}

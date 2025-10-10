@@ -92,7 +92,7 @@ export class PortaCount8020Simulator {
                     // todo: start and stop the interval instead
                     if (this._started) {
                         const concentration = this.generateConcentration();
-                        console.debug(`simulator loop: ${concentration}, isPulling? ${isPulling}`)
+                        // console.debug(`simulator loop: ${concentration}, isPulling? ${isPulling}`)
                         if (isPulling) {
                             isPulling = false; // only enqueue if something wanted enqueuing
                             controller.enqueue(this.encoder.encode(`${concentration}\n`))
@@ -124,7 +124,7 @@ export class PortaCount8020Simulator {
                 // Implement the sink
                 write: (chunk: Uint8Array) => {
                     const data: string = decoder.decode(chunk);
-                    console.debug(`writer got ${data}`)
+                    // console.debug(`writer got ${data}`)
                     accumulator += data
                     // todo: check for multiple lines. look for last match, split everything before the last match by
                     // newlinesRecexp
@@ -152,8 +152,9 @@ export class PortaCount8020Simulator {
         if (Date.now() - this.lastCommandTimeMs > 3 * 60 * 1000) {
             // more than 3 minutes has elapsed since the last command. We can reset the start point
             this.baseConcentration = (1 + 5 * Math.random()) * 1000
-            this.targetMaskFF = (10 + 300 * Math.random())
+            this.targetMaskFF = (2 + 20 * Math.random())
             console.debug(`simulator resetting baseConcentration to ${this.baseConcentration}, targetMaskFF to ${this.targetMaskFF}`)
+            this.lastCommandTimeMs = Date.now()
         }
 
         this.baseConcentration += Math.round(Math.random() * 200)
@@ -251,7 +252,7 @@ export class PortaCount8020Simulator {
                 break;
             }
             default: {
-                console.debug(`echoing back: ${command}`)
+                // console.debug(`echoing back: ${command}`)
                 this.sendResponse(`${command}\n`)
             }
         }

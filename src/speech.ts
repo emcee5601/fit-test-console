@@ -80,7 +80,7 @@ export const SPEECH = new class {
         if (!this.speechEnabled) {
             return;
         }
-        console.log(`say it later: ${message}`)
+        // console.log(`say it later: ${message}`)
         const utterThis = new SpeechSynthesisUtterance(message);
         utterThis.voice = this.selectedVoice;
         utterThis.rate = this.speechRate;

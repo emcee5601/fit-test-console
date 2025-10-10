@@ -12,7 +12,7 @@ export const useWakeLock = () => {
     const wakeLock = useRef<WakeLockSentinel | null>(null)
 
     async function requestWakeLock() {
-        console.debug("requestWakeLock()")
+        // console.debug("requestWakeLock()")
         if (wakeLock.current === null && document.visibilityState === 'visible') {
             try {
                 wakeLock.current = await navigator.wakeLock.request('screen')
@@ -20,7 +20,7 @@ export const useWakeLock = () => {
                 console.warn(error)
             }
         } else {
-            console.debug("not visible or already have a wakelock")
+            // console.debug("not visible or already have a wakelock")
         }
     }
 

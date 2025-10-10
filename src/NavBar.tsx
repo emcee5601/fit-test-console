@@ -1,37 +1,119 @@
-import {NavLink, useLocation, useNavigate} from "react-router";
-import {useWakeLock} from "./use-wake-lock.ts";
-import {EventTimeWidget} from "src/EventTimeWidget.tsx";
-import {CurrentParticipantTimeWidget} from "src/CurrentParticipantTimeWidget.tsx";
-import {useSetting} from "src/use-setting.ts";
-import {SampleSourceWidget} from "src/SampleSourceWidget.tsx";
-import {ControlSourceWidget} from "src/ControlSourceWidget.tsx";
-import {PortaCountCommandWidget} from "src/PortaCountCommandWidget.tsx";
-import {DriverSelectorWidget} from "src/DriverSelectorWidget.tsx";
-import {ActionMenuWidget, SelectOption} from "src/ActionMenuWidget.tsx";
-import {IoMdArrowDropdown} from "react-icons/io";
-import {CurrentActivityWidget} from "src/CurrentActivityWidget.tsx";
-import {PortaCountLastLineWidget} from "src/PortaCountLastLineWidget.tsx";
-import {ReactNode, useEffect, useRef, useState} from "react";
-import {ColorSchemeSwitcher} from "src/ColorSchemeSwitcher.tsx";
+import {useEffect, useRef, useState} from "react";
+import {Location, NavigateFunction, useLocation, useNavigate} from "react-router";
+import {SelectOption} from "src/ActionMenuWidget.tsx";
 import {AppSettings} from "src/app-settings-types.ts";
+import {ColorSchemeSwitcher} from "src/ColorSchemeSwitcher.tsx";
+import {CurrentParticipantTimeWidget} from "src/CurrentParticipantTimeWidget.tsx";
+import {EventTimeWidget} from "src/EventTimeWidget.tsx";
+import {MenuWidget} from "src/MenuWidget.tsx";
+import {SettingsWidget} from "src/SettingsWidget.tsx";
+import {useSetting} from "src/use-setting.ts";
+import {isMobile} from "src/utils.ts";
+import {useWakeLock} from "./use-wake-lock.ts";
 
 
 type NavBarState = "full-width" | "time-icons" | "2-lines" | "dropdown-tabs"
 
+const _touchEvents = ["touchstart", "touchend", "touchcancel", "touchmove"] as const;
+type TouchEventType = typeof _touchEvents[number];
+
+type Point = { x: number, y: number };
+
+class TouchListener implements EventListenerObject {
+    private touchStartPoint: Point | null;
+    private readonly links: SelectOption[];
+    private readonly location: Location;
+    private readonly navigate: NavigateFunction;
+
+    constructor(links: SelectOption[], location: Location, navigate: NavigateFunction) {
+        this.touchStartPoint = null;
+        this.links = links;
+        this.location = location;
+        this.navigate = navigate;
+    }
+
+    handleEvent(event: TouchEvent) {
+        const touchEvent = event
+        const minDragDistancePercentage = 50;
+        const minDragDistance = window.outerWidth * minDragDistancePercentage / 100.0;
+        const maxDistanceFromEdge = 10;
+        switch (touchEvent.type) {
+            case "touchstart": {
+                // console.log("touch start", touchEvent, "width:", window.innerWidth, " outerwidth:",
+                // window.outerWidth)
+                const item = touchEvent.targetTouches.item(0);
+                if (item) {
+                    if (item.clientX < maxDistanceFromEdge || item.clientX > window.outerWidth - maxDistanceFromEdge) {
+                        // we only want edge swipes
+                        this.touchStartPoint = {x: item.clientX, y: item.clientY}
+                    } else {
+                        this.touchStartPoint = null; // ignore touch start too far from edge
+                    }
+                }
+                break;
+            }
+            case "touchend": {
+                // console.log("touch end", touchEvent)
+                if (!this.touchStartPoint) {
+                    return
+                }
+                const item = touchEvent.changedTouches.item(0);
+                if (!item) {
+                    return
+                }
+                const endPoint: Point = {x: item.clientX, y: item.clientY}
+
+                const currentPath = this.location.pathname;
+                const index = this.links.findIndex((value) => value.value === currentPath);
+                // console.debug("current path is", currentPath)
+
+                if (endPoint.x > this.touchStartPoint.x + minDragDistance) {
+                    console.debug("swiped right ->")
+                    if (index > -1) {
+                        this.navigate(this.links[(this.links.length + index - 1) % this.links.length].value)
+                    }
+                }
+                if (endPoint.x < this.touchStartPoint.x - minDragDistance) {
+                    console.debug("swiped left <-")
+                    if (index > -1) {
+                        this.navigate(this.links[(index + 1) % this.links.length].value)
+                    }
+                }
+                if (endPoint.y > this.touchStartPoint.y + minDragDistance) {
+                    console.debug("swiped down V")
+                }
+                if (endPoint.y < this.touchStartPoint.y - minDragDistance) {
+                    console.debug("swiped up ^")
+                }
+                break;
+            }
+            case "touchmove":
+                break;
+            case "touchcancel":
+                break;
+        }
+    }
+}
+
 export function NavBar() {
     const [showParticipantTime] = useSetting<boolean>(AppSettings.SHOW_ELAPSED_PARTICIPANT_TIME)
     const [showEventTime] = useSetting<boolean>(AppSettings.SHOW_REMAINING_EVENT_TIME)
-    const [compactUi] = useSetting<boolean>(AppSettings.USE_COMPACT_UI)
-    const [enableProtocolEditor] = useSetting<boolean>(AppSettings.ENABLE_PROTOCOL_EDITOR)
-    const [enableStats] = useSetting<boolean>(AppSettings.ENABLE_STATS);
-    const [enableQrCodeScanner] = useSetting<boolean>(AppSettings.ENABLE_QR_CODE_SCANNER)
     const navigate = useNavigate();
-    const location = useLocation();
+    const location: Location = useLocation();
     const ref = useRef<HTMLDivElement>(null)
     const [navBarState, setNavBarState] = useState<NavBarState>("full-width");
     const [prevWidth, setPrevWidth] = useState<number>(0)
     const [useIcons, setUseIcons] = useState<boolean>(false)
-    const [useDropdownTabs, setUseDropdownTabs] = useState<boolean>(false)
+
+    useEffect(() => {
+        const touchListener = new TouchListener(navLinks, location, navigate)
+
+        const touchEvents: TouchEventType[] = [..._touchEvents]
+        touchEvents.forEach((event) => window.addEventListener(event, touchListener));
+        return () => {
+            touchEvents.forEach((event) => window.removeEventListener(event, touchListener));
+        }
+    }, [location]);
 
     useEffect(() => {
         const resizeObserver = new ResizeObserver(([entry]) => {
@@ -52,7 +134,9 @@ export function NavBar() {
         // on mobile, we don't get resize events so need to re-calculate from the start.
         const listener = () => setNavBarState("full-width")
         screen.orientation.addEventListener("change", listener);
-        return () => {screen.orientation.removeEventListener("change", listener);}
+        return () => {
+            screen.orientation.removeEventListener("change", listener);
+        }
     }, []);
 
     useWakeLock()
@@ -61,6 +145,10 @@ export function NavBar() {
         {
             label: "Home",
             value: "/"
+        },
+        {
+            label: "Test",
+            value: "/test",
         },
         {
             label: "Results",
@@ -74,38 +162,27 @@ export function NavBar() {
             label: "Settings",
             value: "/settings"
         },
+        {
+            label: "Protocols",
+            value: "/protocols"
+        },
+        {
+            label: "Stats",
+            value: "/stats"
+        },
+        {
+            label: "QR Code",
+            value: "/qrscanner"
+        },
+        {
+            label: "Daily Checks",
+            value: "/daily-checks"
+        },
+        {
+            label: "Bookmarks",
+            value: "/bookmarks"
+        }
     ];
-    if (enableProtocolEditor) {
-        navLinks.push(
-            {
-                label: "Protocols",
-                value: "/protocols"
-            }
-        )
-    }
-    if (enableStats) {
-        navLinks.push(
-            {
-                label: "Stats",
-                value: "/stats"
-            }
-        )
-    }
-    if (enableQrCodeScanner) {
-        navLinks.push({
-                label: "QR Code",
-                value: "/qrscanner"
-            }
-        )
-    }
-    navLinks.push({
-        label: "Daily Checks",
-        value: "/daily-checks"
-    })
-    navLinks.push({
-        label: "Bookmarks",
-        value: "/bookmarks"
-    })
 
 
     function resizeAsNecessary(entry: ResizeObserverEntry) {
@@ -122,13 +199,17 @@ export function NavBar() {
          */
         switch (navBarState) {
             case "full-width":
+                if (isMobile()) {
+                    console.debug("mobile mode")
+                    setUseIcons(true)
+                    break;
+                }
                 // should have 1 line
                 if (numLines > 1) {
                     // width narrowed
                     setNavBarState("2-lines")
                 }
                 setUseIcons(false)
-                setUseDropdownTabs(false)
                 break;
             case "2-lines":
                 // should have 2 lines
@@ -139,7 +220,6 @@ export function NavBar() {
                     setNavBarState("time-icons")
                 }
                 setUseIcons(false)
-                setUseDropdownTabs(false)
                 break;
             case "time-icons":
                 // probably can merge this into dropdown-tabs state
@@ -150,7 +230,6 @@ export function NavBar() {
                     setNavBarState("dropdown-tabs")
                 }
                 setUseIcons(true)
-                setUseDropdownTabs(false)
                 break;
             case "dropdown-tabs":
                 if (numLines < 2 && isWidening) {
@@ -158,13 +237,13 @@ export function NavBar() {
                     setNavBarState("time-icons")
                 }
                 setUseIcons(true)
-                setUseDropdownTabs(true)
                 break;
             default:
                 // ignore
                 break;
         }
-        // console.debug(`navBarState: ${navBarState}, prevWidth: ${prevWidth}, new width: ${computedStyle.width}, isWidening? ${isWidening}, numLines: ${numLines}`)
+        // console.debug(`navBarState: ${navBarState}, prevWidth: ${prevWidth}, new width: ${computedStyle.width},
+        // isWidening? ${isWidening}, numLines: ${numLines}`)
         setPrevWidth(parseFloat(computedStyle.width))
     }
 
@@ -173,56 +252,12 @@ export function NavBar() {
              ref={ref}
              className={"nav-bar"}>
             <ColorSchemeSwitcher/>
+            <MenuWidget options={navLinks}/>
             <CurrentParticipantTimeWidget style={{visibility: showParticipantTime ? "visible" : "hidden"}}
                                           useIcons={useIcons}/>
-            <div id={"nav-links-container"} className={"inline-flex"}
-                 style={{gap: "0.3em", flexWrap: "wrap", justifyContent: "center"}}>
-                <div>v{__APP_VERSION__}{import.meta.env.MODE[0]}</div>
-                {useDropdownTabs
-                    ? <div>
-                        <ActionMenuWidget
-                            options={navLinks}
-                            value={location.pathname}
-                            onChange={(destination) => navigate(destination)}>
-                            <div
-                                className={"blue-bg thin-border svg-container inline-flex no-wrap"}>{navLinks.find((value) => value.value === location.pathname)?.label}<IoMdArrowDropdown/>
-                            </div>
-                        </ActionMenuWidget>
-                    </div>
-                    : <div style={{gap: "0.1em", display:"flex", flexWrap:"wrap"}}>
-                        {navLinks.reduce((result: ReactNode[], option) => {
-                            if (result.length > 0) {
-                                result.push("|")
-                            }
-                            result.push(<NavLink key={option.label} to={option.value} className={({
-                                isActive,
-                                isPending
-                            }) => isPending ? "nav-link-pending" : isActive ? "nav-link-active" : ""}>
-                                <div className={"no-wrap"}>{option.label}</div>
-                            </NavLink>)
-                            return result;
-                        }, [])}
-                    </div>
-                }
-                <div id="compact-ui" className={"inline-flex"}
-                     style={{
-                         width: 'fit-content',
-                         gap: "0.3em",
-                         alignItems: "center",
-                         height: "inherit",
-                         flexWrap: "wrap",
-                         justifyContent: "center"
-                     }}>
-                    {compactUi && <DriverSelectorWidget compact={true}/>}
-                    <ControlSourceWidget/>
-                    <SampleSourceWidget/>
-                    {compactUi && <PortaCountCommandWidget compact={true}/>}
-                    {compactUi && <CurrentActivityWidget label={""}/>}
-                    {compactUi && <PortaCountLastLineWidget label={""}/>}
-                </div>
-            </div>
+            <div>v{__APP_VERSION__}{import.meta.env.MODE[0]}</div>
             <EventTimeWidget style={{visibility: showEventTime ? "visible" : "hidden"}} useIcons={useIcons}/>
-            {/*<NewSettingsNotifier/> this interferes with browser detection redirect, since this also redirects*/}
+            <SettingsWidget/>
         </div>
     )
 }

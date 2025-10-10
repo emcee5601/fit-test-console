@@ -25,6 +25,7 @@ export interface SimpleResultsDBRecord {
     ProtocolName?: string,
     TestController?: ControlSource,
     DataSource?: DataSource,
+    DeviceID?: string,
     ParticleCounts?: ParticleCount[],
     [key: string]: string | number | undefined | ParticleCount[],
 }
@@ -56,19 +57,22 @@ class SimpleResultsDB extends AbstractDB {
      * Inserts an empty record into the database. This generates a new ID for the record.
      * Return the json representation of the data that was inserted. Includes the generated primary key.
      */
-    async createNewTest(timestamp: string, protocolName: string, testController: ControlSource, dataSource: DataSource): Promise<SimpleResultsDBRecord> {
+    async createNewTest(timestamp: string, protocolName: string, testController: ControlSource, dataSource: DataSource, deviceId?: string): Promise<SimpleResultsDBRecord> {
         const transaction = this.openTransactionClassic("readwrite");
         if (!transaction) {
             console.log("database not ready");
             return new Promise((_resolve, reject) => reject(`${this.dbName} database not ready`));
         }
 
-        const record = {
+        const record: Partial<SimpleResultsDBRecord> = {
             Time: timestamp,
             ProtocolName: protocolName,
             TestController: testController,
-            DataSource: dataSource
+            DataSource: dataSource,
         };
+        if(deviceId) {
+            record.DeviceID = deviceId;
+        }
         const request = transaction?.objectStore(SimpleResultsDB.TEST_RESULTS_OBJECT_STORE).add(record);
         return new Promise((resolve, reject) => {
             request.onerror = (event) => {
@@ -79,7 +83,8 @@ class SimpleResultsDB extends AbstractDB {
             request.onsuccess = (event) => {
                 console.log(`createNewTest request complete: ${event}, new key is ${request.result}`);
                 // TODO: fetch the whole record and return that instead of constructing this by hand?
-                resolve({ ...record, ID: Number(request.result)});
+                record.ID = Number(request.result)
+                resolve(record as SimpleResultsDBRecord);
             }
         });
     }

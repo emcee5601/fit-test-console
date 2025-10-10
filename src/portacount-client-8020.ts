@@ -4,11 +4,15 @@ import {ExternalController, ExternalControlResponsePatterns} from "./external-co
 import {formatDuration} from "src/utils.ts";
 import {
     Activity,
-    ConnectionStatus, ControlSource,
+    ConnectionStatus,
+    ControlSource,
     DataTransmissionState,
     PortaCountState,
     SampleSource
 } from "src/portacount/porta-count-state.ts";
+import {BaudRateDetector} from "src/baud-rate-detector.ts";
+import {AppSettings} from "src/app-settings-types.ts";
+import {APP_SETTINGS_CONTEXT} from "src/app-settings.ts";
 
 
 const Patterns = class {
@@ -239,11 +243,13 @@ export class PortaCountClient8020 {
     private _settings: PortaCountSettings = new PortaCountSettings()
     private _baudRate: number = 1200;
     private _syncOnConnect: boolean = false;
+    private readonly baudRateDetector: BaudRateDetector;
 
     constructor() {
         console.log("PortaCountClient8020 constructor called")
         this._externalController = new ExternalController(this)
         this.addListener(this.stateUpdatingListener) // todo: directly update state? since it's internal anyway?
+        this.baudRateDetector = new BaudRateDetector()
     }
 
     get baudRate(): number {
@@ -282,6 +288,7 @@ export class PortaCountClient8020 {
     private readonly stateUpdatingListener: PortaCountListener = {
         // TODO: refactor this. listening to self is kinda weird.
         connectionStatusChanged: (connectionStatus: ConnectionStatus) => {
+            APP_SETTINGS_CONTEXT.saveSetting(AppSettings.CONNECTION_STATUS, connectionStatus);
             this.state.connectionStatus = connectionStatus;
         },
         controlSourceChanged: (source: ControlSource) => {
@@ -301,11 +308,12 @@ export class PortaCountClient8020 {
     private async monitor(reader: ReadableStreamDefaultReader<Uint8Array>) {
         this.dispatch(new ConnectionStatusChangedEvent(ConnectionStatus.WAITING))
         for await (const line of getLines(reader)) {
-            // todo: remove non-printable characters from line. sometimes these are received and mess up the parsing.
-            // usually they are leading characters
             if (this.state.connectionStatus === ConnectionStatus.WAITING) {
+                // TODO: look at AppSettings.CONNECTION_STATUS instead? or wrap the status check in a util function
                 this.dispatch(new ConnectionStatusChangedEvent(ConnectionStatus.RECEIVING))
             }
+            // todo: remove non-printable characters from line. sometimes these are received and mess up the parsing.
+            // usually they are leading characters
             if (line.trim().length > 0) {
                 // we only care about non-empty lines
                 this.dispatch(new LineReceivedEvent(line));
@@ -649,10 +657,18 @@ export class PortaCountClient8020 {
             }
         } else {
             console.debug("portacount client connect not connected, attempting to connect...")
-            port.open({baudRate: Number(this.baudRate)}).then(() => {
-                console.log(`port opened: ${JSON.stringify(port.getInfo())}`)
-                this.connect(port)
-            })
+
+            if (APP_SETTINGS_CONTEXT.getSetting(AppSettings.AUTO_DETECT_BAUD_RATE) && port.readable) {
+                this.baudRateDetector.openPortWithAutoDetectedBaudRate(port).then(() => {
+                    this.connect(port)
+                }).catch((err) => {console.log(err)})
+            } else {
+
+                port.open({baudRate: Number(this.baudRate)}).then(() => {
+                    console.log(`port opened: ${JSON.stringify(port.getInfo())}`)
+                    this.connect(port)
+                })
+            }
         }
     }
 

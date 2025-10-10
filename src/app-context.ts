@@ -10,16 +10,17 @@ import {DataCollector, DataCollectorListener} from "./data-collector.ts";
 import {SPEECH} from "./speech.ts";
 import {RESULTS_DB, SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 import {RAW_DB} from "./database.ts";
-import {ProtocolExecutor, ProtocolExecutorListener} from "./protocol-executor.ts";
+import {ProtocolExecutor} from "./protocol-executor.ts";
 import {PortaCount8020Simulator} from "./porta-count-8020-simulator.ts";
 import {UsbSerialDrivers} from "./web-usb-serial-drivers.ts";
 import {DataSource} from "./data-source.ts";
 import {timingSignal} from "src/timing-signal.ts";
-import {enCaseInsensitiveCollator} from "src/utils.ts";
+import {enCaseInsensitiveCollator, normalizeMaskName} from "src/utils.ts";
 import {ProtocolDefaults, StandardProtocolDefinition, StandardStageDefinition} from "src/simple-protocol.ts";
 import {defaultConfigManager} from "src/config/config-context.tsx";
 import {AppSettings, AppSettingsDefaults} from "src/app-settings-types.ts";
 import {Activity, ConnectionStatus} from "src/portacount/porta-count-state.ts";
+import {ProtocolExecutorListener} from "src/protocol-executor/protocol-executor-listener.ts";
 
 /**
  * Global context.
@@ -42,7 +43,7 @@ function initSpeech() {
     SPEECH.synth.getVoices() // ignore. this forces speech to initialize
     SPEECH.setSpeechEnabled(settings.getSetting(AppSettings.SPEECH_ENABLED))
     const voice = SPEECH.findVoiceByName(settings.getSetting(AppSettings.SPEECH_VOICE));
-    if(voice) {
+    if (voice) {
         SPEECH.setSelectedVoice(voice)
     }
 
@@ -189,8 +190,10 @@ async function scanHistoricalResults() {
         }
     }
 
+    const normalizeMaskNames = settings.getSetting(AppSettings.NORMALIZE_MASK_LIST_NAMES)
+
     return RESULTS_DB.getData().then((results) => {
-        const dbMasks = deduplicateValues(results.map((record) => record.Mask as string))
+        const dbMasks = deduplicateValues(results.map((record) => normalizeMaskNames ? normalizeMaskName(record.Mask as string) : record.Mask as string))
         const dbTestNotes = deduplicateValues(results.map((record) => record.Notes as string))
         const todayDbParticipants = deduplicateValues(results
             .filter((record) => isToday(record.Time))
@@ -252,7 +255,8 @@ function initMaskListUpdator() {
     // update the mask list when a new test is started
     const maskListUpdater: DataCollectorListener = {
         newTestStarted(data: SimpleResultsDBRecord) {
-            const mask = cleanString(data.Mask)
+            const normalizeMaskNames = settings.getSetting<boolean>(AppSettings.NORMALIZE_MASK_LIST_NAMES)
+            const mask = normalizeMaskNames ? normalizeMaskName(data.mask as string) : cleanString(data.Mask)
             if (!mask) {
                 return; // no mask was specified
             }
@@ -336,7 +340,7 @@ async function init() {
 // support functions
 function cleanString(mask: string | undefined) {
     // clean up mask names
-    return ((mask as string) ?? "").replaceAll(/\s+/g, ' ');
+    return ((mask as string) ?? "").replaceAll(/\s+/g, ' ').trim();
 }
 
 function deduplicateValues(rawValues: string[]) {

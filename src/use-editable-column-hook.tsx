@@ -1,14 +1,15 @@
 import {CellContext, RowData} from "@tanstack/react-table";
-import React, {useCallback, useContext, useEffect} from "react";
+import React, {useCallback, useContext, useEffect, useRef} from "react";
 import {useInView} from "react-intersection-observer";
 import {numberInputClasses, Unstable_NumberInput as NumberInput} from "@mui/base/Unstable_NumberInput";
 import {useTheme} from '@mui/system';
 import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
-import {convertFitFactorToFiltrationEfficiency, getColorForFitFactor, getFitFactorCssClass} from "src/utils.ts";
+import {convertFitFactorToFiltrationEfficiency, getFitFactorCssClass} from "src/utils.ts";
 import {AppContext} from "src/app-context.ts";
 import {SmartTextArea} from "src/SmartTextArea.tsx";
 import {MaskSelectorWidget} from "src/MaskSelectorWidget.tsx";
 import {ControlSource, SampleSource} from "src/portacount/porta-count-state.ts";
+import {useScoreBasedColors} from "src/use-score-based-colors.ts";
 
 declare module '@tanstack/react-table' {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -34,6 +35,7 @@ export function useEditableExerciseResultColumn<T extends SimpleResultsDBRecord,
     const initialValue = getValue()
     // We need to keep and update the state of the cell normally
     const [value, setValue] = React.useState<V>(initialValue)
+    const divRef = useRef<HTMLDivElement>(null);
 
     /**
      * Since we're using DebouncedInput, we'll get an update event quickly. This happen before the component
@@ -63,10 +65,14 @@ export function useEditableExerciseResultColumn<T extends SimpleResultsDBRecord,
     const fitFactor = Number(value);
     const efficiencyPercentage = convertFitFactorToFiltrationEfficiency(fitFactor);
     const classes = getFitFactorCssClass(value as string, protocolHasThisManyExercises)
-    const color = getColorForFitFactor(value as string, protocolHasThisManyExercises)
+    useScoreBasedColors(divRef, fitFactor, protocolHasThisManyExercises)
 
     return (
-        <div className={[classes, "table-cell"].join(" ")} style={{width: "100%", display: "inline-flex", flexDirection: "column", backgroundColor: color}}>
+        <div className={[classes, "table-cell"].join(" ")} style={{
+            width: "100%",
+            display: "inline-flex",
+            flexDirection: "column",
+        }} ref={divRef}>
             <div className={"inline-flex"}>
                 {editable
                     ? <SmartTextArea
@@ -115,12 +121,12 @@ export function useEditableColumn<T, V>({
 
     return (
         <SmartTextArea className={"table-cell"}
-            id={`${String(index)}-${id}`}
-            onChangeOnlyOnBlur={true}
-            initialValue={value ? value as string : ""}
-            onChange={v => setValue(v as V)}
-            onBlur={onBlur}
-            placeholder={`Click to add ${id}`}
+                       id={`${String(index)}-${id}`}
+                       onChangeOnlyOnBlur={true}
+                       initialValue={value ? value as string : ""}
+                       onChange={v => setValue(v as V)}
+                       onBlur={onBlur}
+                       placeholder={`Click to add ${id}`}
         ></SmartTextArea>
     )
 }
@@ -146,7 +152,8 @@ export function useEditableMaskColumn<T, V>({
     // console.debug(`normalizing ${value} => ${normalizeMaskName(value as string)}`)
 
     return (
-        <MaskSelectorWidget id={String(index)} className={"table-cell"} value={(value as string) ?? ""} onChange={(v) => onChange(v)}/>
+        <MaskSelectorWidget id={String(index)} className={"table-cell"} value={(value as string) ?? ""}
+                            onChange={(v) => onChange(v)}/>
     )
 }
 

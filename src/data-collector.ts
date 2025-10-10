@@ -1,10 +1,10 @@
-/*
-Collect data from PortaCount 8020a
+/**
+ * Collect data from PortaCount 8020
  */
 
-// data output patterns
+import {AppSettings} from "src/app-settings-types.ts";
+import {ProtocolExecutionState} from "src/protocol-execution-state.ts";
 import {SPEECH} from "./speech.ts";
-import React from "react";
 import {
     FitFactorResultsEvent,
     ParticleConcentrationEvent,
@@ -14,7 +14,6 @@ import {
 import {RESULTS_DB, SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 import {InstructionOrStage} from "./simple-protocol.ts";
 import {APP_SETTINGS_CONTEXT} from "./app-settings.ts";
-import {FitFactorEstimator} from "./fit-factor-estimator.ts";
 import {
     CurrentTestUpdatedEvent,
     DataCollectorEvent,
@@ -31,6 +30,7 @@ import {
 import {RAW_DB} from "./database.ts";
 import {DataSource} from "./data-source.ts";
 import {ControlSource, DataTransmissionState, SampleSource} from "src/portacount/porta-count-state.ts";
+import {formatFitFactor} from "src/utils.ts";
 
 
 export interface DataCollectorListener {
@@ -73,16 +73,13 @@ export class DataCollector {
     private _rawLines: string = "";
     private _processedData: string = "";
     private _logLines: string = "";
-    private _fitFactorEstimator: FitFactorEstimator;
     private _dataSource: DataSource = DataSource.NotInitialized;
-
+    private portaCountClient: PortaCountClient8020 | null = null;
 
     constructor() {
         this.settings = APP_SETTINGS_CONTEXT; // can't take this from appContext because appContext refers to data
                                               // collector (this)
         this.resultsDatabase = RESULTS_DB;
-        this._fitFactorEstimator = new FitFactorEstimator(this)
-        this.fitFactorEstimator.resetChart();
     }
 
     get saveLinesToDb(): boolean {
@@ -96,15 +93,6 @@ export class DataCollector {
     get dataSource(): DataSource {
         return this._dataSource;
     }
-
-    get fitFactorEstimator(): FitFactorEstimator {
-        return this._fitFactorEstimator;
-    }
-
-    set fitFactorEstimator(value: FitFactorEstimator) {
-        this._fitFactorEstimator = value;
-    }
-
 
     get rawLines() {
         return this._rawLines
@@ -144,6 +132,7 @@ export class DataCollector {
         }
         const selectedProtocol = this.settings.selectedProtocol;
         const protocolInstructionSet: InstructionOrStage[] = this.settings.getProtocolDefinition(selectedProtocol)
+        // todo: search for the correct stage. This only works for protocols where all stages have exercises.
         const instructionsOrStageInfo = protocolInstructionSet[exerciseNum - 1];
         const instructions = typeof instructionsOrStageInfo === "object"
             ? ("instructions" in instructionsOrStageInfo
@@ -155,13 +144,18 @@ export class DataCollector {
             // We don't know the number of exercises the portacount will run. Just assume the currently selected
             // protocol matches the portacount setting. So if there are no more instructions for this exercise num,
             // assume we're done.
-            this.setInstructions(`Perform exercise ${exerciseNum}: ${instructions}`);
+            this.setInstructions(`Begin exercise ${exerciseNum}: ${instructions}`);
         }
     }
 
-    recordTestComplete() {
+    recordTestComplete(finalScore?: number) {
+        if (finalScore !== undefined) {
+            this.recordExerciseResult("Final", finalScore)
+            this.setInstructions(`Test completed; final score: ${formatFitFactor(finalScore)}`)
+        }
+
         const fun = () => {
-            console.log(`test complete, id ${this.currentTestData?.ID}`)
+            console.log(`test complete, id ${this.currentTestData?.ID}, final score ${finalScore}`);
             this.previousTestData = this.currentTestData
             this.currentTestData = null; // flag done
         };
@@ -206,7 +200,8 @@ export class DataCollector {
         const newTestData = await this.resultsDatabase.createNewTest(timestamp,
             this.settings.selectedProtocol,
             controlSource,
-            controlSource === ControlSource.Manual ? DataSource.Manual : this.dataSource);
+            controlSource === ControlSource.Manual ? DataSource.Manual : this.dataSource,
+            this.portaCountClient?.settings.serialNumber);
         this.currentTestData = newTestData;
 
         const testTemplate = this.settings.getTestTemplate()
@@ -228,7 +223,6 @@ export class DataCollector {
 
         console.log(`new test added: ${JSON.stringify(this.currentTestData)}`)
         this.dispatch(new NewTestStartedEvent(newTestData))
-        this.dispatch(new CurrentTestUpdatedEvent(newTestData))
     }
 
     recordExerciseResult(exerciseNum: number | string, ff: number) {
@@ -407,6 +401,11 @@ export class DataCollector {
             this.appendToProcessedData(`\nStarting a new test. ${new Date(timestamp).toLocaleString()}\n`);
             this.setInstructionsForExercise(1);
             this.inProgressTestPromiseChain = this.recordTestStart(ControlSource.Internal, new Date(timestamp).toLocaleString());
+            const now = Date.now();
+            this.settings.saveSetting(AppSettings.PROTOCOL_START_TIME, now);
+            this.settings.saveSetting(AppSettings.STAGE_START_TIME, now);
+            this.settings.saveSetting(AppSettings.CURRENT_STAGE_INDEX, 0);
+            this.settings.saveSetting<ProtocolExecutionState>(AppSettings.PROTOCOL_EXECUTION_STATE, "Executing"); // todo: use a separate state from protocol executor
         },
 
         controlSourceChanged: (source: ControlSource) => {
@@ -423,6 +422,11 @@ export class DataCollector {
                 this.appendToProcessedData(`Exercise ${exerciseNum}: Fit factor is ${ff}. Result: ${result}\n`)
                 this.setInstructionsForExercise(exerciseNum + 1);
                 SPEECH.sayItLater(`Score was ${ff}`)
+                // switch to Executing every time we get these in case we plug the device in midway through a test
+                this.settings.saveSetting<ProtocolExecutionState>(AppSettings.PROTOCOL_EXECUTION_STATE, "Executing");
+                // todo: look through the current protocol and find the correct next stage (or none if done, but don't go to idle)
+                this.settings.saveSetting(AppSettings.CURRENT_STAGE_INDEX, exerciseNum+1);
+                this.settings.saveSetting(AppSettings.STAGE_START_TIME, Date.now());
             } else {
                 // test finished
                 this.appendToProcessedData(`\nTest complete. ${result} with FF of ${ff}\n`);
@@ -430,6 +434,7 @@ export class DataCollector {
                 this.appendToLog(JSON.stringify(this.currentTestData) + "\n");
                 this.recordTestComplete();
                 SPEECH.sayItLater(`Final score was ${ff}`)
+                this.settings.saveSetting<ProtocolExecutionState>(AppSettings.PROTOCOL_EXECUTION_STATE, "Idle");
             }
         },
 
@@ -438,6 +443,7 @@ export class DataCollector {
             // this.setInstructions("Breathe normally");
             this.recordTestAborted();
             this.recordTestComplete()
+            this.settings.saveSetting<ProtocolExecutionState>(AppSettings.PROTOCOL_EXECUTION_STATE, "Idle");
         },
 
         particleConcentrationReceived: (event: ParticleConcentrationEvent) => {
@@ -452,13 +458,9 @@ export class DataCollector {
                     return
                 }
                 const concentration = event.concentration;
-                const timestamp = event.timestamp;
                 if (this.controlSource === ControlSource.External) {
                     this.appendToProcessedData(`${this.sampleSource}: ${concentration}\n`)
                 }
-
-                // TODO: timestamp should always be present. check this
-                this.fitFactorEstimator.processConcentration(concentration, timestamp ? new Date(timestamp) : new Date())
             }
             this.chain(fun)
         }
@@ -476,6 +478,7 @@ export class DataCollector {
     }
 
     setPortaCountClient(portaCountClient: PortaCountClient8020) {
+        this.portaCountClient = portaCountClient;
         portaCountClient.addListener(this.portaCountListener)
     }
 }

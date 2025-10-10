@@ -2,7 +2,7 @@ import {IDetectedBarcode, Scanner} from "@yudiel/react-qr-scanner";
 import {useState} from "react";
 import {BooleanToggleButton} from "src/ToggleButton.tsx";
 
-export default function QRScanner() {
+export function QRScanner() {
     const [scannedPayloads, setScannedPayloads] = useState<string[]>([])
     const [enabled, setEnabled] = useState<boolean>(false)
 

@@ -1,0 +1,47 @@
+.settings-button {
+    cursor: pointer;
+    font-size: 1.5em;
+}
+
+.settings-overlay {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: 0.2s opacity ease-in-out;
+}
+
+.settings-nav {
+    position: absolute;
+    top: 2em;
+    right: 0;
+    width: 80vw;
+    max-height: 90vh;
+    overflow-y: scroll;
+    padding-inline: 1em;
+    opacity: 1;
+    background-color: lightgrey;
+    transform: translateX(100%);
+    will-change: transform;
+    transition: 0.2s transform linear;
+    z-index: 10;
+}
+
+.settings-toggle-menu {
+    appearance: none;
+
+    &:checked {
+        ~ .settings-nav {
+            transform: translateX(0);
+        }
+
+        ~ .settings-overlay {
+            pointer-events: initial;
+            opacity: 1;
+            z-index: 1;
+        }
+    }
+}

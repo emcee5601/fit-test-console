@@ -3,7 +3,7 @@ import {useNavigate, useSearchParams} from "react-router";
 import {useEffect, useState} from "react";
 import {RESULTS_DB, SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 import {getStoredData, importRecords} from "./results-transfer-util.ts";
-import {ResultsTable} from "src/lazy-components.ts";
+import {ResultsTable} from "src/ResultsTable.tsx";
 
 export function ResultViewer() {
     const [results, setResults] = useState<SimpleResultsDBRecord[]>([])

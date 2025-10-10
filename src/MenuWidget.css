@@ -1,0 +1,48 @@
+.header-menu-button {
+    cursor: pointer;
+    font-size: 1.5em;
+}
+
+.header-menu-overlay {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: 0.2s opacity ease-in-out;
+}
+
+.header-nav {
+    position: absolute;
+    top: 1em;
+    left: 0;
+    width: fit-content;
+    max-height: 90vh;
+    overflow-y: scroll;
+    font-size: 1.5em;
+    padding-inline: 1em;
+    opacity: 1;
+    background-color: lightgrey;
+    transform: translateX(-100%);
+    will-change: transform;
+    transition: 0.2s transform linear;
+    z-index: 10;
+}
+
+.header-toggle-menu {
+    appearance: none;
+
+    &:checked {
+        ~ .header-nav {
+            transform: translateX(0);
+        }
+
+        ~ .header-menu-overlay {
+            pointer-events: initial;
+            opacity: 1;
+            z-index: 1;
+        }
+    }
+}

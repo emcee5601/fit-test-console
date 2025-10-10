@@ -102,7 +102,7 @@ export class ExternalController {
                             cleanup()
                             // we can continue
                             resolve()
-                            console.debug(`received expected response to command '${command}'`)
+                            // console.debug(`received expected response to command '${command}'`)
                         } else if(line.startsWith("E")) {
                             console.debug(`got an error response for command ${command}: ${line}`)
                             // got an error
@@ -112,7 +112,7 @@ export class ExternalController {
                     }
                 }
                 const attemptSendCommand = (): void => {
-                    console.debug(`sending command '${command}', expecting '${expectedResponse}' in response, retries remaining ${numRetriesRemaining}`)
+                    // console.debug(`sending command '${command}', expecting '${expectedResponse}' in response, retries remaining ${numRetriesRemaining}`)
                     this.writer!.write(chunk) // catch and reject?
                 }
                 const setUpRetry = (): void => {
@@ -153,7 +153,7 @@ export class ExternalController {
             })
         };
         if (this.commandChain) {
-            console.debug(`chaining command ${command}`)
+            // console.debug(`chaining command ${command}`)
             this.commandChain = this.commandChain.then(fun).catch(() => {
                 // ignore
             });

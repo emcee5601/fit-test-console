@@ -1,25 +1,18 @@
+import {AppSettings, AppSettingsDefaults, AppSettingType, ValidSettings} from "src/app-settings-types.ts";
+import {defaultConfigManager} from "src/config/config-context.tsx";
+import {ConfigListener} from "src/config/config-manager.ts";
+import {getStageDuration} from "src/protocol-executor/utils.ts";
 import {JSONContent} from "vanilla-jsoneditor";
+import {DataSource} from "./data-source.ts";
 import {
     ProtocolDefaults,
     ProtocolDefinitions,
-    StageDefinition,
     StandardizedProtocolDefinitions,
     standardizeProtocolDefinitions,
     StandardProtocolDefinition,
     StandardStageDefinition
 } from "./simple-protocol.ts";
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
-import {DataSource} from "./data-source.ts";
-import {SegmentState} from "./protocol-executor.ts";
-import {ConfigListener, defaultConfigManager} from "src/config/config-context.tsx";
-import {
-    AppSettings,
-    AppSettingsDefaults,
-    AppSettingType,
-    ProtocolSegment,
-    ValidSettings
-} from "src/app-settings-types.ts";
-import {SampleSource} from "src/portacount/porta-count-state.ts";
 
 function isSessionOnlySetting(setting: ValidSettings) {
     return setting.toLowerCase().startsWith("so-")
@@ -31,12 +24,12 @@ export interface SettingsListener {
 }
 
 // todo put these into utils?
-export function isThisAnExerciseSegment(segment: ProtocolSegment) {
-    return segment.source === SampleSource.MASK && segment.state === SegmentState.SAMPLE;
+function isThisAnExerciseStage(stage: StandardStageDefinition) {
+    return stage.mask_sample > 0
 }
 
 export function calculateNumberOfExercises(protocol: StandardProtocolDefinition) {
-    return convertStagesToSegments(protocol).reduce((numExercises: number, segment: ProtocolSegment) => numExercises + (isThisAnExerciseSegment(segment) ? 1 : 0), 0);
+    return protocol.reduce((numExercises: number, stage: StandardStageDefinition) => numExercises + (isThisAnExerciseStage(stage) ? 1 : 0), 0);
 }
 
 // enums as keys doesn't force defaults, but maybe these can be used as keys but the type can be a separate declaration
@@ -52,8 +45,7 @@ export function calculateNumberOfExercises(protocol: StandardProtocolDefinition)
  * - When the cache updates, dispatch an event if the value has changed.
  */
 class AppSettingsContext {
-    private _protocolStages: StageDefinition[] = []; // kept in sync with selected protocol
-    private _protocolSegments: ProtocolSegment[] = []; // kept in sync with protocol stages
+    private _protocolStages: StandardStageDefinition[] = []; // kept in sync with selected protocol
     readonly numExercisesForProtocol: { [key: string]: number } = {}
 
     private _listenerMap: Map<SettingsListener, ConfigListener> = new Map();
@@ -74,33 +66,6 @@ class AppSettingsContext {
                     if (!simulatorEnabled && [DataSource.Simulator, DataSource.SimulatorFile].includes(this.getSetting(AppSettings.SELECTED_DATA_SOURCE))) {
                         // make sure the selected data source is not simulator if we've disabled the simulator
                         this.saveSetting(AppSettings.SELECTED_DATA_SOURCE, AppSettingsDefaults[AppSettings.SELECTED_DATA_SOURCE])
-                    }
-                }
-            }
-        })
-        this.addListener({
-            subscriptions: () => [AppSettings.SHOW_EXTERNAL_CONTROL],
-            settingsChanged: (setting: ValidSettings, showControls: AppSettingType) => {
-                if (setting === AppSettings.SHOW_EXTERNAL_CONTROL) {
-                    if (!showControls) {
-                        // if we're not showing external controls, disable sync state on connect because that requires
-                        // external control
-                        this.saveSetting(AppSettings.SYNC_DEVICE_STATE_ON_CONNECT, false)
-                    }
-                }
-            }
-        })
-        this.addListener({
-            subscriptions: () => [AppSettings.SYNC_DEVICE_STATE_ON_CONNECT],
-            settingsChanged: (setting: ValidSettings, syncOnConnect: AppSettingType) => {
-                if (setting === AppSettings.SYNC_DEVICE_STATE_ON_CONNECT) {
-                    if (syncOnConnect && !this.getSetting(AppSettings.SHOW_EXTERNAL_CONTROL)) {
-                        // we're trying to turn on sync on connect but external control is not enabled. disallow
-                        // (re-disable sync on connect) need to do this in a separate thread? react doesn't seem to
-                        // update itself if we just call saveSetting
-                        setTimeout(() => {
-                            this.saveSetting(AppSettings.SYNC_DEVICE_STATE_ON_CONNECT, false);
-                        }, 200)
                     }
                 }
             }
@@ -156,16 +121,12 @@ class AppSettingsContext {
     /**
      * protocolStages and protocolSegments are kept in sync with selectedProtocol.
      */
-    get protocolStages(): StageDefinition[] {
+    get protocolStages(): StandardStageDefinition[] {
         return this._protocolStages;
     }
 
-    set protocolStages(value: StageDefinition[]) {
+    set protocolStages(value: StandardStageDefinition[]) {
         this._protocolStages = value
-    }
-
-    get protocolSegments(): ProtocolSegment[] {
-        return this._protocolSegments;
     }
 
     get eventEndTime(): Date {
@@ -181,11 +142,7 @@ class AppSettingsContext {
     }
 
     get numExercises(): number {
-        return Math.max(...this.protocolSegments.map((segment) => segment.exerciseNumber ?? 0), 0)
-    }
-
-    set protocolSegments(value: ProtocolSegment[]) {
-        this._protocolSegments = value;
+        return calculateNumberOfExercises(this.protocolStages)
     }
 
     get sayEstimatedFitFactor(): boolean {
@@ -366,7 +323,7 @@ class AppSettingsContext {
      * @param value
      * @private
      */
-    saveSetting(setting: ValidSettings, value: AppSettingType) {
+    saveSetting<T extends AppSettingType>(setting: ValidSettings, value: T) {
         defaultConfigManager.setConfig(setting, value);
     }
 
@@ -377,126 +334,30 @@ class AppSettingsContext {
         if (!protocolStages) {
             return;
         }
-        this.protocolSegments = convertStagesToSegments(protocolStages)
         this.protocolStages = protocolStages;
     }
 
     getProtocolDuration(protocolName: string): number {
         // todo: this should be pre-calculated since these wouldn't change
         const protocolDefinition: StandardStageDefinition[] = this.protocolDefinitions[protocolName] ?? [];
-        const segments: ProtocolSegment[] = convertStagesToSegments(protocolDefinition);
-        return calculateProtocolDuration(segments)
+        return protocolDefinition.reduce((result, stage) =>
+            result + getStageDuration(stage), 0)
     }
 
+    // todo: move protocol functions elsewhere
+    getProtocolTimeRemaining(): number {
+        const protocolName = this.getSetting<string>(AppSettings.SELECTED_PROTOCOL)
+        const currentStageIndex = this.getSetting<number>(AppSettings.CURRENT_STAGE_INDEX);
+        const stageStartTime = this.getSetting<number>(AppSettings.STAGE_START_TIME);
+        const stages: StandardStageDefinition[] = this.protocolDefinitions[protocolName] ?? [];
+        const currentStage = stages[currentStageIndex];
+        const currentStageElapsedMs = Date.now() - stageStartTime
+        const msRemaining = stages.filter((_stage, index) => currentStageIndex < index).reduce((result, stage) => result + 1000*getStageDuration(stage), Math.max(0, 1000*getStageDuration(currentStage) - currentStageElapsedMs))
+        return msRemaining;
+    }
 }
 
 export const APP_SETTINGS_CONTEXT = new AppSettingsContext()
-
-/**
- *
- * @param segments
- * @return protocol duration in seconds
- */
-export function calculateProtocolDuration(segments: ProtocolSegment[]): number {
-    return segments.reduce((totalTime: number, segment: ProtocolSegment) => totalTime + segment.duration, 0)
-}
-
-// todo: keep this private, convert all stages to segments on settings load since these shouldn't change often
-export function convertStagesToSegments(stages: StandardStageDefinition[]): ProtocolSegment[] {
-    const segments: ProtocolSegment[] = []
-    let numExercisesSeen: number | null = null;
-    let currentOffset: number = 0
-
-    stages.forEach((stage: StandardStageDefinition, stageIndex: number) => {
-        let stageOffset: number = 0
-        if (stage.mask_sample > 0) {
-            // increment the exercise number if this stage has a mask sample segment
-            numExercisesSeen = (numExercisesSeen ?? 0) + 1; // increment; 1-based
-        }
-        // this stage's has an exercise num only if it has a mask sample segment. otherwise it has no exercise number
-        // (either a prep or finalize stage)
-        const thisStageExerciseNum = stage.mask_sample > 0 ? numExercisesSeen : null
-
-        // allow any combination of ambient/mask/purge/sample. rely on the protocol standardizer to set these to
-        // coherent values
-
-        // ambient segments
-        if (stage.ambient_purge > 0) {
-            const ambientPurgeSegment: ProtocolSegment = {
-                index: segments.length,
-                stage: stage,
-                stageIndex: stageIndex,
-                exerciseNumber: thisStageExerciseNum,
-                source: SampleSource.AMBIENT,
-                state: SegmentState.PURGE,
-                protocolStartTimeOffsetSeconds: currentOffset,
-                stageStartTimeOffsetSeconds: stageOffset,
-                duration: stage.ambient_purge,
-                data: []
-            };
-            segments.push(ambientPurgeSegment);
-            currentOffset += ambientPurgeSegment.duration;
-            stageOffset += ambientPurgeSegment.duration;
-        }
-
-        if (stage.ambient_sample > 0) {
-            const ambientSampleSegment: ProtocolSegment = {
-                index: segments.length,
-                stage: stage,
-                stageIndex: stageIndex,
-                exerciseNumber: thisStageExerciseNum,
-                source: SampleSource.AMBIENT,
-                state: SegmentState.SAMPLE,
-                protocolStartTimeOffsetSeconds: currentOffset,
-                stageStartTimeOffsetSeconds: stageOffset,
-                duration: stage.ambient_sample,
-                data: []
-            };
-            segments.push(ambientSampleSegment);
-            currentOffset += ambientSampleSegment.duration;
-            stageOffset += ambientSampleSegment.duration;
-        }
-
-        // mask segments
-        if (stage.mask_purge > 0) {
-            const maskPurgeSegment: ProtocolSegment = {
-                index: segments.length,
-                stage: stage,
-                stageIndex: stageIndex,
-                exerciseNumber: thisStageExerciseNum,
-                source: SampleSource.MASK,
-                state: SegmentState.PURGE,
-                protocolStartTimeOffsetSeconds: currentOffset,
-                stageStartTimeOffsetSeconds: stageOffset,
-                duration: stage.mask_purge,
-                data: []
-            };
-            segments.push(maskPurgeSegment);
-            currentOffset += maskPurgeSegment.duration;
-            stageOffset += maskPurgeSegment.duration;
-        }
-
-        if (stage.mask_sample > 0) {
-            const maskSampleSegment: ProtocolSegment = {
-                index: segments.length,
-                stage: stage,
-                stageIndex: stageIndex,
-                exerciseNumber: thisStageExerciseNum,
-                source: SampleSource.MASK,
-                state: SegmentState.SAMPLE,
-                protocolStartTimeOffsetSeconds: currentOffset,
-                stageStartTimeOffsetSeconds: stageOffset,
-                duration: stage.mask_sample,
-                data: []
-            };
-            segments.push(maskSampleSegment);
-            currentOffset += maskSampleSegment.duration;
-        }
-    });
-
-    // console.log(`created segments: ${JSON.stringify(segments)}`);
-    return segments;
-}
 
 
 /**

@@ -74,6 +74,7 @@ body {
     display: flex;
     min-width: 320px;
     min-height: 100vh;
+    background-color: light-dark(white, black);
 }
 
 h1 {
@@ -101,12 +102,21 @@ button:hover {
     transition: background-color 1s ease-in-out;
 }
 
-button:hover.start {
-    background-color: lightgreen;
-}
+.icon-button {
+    transition: background-color 1s ease-in-out;
 
-button:hover.stop {
-    background-color: pink;
+    &.start {
+        background-color: lightgreen;
+    }
+
+    &.stop {
+        background-color: pink;
+    }
+
+    &.disabled {
+        opacity: 0.5;
+        background-color: lightgray;
+    }
 }
 
 button.icon-button {
@@ -173,6 +183,13 @@ div.editable-table-cell {
     /* match svg's height to the line height when next to text to maximize the svg's size*/
     height: 1.5em;
     line-height: 1.5em;
+    display: flex;
+    gap: 0.2em;
+
+    &.icon-button {
+        height: 2em;
+        line-height: 2em;
+    }
 }
 
 .svg-container svg {
@@ -234,22 +251,22 @@ td.results {
 
     &.low-fit-score {
         background-color: darkorange;
-        color: whitesmoke;
+        /*color: whitesmoke;*/
     }
 
     &.moderate-fit-score {
         background-color: yellowgreen;
-        color: black;
+        /*color: black;*/
     }
 
     &.high-fit-score {
         background-color: green;
-        color: whitesmoke
+        /*color: whitesmoke*/
     }
 
     &.very-high-fit-score {
         background-color: darkgreen;
-        color: whitesmoke
+        /*color: whitesmoke*/
     }
 
     &.aborted {
@@ -331,10 +348,10 @@ td.results {
 }
 
 .console-8020 {
-    width: 25ch;
+    width: 21ch;
     height: inherit;
     white-space-collapse: preserve;
-    font-family: "Courier New", monospace;
+    font-family: monospace;
     text-wrap: nowrap;
 
     &:empty:before {
@@ -377,8 +394,9 @@ td.results {
     color: white;
     background-color: blue;
     font-weight: bold;
-    font-style: italic;
-    padding-inline: 0.2em;
+    font-size: larger;
+    /*font-style: italic;*/
+    /*padding-inline: 0.2em;*/
 }
 
 .nav-link-pending {
@@ -388,6 +406,10 @@ td.results {
 #nav-bar {
     container-type: inline-size;
     container-name: nav-bar-container;
+}
+
+.icon-text {
+    transition: background-color 1s ease-in-out;
 }
 
 @container root-container (width <= 55em) {
@@ -420,7 +442,7 @@ td input.simple-mask-selector {
 
 
 .test-instructions-container {
-    opacity: 100%;
+    opacity: 1;
     background-color: inherit;
     width: 100%;
     /*z-index: 3;*/
@@ -437,10 +459,25 @@ td input.simple-mask-selector {
     position: relative;
 }
 
+.no-focus-border {
+    &:focus {
+        outline: none;
+    }
+}
+
+.no-dim-disabled {
+    &:disabled {
+        opacity: 1;
+        color: black;
+    }
+}
+
 .thin-border {
     border: 1px solid;
     padding-inline: 0.2em;
     box-shadow: 2px 2px 2px;
+    margin-inline-end: 3px;
+    margin-block-end: 3px;
 }
 
 .thin-border-2 {

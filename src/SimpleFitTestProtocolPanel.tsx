@@ -1,14 +1,17 @@
-import {createAjvValidator, JSONContent, toJSONContent} from 'vanilla-jsoneditor';
+import Ajv from "ajv"
 import {useContext, useState} from 'react';
 import "./simple-protocol-editor.css";
 import {useSetting} from "./use-setting.ts";
 import {AppSettings} from "src/app-settings-types.ts";
 import {AppContext} from "src/app-context.ts";
 
-export default function SimpleFitTestProtocolPanel() {
+type JSONContent = {json: string};
+export function SimpleFitTestProtocolPanel() {
     const [protocolInstructionSets, setProtocolInstructionSets] = useSetting<JSONContent>(AppSettings.PROTOCOL_INSTRUCTION_SETS)
     const appContext = useContext(AppContext)
     const [content, setContent] = useState<string>(JSON.stringify(protocolInstructionSets.json, null, 2))
+    const [changesSaved, setChangesSaved] = useState<boolean>(true)
+    const ajv = new Ajv()
 
     function resetToDefault() {
         console.debug("resetting protocols to defaults")
@@ -71,15 +74,23 @@ export default function SimpleFitTestProtocolPanel() {
             }
         }
     }
-    const validator = createAjvValidator({schema})
+    const validate = ajv.compile(schema)
 
     function valueChanged(newValue: string) {
-        const validationErrors = validator(JSON.parse(newValue));
         setContent(newValue);
-        if(validationErrors.length > 0) {
-            console.error(validationErrors);
-        } else {
-            setProtocolInstructionSets(toJSONContent({text:newValue}))
+        try {
+            const parsedJson = JSON.parse(newValue);
+
+            if (validate(parsedJson)) {
+                setProtocolInstructionSets({json: parsedJson} as JSONContent)
+                setChangesSaved(true)
+            } else {
+                console.error(validate.errors);
+                setChangesSaved(false)
+            }
+        } catch(jsonParseError) {
+            console.error("error parsing json:", jsonParseError);
+            setChangesSaved(false)
         }
     }
     return (
@@ -88,7 +99,7 @@ export default function SimpleFitTestProtocolPanel() {
                 <button id={"reset"} onDoubleClick={resetToDefault}>Reset to default (double click)</button>
             </section>
             <section id={"editor"} style={{display:"contents"}}>
-                <textarea style={{height:"90%", width:"90%"}} onChange={(e) => valueChanged(e.target.value)} value={content}>
+                <textarea style={{height:"90%", width:"90%", borderWidth: "10px", borderColor:changesSaved ? "green":"red"}} onChange={(e) => valueChanged(e.target.value)} value={content}>
                 </textarea>
                 {/*<JsonEditorPanel props={props} />*/}
             </section>

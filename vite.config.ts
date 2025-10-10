@@ -16,7 +16,23 @@ export default defineConfig({
         }
     },
     build: {
-        target: "es2023"
+        target: "es2023",
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    'ajv': ["ajv"],
+                    'drivers': ["ftdi-js", "pl2303", "ch34x-webusb-serial-ts"],
+                    'echarts': ["echarts", "echarts-for-react"],
+                    'function-plot': ["function-plot"],
+                    'mui': ["@mui/system", "@mui/base"],
+                    'qr-code': ["@yudiel/react-qr-scanner", "qrcode.react"],
+                    'react-datepicker': ["react-datepicker"],
+                    'react-etc': ["react-dom", "react-icons", "react-intersection-observer", "react-router", "react-select"],
+                    'tanstack-tables': ["@tanstack/react-table", "@tanstack/react-virtual"],
+                    'utils': ["export-to-csv", "json-2-csv", "json-stringify-deterministic", "lz-string", "moving-average"]
+                }
+            }
+        }
     },
     plugins: [
         react(),

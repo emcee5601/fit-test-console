@@ -3,6 +3,8 @@ import {isNull, isUndefined} from "json-2-csv/lib/utils";
 import {RefObject} from "react";
 
 import {ConnectionStatus} from "src/portacount/porta-count-state.ts";
+import {ProtocolSegment} from "src/app-settings-types.ts";
+import {ParticleConcentrationEvent} from "src/portacount-client-8020.ts";
 
 const aliases = {
     med: "M",
@@ -61,6 +63,8 @@ const _MaskMaker = ["unknown"
     , "Zimi"]
 type MaskMaker = typeof _MaskMaker[number]
 
+const delimiters = '[,;]'
+
 class StructuredMaskName {
     private _maker: MaskMaker;
     private _model: string;
@@ -80,7 +84,24 @@ class StructuredMaskName {
 
     get shortName(): string {
         // console.debug("structured name for ", JSON.stringify(this._model, null, 2));
-        return `${this.maker} ${this.model}`
+        return [this.maker, this.model].join(" ");
+    }
+
+    /**
+     * Generally the taxonomy is mfr + model number + size (if model number doesn't indicate) + color (I've been
+     * tracking for Zimis to see if there's a difference in FF) + ear loop vs head strap
+     *
+     * Assume a few things about the mask name and parts:
+     * - maker, size, color, attachmentType are all single words
+     * - case and spaces don't matter
+     * - commas and semicolons are the same as spaces
+     */
+    get normalizedName(): string {
+        return [this.maker, this.model, this.size, this.color, this.attachmentType].join(" ")
+            // remove orphaned delimiters (these will come from leftover original mask name which ends up in model)
+            .replaceAll(new RegExp(`(?<=\\s)${delimiters}*(?=\\s)`, "ig"), " ")
+            // remove extraneous spaces
+            .replaceAll(/\s+/g, " ").trim()
     }
 
     get maker(): MaskMaker {
@@ -132,21 +153,8 @@ class StructuredMaskName {
     }
 }
 
-/**
- * Generally the taxonomy is mfr + model number + size (if model number doesn't indicate) + color (I've been tracking
- * for Zimis to see if there's a difference in FF) + ear loop vs head strap
- *
- * Assume a few things about the mask name and parts:
- * - maker, size, color, attachmentType are all single words
- * - case and spaces don't matter
- * - commas and semicolons are the same as spaces
- * @param maskName
- */
 export function normalizeMaskName(maskName: string): string {
-    const structuredName = getStructuredMaskName(maskName);
-    // console.debug("structuredName: ", structuredName)
-    // concatenate remainders from the original version to build normalized string
-    return `${structuredName.maker ?? ""} ${structuredName.model ?? ""} ${structuredName.size ?? ""} ${structuredName.color ?? ""} ${structuredName.attachmentType ?? ""}`.replaceAll(/\s+/g, " ")
+    return getStructuredMaskName(maskName).normalizedName
 }
 
 export function getStructuredMaskName(maskName: string): StructuredMaskName {
@@ -154,21 +162,24 @@ export function getStructuredMaskName(maskName: string): StructuredMaskName {
     // collapse whitespace
     const spaceFixedName = (maskName ?? "").replaceAll(/\s+/g, " ")
     // resolve aliases
-    const unaliasedName = Object.entries(aliases).reduce((result, [alias, value]) => {
+    const unaliasedName = Object.entries(aliases).toSorted(([k1], [k2]) => k2.length - k1.length).reduce((result, [alias, value]) => {
         return result.replaceAll(new RegExp(`${alias}`, "ig"), value)
     }, spaceFixedName)
     let originalName = unaliasedName
     let loweredName = originalName.toLowerCase();
 
+    // TODO: don't perform the replace if more than one match is found, eg, zimi kn95 med frame small filter (size
+    // appears 2x)
+
     // look for parts in order, splice out found pieces from both lower case and original version
     _MaskMaker.find((maker) => {
-        const match = loweredName.match(new RegExp(`\\b${maker.toLowerCase()}\\b`, "i"))
+        const match = loweredName.match(new RegExp(`\\b${maker.toLowerCase()}${delimiters}*\\b`, "i"))
         if (match && match.index !== undefined) {
             // found
             const index = match.index
             structuredName.maker = maker
-            loweredName = loweredName.slice(0, index) + loweredName.slice(index + maker.length)
-            originalName = originalName.slice(0, index) + originalName.slice(index + maker.length)
+            loweredName = loweredName.slice(0, index) + loweredName.slice(index + match[0].length)
+            originalName = originalName.slice(0, index) + originalName.slice(index + match[0].length)
             return true;
 
         } else {
@@ -177,13 +188,13 @@ export function getStructuredMaskName(maskName: string): StructuredMaskName {
     })
 
     _MaskSize.find((size) => {
-        const match = loweredName.match(new RegExp(`\\b${size}\\b`, "i"))
+        const match = loweredName.match(new RegExp(`\\b${size}${delimiters}*\\b`, "i"))
         if (match && match.index !== undefined) {
             // found
             const index = match.index
             structuredName.size = size
-            loweredName = loweredName.slice(0, index) + loweredName.slice(index + size.length)
-            originalName = originalName.slice(0, index) + originalName.slice(index + size.length)
+            loweredName = loweredName.slice(0, index) + loweredName.slice(index + match[0].length)
+            originalName = originalName.slice(0, index) + originalName.slice(index + match[0].length)
             return true;
         } else {
             return false;
@@ -191,13 +202,13 @@ export function getStructuredMaskName(maskName: string): StructuredMaskName {
     })
 
     _MaskAttachmentType.find((attachmentType) => {
-        const match = loweredName.match(new RegExp(`\\b${attachmentType}\\b`, "i"))
+        const match = loweredName.match(new RegExp(`\\b${attachmentType}${delimiters}*\\b`, "i"))
         if (match && match.index !== undefined) {
             // found
             const index = match.index
             structuredName.attachmentType = attachmentType
-            loweredName = loweredName.slice(0, index) + loweredName.slice(index + attachmentType.length)
-            originalName = originalName.slice(0, index) + originalName.slice(index + attachmentType.length)
+            loweredName = loweredName.slice(0, index) + loweredName.slice(index + match[0].length)
+            originalName = originalName.slice(0, index) + originalName.slice(index + match[0].length)
             return true;
         } else {
             return false;
@@ -269,7 +280,9 @@ export function feToFf(filtrationEfficiency: number) {
 }
 
 export function formatFe(efficiency: number): string {
-    return efficiency.toFixed(efficiency < 90 ? 0 : efficiency < 99.9 ? 1 : efficiency < 99.99 ? 2 : 3)
+    return (efficiency > 0 && efficiency <= 99.999)
+        ? efficiency.toFixed(efficiency < 90 ? 0 : efficiency < 99.9 ? 1 : efficiency < 99.99 ? 2 : 3)
+        : "?"
 }
 
 export function formatFF(fitFactor: number): string {
@@ -298,15 +311,49 @@ export function getConnectionStatusCssClass(connectionStatus: ConnectionStatus):
     }
 }
 
-export function getColorForFitFactor(fitFactor: number | string, hasThisExercise: boolean) {
+/**
+ * from
+ * https://gamedev.stackexchange.com/questions/38536/given-a-rgb-color-x-how-to-find-the-most-contrasting-color-y?noredirect=1
+ * @param bgColor
+ *
+ * color(srgb 0.635608 0.783529 0.180392)
+ * color(srgb-linear 0.151859 0.354418 0.0149882)
+ * rgb(245, 245, 245)
+ * oklab(0.647273 -0.103665 0.123616)
+ */
+export function getFgColorForBgColor(bgColor: string) {
+    const match = bgColor.match(/rgb(?<hasAlpha>a)?\((?<r>\d+),\s*(?<g>\d+),\s*(?<b>\d+)(,\s*(?<a>\d+))?\)/)
+        || bgColor.match(/color\((?<srgb>s)rgb(-linear)?\s+(?<r>[\d.]+)\s+(?<g>[\d.]+)\s+(?<b>[\d.]+)\)/)
+        || bgColor.match(/(?<oklab>oklab)\((?<L>[\d.]+)\s+(?<a>[\d.-]+)\s+(?<B>[\d.-]+)(\s+(?<A>[\d.]+))?\)/)
+    if (!match || !match.groups) {
+        console.debug(`no match for ${bgColor}`)
+        return "black"
+    }
+    const {r: r, g: g, b: b, srgb: srgb, oklab: oklab, L: L} = match.groups;
+    if (oklab) {
+        const lum = Number(L)
+        return lum > 0.5 ? "black" : "white";
+    } else {
+        const divisor = srgb ? 1 : 255
+        const gamma = 2.2;
+        const lum =
+            0.2126 * Math.pow(Number(r) / divisor, gamma) +
+            0.7152 * Math.pow(Number(g) / divisor, gamma) +
+            0.0722 * Math.pow(Number(b) / divisor, gamma)
+        return lum > Math.pow(0.5, gamma) ? "black" : "white";
+    }
+    // console.debug(bgColor, "lum is ", lum)
+}
+
+export function getColorForFitFactor(fitFactor: number | string, hasThisExercise: boolean = true) {
     if (!hasThisExercise && !fitFactor) {
         // we don't have this many exercises, and there's no value in the cell
-        return ""
+        return "whitesmoke"
     }
     fitFactor = Number(fitFactor)
     if (isNaN(fitFactor) || fitFactor <= 0) {
         // if it's zero, it was probably parsed from empty string
-        return ""
+        return "whitesmoke"
     }
     const efficiency = 100 * (1.0 - 1.0 / fitFactor);
     if (efficiency > 99) {
@@ -316,19 +363,19 @@ export function getColorForFitFactor(fitFactor: number | string, hasThisExercise
         // 20 == 95%
         const pctLowColor = Math.round(100 * (99 - efficiency) / (99 - 95))
         const pctHighColor = 100 - pctLowColor
-        return `color-mix(in oklch, yellowgreen ${pctLowColor}%, darkgreen ${pctHighColor}%)`
+        return `color-mix(in srgb, yellowgreen ${pctLowColor}%, darkgreen ${pctHighColor}%)`
     }
     if (efficiency >= 80) {
         // 5 == 95%
         const pctLowColor = Math.round(100 * (95 - efficiency) / (95 - 80))
         const pctHighColor = 100 - pctLowColor
-        return `color-mix(in oklch, darkorange ${pctLowColor}%, yellowgreen ${pctHighColor}%)`
+        return `color-mix(in srgb, darkorange ${pctLowColor}%, yellowgreen ${pctHighColor}%)`
     }
     if (efficiency > 0) {
         // 1 == 0%
         const pctLowColor = Math.round(100 * (80 - efficiency) / (80 - 0))
         const pctHighColor = 100 - pctLowColor
-        return `color-mix(in oklch, darkred ${pctLowColor}%, darkorange ${pctHighColor}%)`
+        return `color-mix(in srgb, darkred ${pctLowColor}%, darkorange ${pctHighColor}%)`
     }
     // console.debug("efficiency", efficiency, "fit factor", fitFactor)
     return "darkred"
@@ -376,17 +423,41 @@ export function avgArray(theNumbers: number[], startIndex: number = 0, endIndex:
     return sum(theNumbers, startIndex, endIndex) / (endIndex - startIndex);
 }
 
-export function formatFitFactor(value: number): string {
+/**
+ * use exponents to express integers with more than width number of digits.
+ */
+export function formatInteger(value: number, width: number = 4): string {
+    const digits = value ? 1 + Math.floor(Math.log10(value)) : 1;
+    if (digits > width) {
+        const digitsToTrim = digits - 2;
+        return Math.round(value / (10 ** digitsToTrim)).toFixed(0) + 'e' + digitsToTrim
+    } else {
+        return value.toFixed(0)
+    }
+}
+
+/**
+ * Format integers to display in 4 or fewer characters if possible.
+ */
+export function formatInteger4(value: number): string {
     if (isNaN(value) || isUndefined(value) || isNull(value)) {
         return "?";
     }
-    if (value < 1) {
-        return value.toFixed(2);
-    } else if (value < 10) {
-        return value.toFixed(1);
+    if (value >= 10000) {
+        return Math.round(value / 1000).toFixed(0) + 'k';
     } else {
-        return value.toFixed(0);
+        return value.toFixed(0)
     }
+}
+
+export function formatFitFactor(value: number): string {
+    if (isNaN(value) || isUndefined(value) || isNull(value) || value < 1) {
+        return "?";
+    }
+    if (value < 10) {
+        return value.toFixed(2);
+    }
+    return formatInteger4(value);
 }
 
 export function scrollToBottom(textAreaRef: RefObject<HTMLTextAreaElement>) {
@@ -413,3 +484,12 @@ export function median(array: number[]) {
 
 export const enCaseInsensitiveCollator = Intl.Collator("en", {sensitivity: "base"}) // case-insensitive sort
 
+export function isMobile() {
+    return window.navigator.userAgent.includes("Mobi")
+}
+
+export function calculateSegmentConcentration(segment: ProtocolSegment): number {
+    // don't round this here
+    // portacount seems to return a minimum value of 0.01 here, so we'll do the same
+    return Math.max(0.01, segment.data.reduce((sum, currentValue: ParticleConcentrationEvent) => sum + currentValue.concentration, 0) / segment.data.length);
+}

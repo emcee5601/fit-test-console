@@ -40,7 +40,7 @@ import {MaskPerfFunctionPlot} from "src/MaskPerfFunctionPlot.tsx";
 
 //This is a dynamic row height example, which is more complicated, but allows for a more realistic table.
 //See https://tanstack.com/virtual/v3/docs/examples/react/table for a simpler fixed row height example.
-export default function ResultsTable({
+export function ResultsTable({
     tableData,
     setTableData,
     searchableColumns = ["Time", "Participant", "Mask", "Notes", "ProtocolName"],
@@ -310,7 +310,7 @@ export default function ResultsTable({
             }
         });
 
-        console.debug("maxExercises from protocols:", maxExercises)
+        // console.debug("maxExercises from protocols:", maxExercises)
         setNumExerciseColumns(maxExercises);
     }
 

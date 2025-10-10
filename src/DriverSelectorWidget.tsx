@@ -1,4 +1,4 @@
-import {PortaCountListener, SerialPortLike} from "./portacount-client-8020.ts";
+import {SerialPortLike} from "./portacount-client-8020.ts";
 import {useContext, useEffect, useState} from "react";
 import {AppContext} from "./app-context.ts";
 import {DataSource} from "./data-source.ts";
@@ -43,22 +43,11 @@ export function DriverSelectorWidget({compact = false}: { compact?: boolean }) {
     const simulationSpeedsBytesPerSecond: number[] = [3, 30, 300, 1200, 14400, 28800, 56760];
     const [simulationSpeedBytesPerSecond, setSimulationSpeedBytesPerSecond] = useSetting<number>(AppSettings.SIMULATOR_FILE_SPEED)
     const [dataSource, setDataSource] = useSetting<DataSource>(AppSettings.SELECTED_DATA_SOURCE)
-    const [connectionStatus, setConnectionStatus] = useState(portaCountClient.state.connectionStatus)
+    const [connectionStatus] = useSetting<ConnectionStatus>(AppSettings.CONNECTION_STATUS)
     const [, setConnectionStatusInView] = useSetting(AppSettings.CONNECTION_STATUS_IN_VIEW)
     const [enableWebSerialDrivers] = useSetting(AppSettings.ENABLE_WEB_SERIAL_DRIVERS)
     const {ref, inView} = useInView()
 
-    useEffect(() => {
-        const listener: PortaCountListener = {
-            connectionStatusChanged(connectionStatus: ConnectionStatus) {
-                setConnectionStatus(connectionStatus)
-            }
-        };
-        portaCountClient.addListener(listener);
-        return () => {
-            portaCountClient.removeListener(listener)
-        };
-    }, []);
     useEffect(() => {
         setConnectionStatusInView(inView)
     }, [inView]);
@@ -146,11 +135,9 @@ export function DriverSelectorWidget({compact = false}: { compact?: boolean }) {
                 connectViaWebSerial()
                 break;
             case DataSource.Simulator:
-                dataCollector.fitFactorEstimator.resetChart();
                 connectViaSimulator()
                 break;
             case DataSource.SimulatorFile:
-                dataCollector.fitFactorEstimator.resetChart();
                 connectViaSimulatorFile()
                 break;
             default:
@@ -208,7 +195,7 @@ export function DriverSelectorWidget({compact = false}: { compact?: boolean }) {
                     <select id="data-source-selector"
                             value={dataSource}
                             onChange={(event) => setDataSource(event.target.value as DataSource)}
-                            disabled={portaCountClient.state.connectionStatus !== ConnectionStatus.DISCONNECTED}>
+                            disabled={connectionStatus !== ConnectionStatus.DISCONNECTED}>
                         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                     </select>
                     {dataSource === DataSource.SimulatorFile &&
@@ -225,7 +212,7 @@ export function DriverSelectorWidget({compact = false}: { compact?: boolean }) {
                 </div>
                 {/*todo: change connect button to "stop" or "disconnect" button once connected*/}
                 <input className="button" type="button" value="Connect" id="connect-button"
-                       disabled={portaCountClient.state.connectionStatus !== ConnectionStatus.DISCONNECTED}
+                       disabled={connectionStatus !== ConnectionStatus.DISCONNECTED}
                        onClick={connectButtonClickHandler}/>
             </fieldset>
 

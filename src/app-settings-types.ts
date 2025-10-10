@@ -1,9 +1,9 @@
 import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
 import {DataSource} from "src/data-source.ts";
 import {StageDefinition} from "src/simple-protocol.ts";
-import {SegmentState} from "src/protocol-executor.ts";
 import {ParticleConcentrationEvent} from "src/portacount-client-8020.ts";
-import {Activity, SampleSource} from "src/portacount/porta-count-state.ts";
+import {Activity, ConnectionStatus, SampleSource} from "src/portacount/porta-count-state.ts";
+import {SegmentState} from "src/protocol-executor/segment-state.ts";
 
 /**
  * this is for convenience. code outside of this module should use AppSettings enum.
@@ -11,14 +11,12 @@ import {Activity, SampleSource} from "src/portacount/porta-count-state.ts";
  */
 export enum AppSettings {
     SPEECH_ENABLED = "speech-enabled",
-    ADVANCED_MODE = "advanced-mode",
     SPEECH_VOICE = "speech-voice",
     VERBOSE = "verbose",
     SAY_PARTICLE_COUNT = "say-particle-count",
     RESULTS_TABLE_SORT = "results-table-sort",
     PARTICIPANT_RESULTS_TABLE_SORT = "participant-results-table-sort",
     SAY_ESTIMATED_FIT_FACTOR = "say-estimated-fit-factor",
-    SHOW_EXTERNAL_CONTROL = "show-external-control",
     BAUD_RATE = "baud-rate",
     PROTOCOL_INSTRUCTION_SETS = "protocol-instruction-sets",
     SELECTED_PROTOCOL = "selected-protocol",
@@ -34,12 +32,7 @@ export enum AppSettings {
     SHOW_ELAPSED_PARTICIPANT_TIME = "show-elapsed-participant-time",
     SHOW_REMAINING_EVENT_TIME = "show-remaining-event-time",
     AUTO_CREATE_FAST_PROTOCOLS = "auto-create-fast-protocols",
-    LAST_KNOWN_SETTINGS_KEYS_HASH = "last-known-settings-keys-hash", // hash of sorted settings keys
-    USE_COMPACT_UI = "use-compact-ui",
     ENABLE_WEB_SERIAL_DRIVERS = "enable-webserial-drivers",
-    ENABLE_PROTOCOL_EDITOR = "enable-protocol-editor",
-    ENABLE_QR_CODE_SCANNER = "enable-qr-code-scanner",
-    ENABLE_STATS = "enable-stats",
     ENABLE_TEST_INSTRUCTIONS_ZOOM = "enable-test-instructions-zoom",
     BOOKMARKS = "bookmarks",
     MASK_LIST = "mask-list",
@@ -49,6 +42,8 @@ export enum AppSettings {
     SHOW_MASK_PERF_GRAPH = "show-mask-perf-graph",
     SAMPLE_MASK_WHEN_IDLE = "sample-mask-when-idle",
     USE_IDLE_AMBIENT_VALUES = "use-idle-ambient-values",
+    NORMALIZE_MASK_LIST_NAMES = "normalize-mask-list-names",
+    AUTO_DETECT_BAUD_RATE = "auto-detect-baud-rate",
 
     // session only settings (these start with "so-". todo: can we merge these from another enum into this?
     STATS_FIRST_DATE = "so-stats-first-date",
@@ -58,11 +53,17 @@ export enum AppSettings {
     COMBINED_MASK_LIST = "so-combined-mask-list",
     COMBINED_PARTICIPANT_LIST = "so-combined-participant-list",
     TEST_NOTES = "so-test-notes",
-    CONTROL_SOURCE_IN_VIEW = "so-control-source-in-view",
-    SAMPLE_SOURCE_IN_VIEW = "so-sample-source-in-view",
     CONNECTION_STATUS_IN_VIEW = "so-connection-status-in-view",
     ACTIVITY = "so-activity",
     ZOOM_INSTRUCTIONS = "so-zoom-instructions",
+    CURRENT_AMBIENT_AVERAGE = "so-current-ambient-average",
+    CURRENT_MASK_AVERAGE = "so-current-mask-average",
+    CONNECTION_STATUS = "so-connection-status",
+    PROTOCOL_EXECUTION_STATE = "so-protocol-execution-state",
+    PROTOCOL_START_TIME = "so-protocol-start-time",
+    STAGE_START_TIME = "so-stage-start-time",
+    CURRENT_STAGE_INDEX = "so-current-stage-index",
+
 
     // these are deprecated:
     DEFAULT_TO_PREVIOUS_PARTICIPANT = "default-to-previous-participant",
@@ -73,6 +74,16 @@ export enum AppSettings {
     SHOW_LOG_PANELS = "show-log-panels",
     SHOW_HISTORICAL_TESTS = "show-historical-tests",
     SHOW_CURRENT_TEST_PANEL = "show-current-test-panel",
+    SHOW_EXTERNAL_CONTROL = "show-external-control",
+    ENABLE_PROTOCOL_EDITOR = "enable-protocol-editor",
+    ENABLE_QR_CODE_SCANNER = "enable-qr-code-scanner",
+    ENABLE_STATS = "enable-stats",
+    USE_COMPACT_UI = "use-compact-ui",
+    ADVANCED_MODE = "advanced-mode",
+    CONTROL_SOURCE_IN_VIEW = "so-control-source-in-view",
+    SAMPLE_SOURCE_IN_VIEW = "so-sample-source-in-view",
+    IS_PROTOCOL_RUNNING = "so-is-protocol-running",
+    LAST_KNOWN_SETTINGS_KEYS_HASH = "last-known-settings-keys-hash", // hash of sorted settings keys
 } // this class should use AppSettingsType for type checking/ validations to ensure every setting has a default.
 /**
  * Settings can be of these types.
@@ -129,7 +140,7 @@ export const AppSettingsDefaults = {
                 ].join(" "),
                 "Head movement. Look up, down, left, and right. Repeat."
             ],
-            "Modified CNC Fit Protocol (B)": [
+            "Modified CNC (B)": [
                 {
                     "instructions": "prep",
                     "ambient_purge": 4,
@@ -248,6 +259,8 @@ export const AppSettingsDefaults = {
     "show-mask-perf-graph": false,
     "sample-mask-when-idle": false,
     "use-idle-ambient-values": false,
+    "normalize-mask-list-names": true,
+    "auto-detect-baud-rate": true,
 
     "so-stats-first-date": new Date(0), // epoch, sentinel value
     "so-stats-last-date": new Date(), // today
@@ -261,6 +274,14 @@ export const AppSettingsDefaults = {
     "so-connection-status-in-view": true,
     "so-activity": Activity.Disconnected,
     "so-zoom-instructions": false,
+    "so-current-ambient-average": NaN,
+    "so-current-mask-average": NaN,
+    "so-is-protocol-running": false,
+    "so-connection-status": ConnectionStatus.DISCONNECTED,
+    "so-protocol-execution-state": "Idle",
+    "so-protocol-start-time" : 0,
+    "so-stage-start-time" : 0,
+    "so-current-stage-index": 0,
 
     "default-to-previous-participant": false, // deprecated
     "show-protocol-editor": false, // deprecated

@@ -1,105 +1,73 @@
-import {useContext, useEffect, useMemo, useRef, useState} from "react";
-import {DataCollectorListener} from "./data-collector.ts";
+import {useContext, useEffect, useRef, useState} from "react";
+import {AppSettings} from "src/app-settings-types.ts";
+import {useAnimationFrame} from "src/assets/use-animation-frame.ts";
+import {ProtocolExecutionState} from "src/protocol-execution-state.ts";
+import {getStageDuration} from "src/protocol-executor/utils.ts";
+import {updateBackgroundFillProgress} from "src/update-background-fill-progress.ts";
+import {useSetting} from "src/use-setting.ts";
 import {AppContext} from "./app-context.ts";
+import {DataCollectorListener} from "./data-collector.ts";
+
+const LOREM_IPSUM = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
 
 export function TestInstructionsPanel() {
-    const minFontSizePx: number = 30;
     const appContext = useContext(AppContext)
-    const [dataCollector] = useState(appContext.dataCollector)
+    const dataCollector = appContext.dataCollector
     const [instructions, setInstructions] = useState<string>("")
     const ref = useRef<HTMLTextAreaElement>(null)
-    const [dimensions, setDimensions] = useState([0, 0])
-    const startingHeight = useMemo(() => {
-        if(!ref.current) {
-            return minFontSizePx * 1.5
-        } else {
-            return ref.current.clientHeight;
-        }
-    }, [ref.current])
-
-    /**
-     * adjust font size so instructions fill the space available
-     * @param instructions
-     */
-    function updateFontSize(instructions: string) {
-        if (ref.current) {
-            const calculatedFontSize = calculateFontSize(instructions)
-            ref.current.style.fontSize = calculatedFontSize + 'px'
-            // console.debug(`setting font size to ${calculatedFontSize}`)
-        }
-    }
-
-    function calculateNumRowsAtFontSize(fontSize: number, instructions: string, width: number) {
-        // todo: determine the width of each character instead of assuming all characters are the same width
-        const words: string[] = instructions.split(/\s+/)
-        let numRows: number = 0
-        let curWidth: number = 0;
-        words.forEach((word) => {
-            const wordWidth = word.length * fontSize;
-            if (curWidth + wordWidth < width) {
-                curWidth += wordWidth + fontSize // include the space
-            } else {
-                numRows++;
-                curWidth = wordWidth
-            }
-        })
-        return numRows
-    }
-
-    function calculateFontSize(instructions: string) {
-        let fontSize: number = 1;
-        if (ref.current) {
-            const maxHeight = ref.current.clientHeight > window.innerHeight * 0.7 ? ref.current.clientHeight : startingHeight
-            console.debug(`calculateFontSize max height ${maxHeight}`)
-            const width = ref.current.clientWidth;
-            const numChars = instructions.length;
-            const minFontSize = width / numChars  // fit everything onto 1 row
-            const maxFontSize = Math.sqrt(width * maxHeight / numChars)
-            for (let candidate = minFontSize; candidate < maxFontSize; candidate++) {
-                const numRows = calculateNumRowsAtFontSize(candidate, instructions, width)
-                const heightAtFontSize = numRows * candidate
-                if (heightAtFontSize > maxHeight) {
-                    // done
-                    break;
-                }
-                fontSize = candidate;
-            }
-        }
-        return Math.max(fontSize, minFontSizePx);
-    }
+    const [fontSizeSliderValue, setFontSizeSliderValue] = useState<number>(2)
+    const [currentStageIndex] = useSetting<number>(AppSettings.CURRENT_STAGE_INDEX)
+    const [stageStartTime] = useSetting<number>(AppSettings.STAGE_START_TIME)
+    const [selectedProtocol] = useSetting<string>(AppSettings.SELECTED_PROTOCOL)
+    const [protocolExecutionState] = useSetting<ProtocolExecutionState>(AppSettings.PROTOCOL_EXECUTION_STATE)
 
     const dataCollectorListener: DataCollectorListener = {
         instructionsChanged(instructions: string) {
-            setInstructions(instructions.replace(/\./, ".\n"))
+            setInstructions(instructions.replace(/\.\s+/, ".\n"))
         },
     }
 
     useEffect(() => {
         dataCollector.addListener(dataCollectorListener)
-        const ro = new ResizeObserver(([entry]) => {
-            // assume it's just the one element we're observing
-            setDimensions([entry.target.clientWidth, entry.target.clientHeight])
-        })
-        if (ref.current) {
-            ro.observe(ref.current)
-        }
-
         return () => {
             dataCollector.removeListener(dataCollectorListener)
-            ro.disconnect()
         };
     }, []);
 
     useEffect(() => {
-        updateFontSize(instructions)
-    }, [instructions, dimensions]);
+        if (ref.current) {
+            ref.current.style.fontSize = `${fontSizeSliderValue}em`
+        }
+    }, [fontSizeSliderValue]);
+
+
+    useAnimationFrame(() => {
+        switch (protocolExecutionState) {
+            case "Idle":
+                updateBackgroundFillProgress(ref, 0)
+                break;
+            case "Executing": {
+                const stageDurationSeconds = getStageDuration(appContext.settings.getProtocolDefinition(selectedProtocol)[currentStageIndex])
+                const elapsedMs = Date.now() - stageStartTime
+                updateBackgroundFillProgress(ref, Math.min(1, 0.001 * elapsedMs / stageDurationSeconds))
+                break;
+            }
+            case "Paused":
+                // do nothing
+                break
+        }
+    }, [stageStartTime, currentStageIndex, protocolExecutionState])
 
     return (
-        <fieldset style={{display: "inline-block", flexGrow: 1, height: "inherit"}} className={"info-box-compact"}>
-            <legend>Test Instructions</legend>
+        <fieldset style={{display: "flex", flexDirection: "column", flexGrow: 1}} className={"info-box-compact"}>
+            <legend>Instructions <input type="range" min={1} max={5} value={fontSizeSliderValue} step={0.01}
+                                        onChange={(event) => setFontSizeSliderValue(Number(event.target.value))}/>
+            </legend>
             <textarea id="test-instructions"
                       ref={ref}
+                      className={"no-focus-border"}
                       style={{
+                          flexGrow: 1,
                           width: "100%",
                           // height must not be relative to font size or updating fot size via ResizeObserver will
                           // infinite loop
@@ -108,8 +76,8 @@ export function TestInstructionsPanel() {
                           overflow: "auto",
                           resize: "none",
                           border: "none",
-                          alignContent: "center",
-                          textAlign: "center",
+                          alignContent: "start",
+                          textAlign: "start",
                           // wordWrap: "normal", // this causes some infinite resizing loop when test is stopped in
                           // zoomed view
                           textWrap: "wrap",
@@ -118,6 +86,7 @@ export function TestInstructionsPanel() {
                       readOnly={true}
                       value={instructions}
                       onChange={() => null}
+                      placeholder={LOREM_IPSUM}
             ></textarea>
         </fieldset>
     )

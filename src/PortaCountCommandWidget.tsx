@@ -3,15 +3,12 @@ import {ExternalController} from "./external-control.ts";
 import {AppContext} from "./app-context.ts";
 import CreatableSelect from "react-select/creatable";
 import {BsTerminal} from "react-icons/bs";
-import {useSetting} from "src/use-setting.ts";
 import {ActionMenuWidget} from "src/ActionMenuWidget.tsx";
-import {AppSettings} from "src/app-settings-types.ts";
 
 export function PortaCountCommandWidget({compact = false}: { compact?: boolean }) {
     const appContext = useContext(AppContext)
     const control: ExternalController = appContext.portaCountClient.externalController
     const [commandInput, setCommandInput] = useState<string>("")
-    const [showExternalControl] = useSetting<boolean>(AppSettings.SHOW_EXTERNAL_CONTROL)
 
     function sendCommand() {
         control.sendCommand(commandInput);
@@ -40,12 +37,10 @@ export function PortaCountCommandWidget({compact = false}: { compact?: boolean }
         }
     });
 
-    const compactWidget = showExternalControl
-        ? <ActionMenuWidget options={options}
+    const compactWidget = <ActionMenuWidget options={options}
                             onChange={(value) => control.sendCommand(value)} >
             <BsTerminal/>
         </ActionMenuWidget>
-        : null;
 
 
     return (

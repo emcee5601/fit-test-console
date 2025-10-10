@@ -5,17 +5,22 @@
     justify-content: space-between;
     border-collapse: collapse;
     border: 1px solid;
+    min-width: fit-content;
 }
 
-.stage-instructions {
-
+.stage-name {
+    display:inline-flex;
+    flex-wrap: nowrap;
+    text-wrap: nowrap;
+    padding-inline: 0.2em;
+    min-width: fit-content;
 }
-
 .stage-segments {
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
     white-space-collapse: preserve;
+    min-width: fit-content;
 }
 .ambient-purge-segment {
         background-color: yellow;
