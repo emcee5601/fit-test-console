@@ -13,7 +13,10 @@ export function SpeechVoiceSelectorWidget() {
         if (foundVoice && (!currentVoice || currentVoice.name !== foundVoice.name)) {
             SPEECH.setSelectedVoice(foundVoice);
             setSelectedVoiceName(voiceName)
-            SPEECH.sayItLater(`This is ${foundVoice.name} speaking.`)
+            if( selectedVoiceName !== foundVoice.name ) {
+                // avoid announcing the selected voice from settings when the component mounts
+                SPEECH.sayItLater(`This is ${foundVoice.name} speaking.`)
+            }
         }
     }, [setSelectedVoiceName])
 
