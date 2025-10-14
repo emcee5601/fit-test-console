@@ -1,10 +1,11 @@
 import {isNull, isUndefined} from "json-2-csv/lib/utils";
 
 import {RefObject} from "react";
-
-import {ConnectionStatus} from "src/portacount/porta-count-state.ts";
 import {ProtocolSegment} from "src/app-settings-types.ts";
 import {ParticleConcentrationEvent} from "src/portacount-client-8020.ts";
+
+import {ConnectionStatus} from "src/portacount/porta-count-state.ts";
+import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
 
 const aliases = {
     med: "M",
@@ -492,4 +493,13 @@ export function calculateSegmentConcentration(segment: ProtocolSegment): number 
     // don't round this here
     // portacount seems to return a minimum value of 0.01 here, so we'll do the same
     return Math.max(0.01, segment.data.reduce((sum, currentValue: ParticleConcentrationEvent) => sum + currentValue.concentration, 0) / segment.data.length);
+}
+
+export function getEstimatedOverallScore(currentTestData: SimpleResultsDBRecord) {
+    // calculate harmonic mean of exercise fields
+    const scores = Object.entries(currentTestData)
+        .filter(([key]) => key.startsWith("Ex ")) // only look at exercise fields
+        .map(([, value]) => Number(value))
+        .filter((value) => isFinite(value) && value > 1.0); // ignore invalid values
+    return scores.length / scores.reduce((result, value) => result + 1 / value, 0)
 }

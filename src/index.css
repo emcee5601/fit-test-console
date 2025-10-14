@@ -348,7 +348,8 @@ td.results {
 }
 
 .console-8020 {
-    width: 21ch;
+    /*max line length seems to be 25 chars*/
+    width: 25ch;
     height: inherit;
     white-space-collapse: preserve;
     font-family: monospace;

@@ -1,4 +1,5 @@
 import {createContext} from "react";
+import {ParticleSampleCollector} from "src/particle-sample-collector.ts";
 import {
     ParticleConcentrationEvent,
     PortaCountClient8020,
@@ -19,7 +20,7 @@ import {enCaseInsensitiveCollator, normalizeMaskName} from "src/utils.ts";
 import {ProtocolDefaults, StandardProtocolDefinition, StandardStageDefinition} from "src/simple-protocol.ts";
 import {defaultConfigManager} from "src/config/config-context.tsx";
 import {AppSettings, AppSettingsDefaults} from "src/app-settings-types.ts";
-import {Activity, ConnectionStatus} from "src/portacount/porta-count-state.ts";
+import {Activity, ConnectionStatus, SampleSource} from "src/portacount/porta-count-state.ts";
 import {ProtocolExecutorListener} from "src/protocol-executor/protocol-executor-listener.ts";
 
 /**
@@ -32,7 +33,9 @@ const settings = APP_SETTINGS_CONTEXT;
 // todo: make sure we only have one of these when vite dynamically reloads classes
 const dataCollector = new DataCollector();
 const portaCountClient = new PortaCountClient8020();
-const protocolExecutor = new ProtocolExecutor(portaCountClient, dataCollector);
+const ambientSampleCollector = new ParticleSampleCollector(SampleSource.AMBIENT);
+const maskSampleCollector = new ParticleSampleCollector(SampleSource.MASK);
+const protocolExecutor = new ProtocolExecutor(portaCountClient, dataCollector, ambientSampleCollector, maskSampleCollector);
 const portaCountSimulator = new PortaCount8020Simulator()
 
 function initDataCollector() {
@@ -368,6 +371,8 @@ export const APP_CONTEXT = {
     protocolExecutor: protocolExecutor,
     portaCountSimulator: portaCountSimulator,
     timingSignal: timingSignal,
+    ambientSampleCollector: ambientSampleCollector,
+    maskSampleCollector: maskSampleCollector,
     // logger
     // internal test interpreter
     // protocol executor interprets external tests

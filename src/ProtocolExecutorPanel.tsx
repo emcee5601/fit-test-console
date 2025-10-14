@@ -1,6 +1,4 @@
-import {PropsWithChildren, ReactElement, RefObject, useContext, useEffect, useRef, useState} from "react";
-import {IconType} from "react-icons";
-import {AiTwotoneExperiment} from "react-icons/ai";
+import {ReactElement, useContext, useEffect, useRef, useState} from "react";
 import {AppSettings, ProtocolSegment} from "src/app-settings-types.ts";
 import {DataCollectorListener} from "src/data-collector.ts";
 import {Activity, ControlSource} from "src/portacount/porta-count-state.ts";
@@ -8,37 +6,16 @@ import {ProtocolExecutionState} from "src/protocol-execution-state.ts";
 import {ProtocolExecutorListener} from "src/protocol-executor/protocol-executor-listener.ts";
 import {ProtocolStageElement} from "src/ProtocolStageElement.tsx";
 import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
-import {StartPauseProtocolButton} from "src/StartPauseProtocolButton.tsx";
-import {StopProtocolButton} from "src/StopProtocolButton.tsx";
 import {useTimingSignal} from "src/timing-signal.ts";
 import {updateBackgroundFillProgress} from "src/update-background-fill-progress.ts";
-import {useScoreBasedColors} from "src/use-score-based-colors.ts";
 import {AppContext, createDeviceSynchronizedProtocol} from "./app-context.ts";
 import {useAnimationFrame} from "./assets/use-animation-frame.ts";
 import {FitFactorResultsEvent, PortaCountListener} from "./portacount-client-8020.ts";
 import "./protocol-executor.css"
-import {ProtocolSelectorWidget0} from "./ProtocolSelectorWidget0.tsx";
 import {StandardProtocolDefinition} from "./simple-protocol.ts";
 import {useSetting} from "./use-setting.ts";
 import {calculateSegmentConcentration, formatFitFactor} from "./utils.ts";
 
-type IconTextProps = {
-    icon?: IconType,
-    text?: string,
-    elementRef?: RefObject<HTMLDivElement>,
-}
-
-/**
- * Renders svg icons and text together. Makes sure svg takes up full the height of the line.
- */
-function IconText({icon, text, children, elementRef}: PropsWithChildren<IconTextProps>) {
-    return (<div className={"icon-text svg-container thin-border number-field"} ref={elementRef}
-                 style={{display: "flex", gap: "0.2em"}}>
-        <div className={"wide-display"}>{text}</div>
-        <div className={"narrow-display"}>{icon ? icon({}) : null}</div>
-        {children}
-    </div>)
-}
 
 /**
  * Controls for running a custom protocol.
@@ -65,7 +42,6 @@ export function ProtocolExecutorPanel() {
     const currentStageDivRef = useRef<HTMLDivElement>(null);
     const protocolVisualizerContainerRef = useRef<HTMLDivElement>(null);
     const protocolTimeRef = useRef<HTMLDivElement>(null);
-    const overallScoreRef = useRef<HTMLDivElement>(null);
     const lastKnownAmbient = protocolExecutor.lastAmbientSegment ? calculateSegmentConcentration(protocolExecutor.lastAmbientSegment) : undefined
     const currentSegmentConcentration = currentSegment ? calculateSegmentConcentration(currentSegment) : undefined;
     const estimatedFitFactor = lastKnownAmbient && currentSegmentConcentration ? formatFitFactor(lastKnownAmbient / currentSegmentConcentration) : "?"
@@ -87,8 +63,6 @@ export function ProtocolExecutorPanel() {
         setProtocolDurationSeconds(appContext.settings.getProtocolDuration(selectedProtocolName))
     }, [selectedProtocolName]);
 
-    const overallScore = getEstimatedOverallScore();
-    useScoreBasedColors(overallScoreRef, overallScore)
 
     function updateSegment(segment: ProtocolSegment) {
         setCurrentSegment(segment);
@@ -281,15 +255,6 @@ export function ProtocolExecutorPanel() {
         return elements;
     }
 
-    function getEstimatedOverallScore() {
-        // calculate harmonic mean of exercise fields
-        const scores = Object.entries(currentTestData)
-            .filter(([key]) => key.startsWith("Ex ")) // only look at exercise fields
-            .map(([, value]) => Number(value))
-            .filter((value) => isFinite(value) && value > 1.0); // ignore invalid values
-        return scores.length / scores.reduce((result, value) => result + 1 / value, 0)
-    }
-
     return (
         <section id="custom-control-panel" style={{
             height: zoomInstructions ? "inherit" : "auto",
@@ -297,14 +262,7 @@ export function ProtocolExecutorPanel() {
             display: "flex",
             flexDirection: "column"
         }}>
-            <div style={{display: "inline-flex", gap: "0.5em"}}>
-                <ProtocolSelectorWidget0/>
-                <IconText icon={AiTwotoneExperiment} elementRef={overallScoreRef}
-                          text="Overall:">{formatFitFactor(overallScore)}</IconText>
-            </div>
             <div id={"protocol-executor-panel-main"} ref={protocolExecutorPanelRef} className={"idle thin-border"}>
-                <StartPauseProtocolButton/>
-                <StopProtocolButton/>
                 <div id={"protocol-visualizer-container"} ref={protocolVisualizerContainerRef}>
                     {getProtocolStageElements()}
                 </div>

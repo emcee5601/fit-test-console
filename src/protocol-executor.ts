@@ -34,13 +34,15 @@ export class ProtocolExecutor {
     private _lastAmbientSegment: ProtocolSegment | undefined;
     private dataCollector: DataCollector;
     private _protocolStartTime: Date | null = null
-    private ambientSampleCollector = new ParticleSampleCollector(SampleSource.AMBIENT);
-    private maskSampleCollector = new ParticleSampleCollector(SampleSource.MASK);
+    private readonly ambientSampleCollector: ParticleSampleCollector;
+    private readonly maskSampleCollector: ParticleSampleCollector;
 
-    constructor(portaCountClient: PortaCountClient8020, dataCollector: DataCollector) {
+    constructor(portaCountClient: PortaCountClient8020, dataCollector: DataCollector, ambientCollector: ParticleSampleCollector, maskCollector: ParticleSampleCollector) {
         this._portaCountClient = portaCountClient
         this.dataCollector = dataCollector
         this.controller = portaCountClient.externalController;
+        this.ambientSampleCollector = ambientCollector
+        this.maskSampleCollector = maskCollector
         this._portaCountClient.addListener(this.getPortaCountListener())
         this._portaCountClient.addListener(this.ambientSampleCollector)
         this._portaCountClient.addListener(this.maskSampleCollector)
@@ -63,7 +65,7 @@ export class ProtocolExecutor {
                     // test not in progress ignore
                     return;
                 }
-                if(this.state === "Paused") {
+                if (this.state === "Paused") {
                     // we're paused. do nothing.
                     return;
                 }
@@ -186,7 +188,7 @@ export class ProtocolExecutor {
     }
 
     set protocol(protocolName: string) {
-        if(this.state === "Executing") {
+        if (this.state === "Executing") {
             console.warn("attempted to set protocol while protocol is executing. ignoring. this is not allowed.")
             return;
         }
@@ -299,7 +301,7 @@ export class ProtocolExecutor {
         segment.data.splice(0) // make sure this is reset
         this.currentSegmentIndex = segmentIndex;
         this.saveSetting(AppSettings.CURRENT_STAGE_INDEX, segment.stageIndex)
-        if(segmentIndex === 0 || segment.stageIndex !== this.segments[segmentIndex-1].stageIndex) {
+        if (segmentIndex === 0 || segment.stageIndex !== this.segments[segmentIndex - 1].stageIndex) {
             // this is the first segment of the stage.
             this.saveSetting(AppSettings.CURRENT_STAGE_INDEX, segment.stageIndex)
             this.saveSetting(AppSettings.STAGE_START_TIME, segment.segmentStartTimeMs)

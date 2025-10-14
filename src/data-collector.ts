@@ -57,8 +57,6 @@ export interface DataCollectorListener {
 export class DataCollector {
     private readonly listeners: DataCollectorListener[] = [];
     private readonly resultsDatabase;
-    // the last completed dataset
-    private previousTestData: SimpleResultsDBRecord | null = null;
     // the current in-progress dataset
     private currentTestData: SimpleResultsDBRecord | null = null;
     private lastExerciseNum: number = 0;
@@ -156,7 +154,6 @@ export class DataCollector {
 
         const fun = () => {
             console.log(`test complete, id ${this.currentTestData?.ID}, final score ${finalScore}`);
-            this.previousTestData = this.currentTestData
             this.currentTestData = null; // flag done
         };
         this.chain(fun) // need to chain
@@ -266,13 +263,6 @@ export class DataCollector {
                         }
                     }
                 })
-            } else if (record.ID === this.previousTestData?.ID) {
-                /*
-                We're updating the previous record. If we don't have a current record, we must be updating the latest
-                record. In this case, we should update the local copy of the previous record so if we're propagating
-                the text fields over, we pick up these changes.
-                 */
-                this.previousTestData = record;
             }
             this.resultsDatabase.updateTest(record);
         } else {
