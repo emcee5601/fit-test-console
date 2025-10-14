@@ -47,7 +47,7 @@ export function EstimatedOverallScoreWidget() {
                     })
                     .map(([key,value]) => <InfoBox2 key={key} label={key}>{formatFitFactor(Number(value))}</InfoBox2>)
             }
-            <InfoBox2 label={<AiTwotoneExperiment/>}>{formatFitFactor(currentTestData.Final??overallScore)}</InfoBox2>
+            <InfoBox2 label={<AiTwotoneExperiment/>}>{formatFitFactor(Number(currentTestData.Final)??overallScore)}</InfoBox2>
         </div>
     )
 }

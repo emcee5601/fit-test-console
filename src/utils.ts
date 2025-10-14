@@ -1,4 +1,4 @@
-import {isNull, isUndefined} from "json-2-csv/lib/utils";
+import {isNull, isNumber, isUndefined} from "json-2-csv/lib/utils";
 
 import {RefObject} from "react";
 import {ProtocolSegment} from "src/app-settings-types.ts";
@@ -447,12 +447,15 @@ export function formatInteger4(value: number): string {
     if (value >= 10000) {
         return Math.round(value / 1000).toFixed(0) + 'k';
     } else {
+        if(!value.toFixed) {
+            console.debug("unexpected value:", value)
+        }
         return value.toFixed(0)
     }
 }
 
 export function formatFitFactor(value: number): string {
-    if (isNaN(value) || isUndefined(value) || isNull(value) || value < 1) {
+    if (isNaN(value) || isUndefined(value) || isNull(value) || value < 1 || !isNumber(value)) {
         return "?";
     }
     if (value < 10) {
