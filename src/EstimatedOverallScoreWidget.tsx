@@ -2,10 +2,10 @@ import {useContext, useEffect, useRef, useState} from "react";
 import {AiTwotoneExperiment} from "react-icons/ai";
 import {AppContext} from "src/app-context.ts";
 import {DataCollectorListener} from "src/data-collector.ts";
-import {InfoBox2} from "src/InfoBox2.tsx";
+import {ExerciseScoreBox} from "src/ExerciseScoreBox.tsx";
 import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
 import {useScoreBasedColors} from "src/use-score-based-colors.ts";
-import {formatFitFactor, getEstimatedOverallScore} from "src/utils.ts";
+import {getEstimatedOverallScore} from "src/utils.ts";
 
 
 export function EstimatedOverallScoreWidget() {
@@ -29,7 +29,7 @@ export function EstimatedOverallScoreWidget() {
     }, []);
 
     // for(let i = 1; i <=8; i++) {
-    //     currentTestData[`Ex ${i}`] = 100 + i*10
+    //     currentTestData[`Ex ${i}`] = i**2+0.01
     // }
     // currentTestData.Final = 123445
 
@@ -45,9 +45,11 @@ export function EstimatedOverallScoreWidget() {
                         // keep only exercises with in-bound results
                         return key.startsWith("Ex ") && isFinite(v) && v > 1.0
                     })
-                    .map(([key,value]) => <InfoBox2 key={key} label={key}>{formatFitFactor(Number(value))}</InfoBox2>)
+                    .map(([key,value]) => {
+                        return <ExerciseScoreBox key={key} label={key} score={Number(value)}/>
+                    })
             }
-            <InfoBox2 label={<AiTwotoneExperiment/>}>{formatFitFactor(Number(currentTestData.Final)??overallScore)}</InfoBox2>
+            <ExerciseScoreBox label={<AiTwotoneExperiment/>} score={Number(currentTestData.Final??overallScore)}/>
         </div>
     )
 }

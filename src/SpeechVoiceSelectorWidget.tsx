@@ -1,36 +1,36 @@
-import {useSetting} from "./use-setting.ts";
-import {useCallback, useEffect} from "react";
-import {SPEECH} from "./speech.ts";
+import {useEffect} from "react";
 import {AppSettings} from "src/app-settings-types.ts";
+import {SPEECH} from "./speech.ts";
+import {useSetting} from "./use-setting.ts";
 
 export function SpeechVoiceSelectorWidget() {
     const [selectedVoiceName, setSelectedVoiceName] = useSetting<string>(AppSettings.SPEECH_VOICE);
-
-    const updateSelectedVoice = useCallback((voiceName: string) => {
-        const foundVoice = SPEECH.findVoiceByName(voiceName);
-        console.log(`looking for voice '${voiceName}'; found voice ${foundVoice?.name}`)
-        const currentVoice = SPEECH.getSelectedVoice()
-        if (foundVoice && (!currentVoice || currentVoice.name !== foundVoice.name)) {
-            SPEECH.setSelectedVoice(foundVoice);
-            setSelectedVoiceName(voiceName)
-            if( selectedVoiceName !== foundVoice.name ) {
-                // avoid announcing the selected voice from settings when the component mounts
-                SPEECH.sayItLater(`This is ${foundVoice.name} speaking.`)
-            }
-        }
-    }, [setSelectedVoiceName])
 
     useEffect(() => {
         // on first load, set a default voice if found
         // todo: don't override voice loaded from db
         const defaultVoice = SPEECH.findDefaultVoice()
         if (defaultVoice) {
-            setSelectedVoiceName(defaultVoice.name);
+            updateSelectedVoice(defaultVoice.name);
         }
     }, []);
-    useEffect(() => {
-        updateSelectedVoice(selectedVoiceName)
-    }, [selectedVoiceName, updateSelectedVoice])
+
+    function updateSelectedVoice(voiceName: string) {
+        const foundVoice = SPEECH.findVoiceByName(voiceName);
+        console.log(`looking for voice '${voiceName}'; found voice ${foundVoice?.name}`)
+        const currentVoice = SPEECH.getSelectedVoice()
+        if (foundVoice && (!currentVoice || currentVoice.name !== foundVoice.name)) {
+            SPEECH.setSelectedVoice(foundVoice);
+            setSelectedVoiceName((prev) => {
+                if(prev === voiceName) {
+                    return prev
+                }else {
+                    SPEECH.sayItLater(`This is ${voiceName} speaking.`)
+                    return voiceName
+                }
+            })
+        }
+    }
 
     return (
         <>
@@ -38,7 +38,7 @@ export function SpeechVoiceSelectorWidget() {
                 <label htmlFor='speech-voice-select'>Voice: </label>
                 <select id="speech-voice-select"
                         value={selectedVoiceName}
-                        onChange={e => setSelectedVoiceName(e.target.value)}
+                        onChange={e => updateSelectedVoice(e.target.value)}
                         style={{textOverflow: "ellipsis", width: "15em"}}>
                     {
                         SPEECH.allVoices.map((voice) => {

@@ -22,17 +22,18 @@ export function useScoreBasedColors<T extends HTMLElement>(elementRef: RefObject
             const computedBgColor = computedStyle.backgroundColor
             const matchingFgColor = getFgColorForBgColor(computedBgColor);
             // console.debug("useScoreBasedColor", score, "computed bg:", computedBgColor, "desired bg", bgColor, "fg",
-            // matchingFgColor);
+            // matchingFgColor, "score", score);
             elementRef.current.style.color = matchingFgColor;
 
             if (computedBgColor === "rgba(0, 0, 0, 0)") {
                 /**
                  * Sometimes getComputedStyle() returns a 0 alpha color, which is transparent. Force an update, which
                  * should happen in the next render and let getComputedStyle() try again. Hopefully we'll eventually
-                 * get a non-transparent color.  Otherwise we end up with white on white.
+                 * get a non-transparent color.  Otherwise, we end up with white on white. Also, don't request an
+                 * update immediately so React can have some time to update the colors before we try again.
                  */
                 // console.debug("force update")
-                setUpdate({})
+                setTimeout(() => setUpdate({}), 0.1)
             }
         }
     }, [bgColor, elementRef, update]);
