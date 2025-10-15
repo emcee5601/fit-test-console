@@ -12,6 +12,7 @@ export class ParticleSampleCollector implements PortaCountListener {
     private readonly source: SampleSource
     private readonly maxAgeMs: number;
     private readonly settingName: ValidSettings;
+    private nextSampleTimeMs: number = 0;
 
     constructor(source: SampleSource, maxAgeMs: number = ParticleSampleCollector.DEFAULT_MAX_AGE_MS) {
         this.source = source
@@ -20,9 +21,9 @@ export class ParticleSampleCollector implements PortaCountListener {
     }
 
     particleConcentrationReceived(concentrationEvent: ParticleConcentrationEvent): void {
-        if(concentrationEvent.sampleSource === this.source) {
+        const now = Date.now();
+        if(concentrationEvent.sampleSource === this.source && now > this.nextSampleTimeMs) {
             this.history.push(concentrationEvent);
-            const now = Date.now();
             const index = this.history.findLastIndex((event) => now - event.timestamp > this.maxAgeMs)
             if(index > -1 ) {
                 // prune
@@ -47,7 +48,14 @@ export class ParticleSampleCollector implements PortaCountListener {
         return events.reduce((total, cur) => total + cur.concentration, 0) / events.length
     }
 
-    reset() {
+    isPurging(): boolean {
+        return Date.now() < this.nextSampleTimeMs;
+    }
+
+    reset(purgeDurationMs: number = 0) {
+        if(purgeDurationMs) {
+            this.nextSampleTimeMs = Date.now() + purgeDurationMs
+        }
         this.history.splice(0);
         APP_SETTINGS_CONTEXT.saveSetting(this.settingName, NaN)
     }

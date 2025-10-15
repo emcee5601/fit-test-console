@@ -1,10 +1,10 @@
 import {Table} from "@tanstack/react-table";
-import React, {useEffect, useState} from "react";
-import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
-import {getRecordsToExport} from "./results-transfer-util.ts";
 import LZString from "lz-string";
-import {useHref} from "react-router";
 import {QRCodeSVG} from "qrcode.react";
+import React, {useEffect, useState} from "react";
+import {useHref} from "react-router";
+import {getRecordsToExport} from "./results-transfer-util.ts";
+import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 
 /**
  * A button that generatos a QR code for the given React Table to transfer to another instance of this app
@@ -16,7 +16,7 @@ export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({
 }: {
     table: Table<T>,
 } & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'>) {
-    const [qrcodeUrl, setQrcodeUrl] = useState<string>("")
+    const [qrcodeUrls, setQrcodeUrls] = useState<string[]>([])
     const origin = location.origin
 
     // const origin = "https://emcee5601.github.io"
@@ -27,12 +27,12 @@ export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({
     const baseLocation = origin + location.pathname + useHref("/view-results");
 
     useEffect(() => {
-        if (qrcodeUrl) {
+        if (qrcodeUrls) {
             console.log("adding key listener")
             const keyListener = (keyEvent: KeyboardEvent) => {
                 console.log(`key listener got event: ${JSON.stringify(keyEvent)}`)
                 if (keyEvent.code === "Escape") {
-                    setQrcodeUrl("");
+                    setQrcodeUrls([]);
                 }
             };
             window.addEventListener("keydown", keyListener)
@@ -41,21 +41,46 @@ export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({
                 console.log("removed key listener")
             }
         }
-    }, [qrcodeUrl]);
+    }, [qrcodeUrls]);
 
-    function generateQRCode() {
+
+    function getUrlForData(recordsToExport: T[]) {
+        return `${baseLocation}?data=${(LZString.compressToEncodedURIComponent(JSON.stringify(recordsToExport)))}`;
+    }
+
+    function generateQRCodes() {
         // first, extract data and compress it with lz-string
         const recordsToExport = getRecordsToExport(table);
+        const urls = []
 
-        const str = LZString.compressToEncodedURIComponent(JSON.stringify(recordsToExport));
-        const url = `${baseLocation}?data=${str}`;
-        console.log(`url is: ${url}`)
-        console.log(`url length is ${url.length}`);
-        if (url.length > 4296) {
-            console.log("url is too long")
-        } else {
-            setQrcodeUrl(url);
+        while(recordsToExport.length>0) {
+            let url: string|null = null;
+            let i: number = 0
+            let candidateUrl: string|null = null;
+            for(; i < recordsToExport.length; i++) {
+                const candidates = recordsToExport.toSpliced(i)
+                candidateUrl = getUrlForData(candidates)
+                /**
+                 * v40 codes can store 4296 alphanum, 2953 binary at ECC level L
+                 */
+                if(candidateUrl.length <= 2953) {
+                    url = candidateUrl
+                    // console.debug(`url length is ${url.length}`)
+                } else {
+                    break
+                }
+            }
+            if(url) {
+                urls.push(url);
+                recordsToExport.splice(0, i)
+            } else {
+                // if we didn't get a url, it means the first record is too large to encode
+                console.warn(`could not encode data. resulting url for 1 record is too long at ${candidateUrl?.length}`)
+                break;
+            }
         }
+
+        setQrcodeUrls(urls);
     }
 
     /**
@@ -79,17 +104,22 @@ export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({
     // todo: use <button/>. for now use <input/>
     return (
         <>
-            {qrcodeUrl &&
+            {qrcodeUrls.length > 0 &&
                 <div className={"full-screen-overlay"}>
-                    <div onClick={() => setQrcodeUrl("")} className="qrcode-container">
-                        <span style={{display: "block"}}>Fit test results {getFilterSummary()}</span>
-                        <span style={{display: "block"}}>{baseLocation}</span>
-                        <QRCodeSVG value={qrcodeUrl}
-                                   size={512}
-                                   marginSize={4}
-                                   title={"Fit Test Results"}/>
+                    <div style={{display:"flex", flexDirection:"column"}}>
+                    {qrcodeUrls.map((url, index) =>
+                        <div key={index} onClick={() => setQrcodeUrls([])} className="qrcode-container">
+                            <span
+                                style={{display: "block"}}>Fit test results {getFilterSummary()} ({index + 1} / {qrcodeUrls.length})</span>
+                            <span style={{display: "block"}}>{baseLocation}</span>
+                            <QRCodeSVG value={url}
+                                       size={512}
+                                       marginSize={4}
+                                       title={"Fit Test Results"}/>
+                        </div>)}
                     </div>
                 </div>}
-            <button {...props} onClick={() => generateQRCode()}>QR Code</button>
-        </>)
+            <button {...props} onClick={() => generateQRCodes()}>QR Code</button>
+        </>
+    )
 }

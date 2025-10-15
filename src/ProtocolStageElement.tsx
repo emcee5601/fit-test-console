@@ -25,13 +25,14 @@ export function ProtocolStageElement({stage, elementRef, currentTestResults, exe
         <div className={"protocol-stage-element"}
              ref={elementRef}
              style={{
+                 position: "relative",
                  flexBasis: `${stageDuration}px`,
                  flexGrow: stageDuration,
                  overflow: "hidden",
              }}
         >
-            <div
-                className={"stage-name"}>{exerciseNum ? `Ex ${exerciseNum}:` : null} {stage.instructions.split(".")[0]}</div>
+            <div style={{position: 'absolute', top:0, left:0}}
+                className={"stage-name"}>{exerciseNum ? `${exerciseNum}:` : null} {stage.instructions.split(".")[0]} {stage.ambient_purge}/{stage.ambient_sample}/{stage.mask_purge}/{stage.mask_sample} {override && `(${override})`}</div>
             <div className={"stage-segments"}>
                 <ProtocolSegmentElement duration={stage.ambient_purge} source={SampleSource.AMBIENT}
                                         state={SegmentState.PURGE}/>
@@ -40,8 +41,7 @@ export function ProtocolStageElement({stage, elementRef, currentTestResults, exe
                 <ProtocolSegmentElement duration={stage.mask_purge} source={SampleSource.MASK}
                                         state={SegmentState.PURGE}/>
                 <ProtocolSegmentElement duration={stage.mask_sample} source={SampleSource.MASK}
-                                        state={SegmentState.SAMPLE}
-                                        override={override}/>
+                                        state={SegmentState.SAMPLE}/>
             </div>
         </div>
     )

@@ -1,5 +1,6 @@
 import {useContext, useEffect, useRef, useState} from "react";
 import {AiTwotoneExperiment} from "react-icons/ai";
+import {MdOutlinePending} from "react-icons/md";
 import {PiFaceMask} from "react-icons/pi";
 import {TbLeaf2} from "react-icons/tb";
 import "src/estimated-fit-factor-widget.css"
@@ -32,27 +33,34 @@ export function EstimatedFitFactorWidget() {
     }
 
     function maybeResetAmbient() {
-        if(protocolExecutionState === "Idle") {
+        if (protocolExecutionState === "Idle") {
             console.debug("resetting ambient collector (reset button pressed)")
-            appContext.ambientSampleCollector.reset()
+            appContext.ambientSampleCollector.reset(5 * 1000)
         } else {
             console.debug(`protocol execution state is ${protocolExecutionState}, ambient sample collector cannot be reset unless Idle`)
         }
     }
+    function isAmbientPurging() {
+        return appContext.ambientSampleCollector.isPurging()
+    }
+    function isMaskPurging() {
+        return appContext.maskSampleCollector.isPurging()
+    }
 
     function maybeResetMask() {
-        if(protocolExecutionState === "Idle") {
+        if (protocolExecutionState === "Idle") {
             console.debug("resetting mask collector (reset button pressed)")
-            appContext.maskSampleCollector.reset()
+            appContext.maskSampleCollector.reset(5 * 1000)
         } else {
             console.debug(`protocol execution state is ${protocolExecutionState}, mask sample collector cannot be reset unless Idle`)
         }
     }
 
     return (
-        <div id={"estimated-fit-factor"} ref={divRef} className={"eff-container thin-border"} style={{height:"auto"}}>
-            <div className={"eff-item"} onClick={maybeResetAmbient}><TbLeaf2/>{formatInteger4(currentAmbientAverage)}</div>
-            <div className={"eff-item"} onClick={maybeResetMask}><PiFaceMask/>{formatInteger4(currentMaskAverage)}</div>
+        <div id={"estimated-fit-factor"} ref={divRef} className={"eff-container thin-border"} style={{height: "auto"}}>
+            <div className={"eff-item"} onClick={maybeResetAmbient}><TbLeaf2/>{isAmbientPurging() ? <MdOutlinePending /> : formatInteger4(currentAmbientAverage)}
+            </div>
+            <div className={"eff-item"} onClick={maybeResetMask}><PiFaceMask/>{isMaskPurging() ? <MdOutlinePending /> : formatInteger4(currentMaskAverage)}</div>
             <div className={"eff-item"}><AiTwotoneExperiment/>{formatFitFactor(score)}</div>
             <div className={"percentage"}>{convertFitFactorToFiltrationEfficiency(score)}%</div>
         </div>

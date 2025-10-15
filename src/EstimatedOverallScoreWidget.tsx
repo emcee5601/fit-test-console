@@ -28,6 +28,7 @@ export function EstimatedOverallScoreWidget() {
         }
     }, []);
 
+    // for testing:
     // for(let i = 1; i <=8; i++) {
     //     currentTestData[`Ex ${i}`] = i**2+0.01
     // }
@@ -37,7 +38,7 @@ export function EstimatedOverallScoreWidget() {
     const overallScore = getEstimatedOverallScore(currentTestData);
     useScoreBasedColors(overallScoreRef, overallScore)
     return (
-        <div className={"inline-flex"}>
+        <div style={{display:"contents"}}>
             {
                 Object.entries(currentTestData)
                     .filter(([key,value]) => {
