@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from "react";
-import {Location, NavigateFunction, useLocation, useNavigate} from "react-router";
+import {Location, NavigateFunction, NavLink, useLocation, useNavigate} from "react-router";
 import {SelectOption} from "src/ActionMenuWidget.tsx";
 import {AppSettings} from "src/app-settings-types.ts";
 import {ColorSchemeSwitcher} from "src/ColorSchemeSwitcher.tsx";
@@ -98,6 +98,7 @@ class TouchListener implements EventListenerObject {
 export function NavBar() {
     const [showParticipantTime] = useSetting<boolean>(AppSettings.SHOW_ELAPSED_PARTICIPANT_TIME)
     const [showEventTime] = useSetting<boolean>(AppSettings.SHOW_REMAINING_EVENT_TIME)
+    const [enableTesterMode] = useSetting<boolean>(AppSettings.ENABLE_TESTER_MODE)
     const navigate = useNavigate();
     const location: Location = useLocation();
     const ref = useRef<HTMLDivElement>(null)
@@ -141,48 +142,60 @@ export function NavBar() {
 
     useWakeLock()
 
-    const navLinks: SelectOption[] = [
-        {
-            label: "Home",
-            value: "/"
-        },
-        {
-            label: "Test",
-            value: "/test",
-        },
-        {
-            label: "Results",
-            value: "/view-results"
-        },
-        {
-            label: "Raw Data",
-            value: "/raw-data"
-        },
-        {
-            label: "Settings",
-            value: "/settings"
-        },
-        {
-            label: "Protocols",
-            value: "/protocols"
-        },
-        {
-            label: "Stats",
-            value: "/stats"
-        },
-        {
-            label: "QR Code",
-            value: "/qrscanner"
-        },
-        {
-            label: "Daily Checks",
-            value: "/daily-checks"
-        },
-        {
-            label: "Bookmarks",
-            value: "/bookmarks"
-        }
-    ];
+    const navLinks: SelectOption[] =
+        enableTesterMode
+            ? [
+                {
+                    label: "Test",
+                    value: "/test",
+                },
+                {
+                    label: "Participant",
+                    value: "/participant"
+                },
+                {
+                    label: "All Results",
+                    value: "/view-results"
+                },
+                {
+                    label: "Daily Checks",
+                    value: "/daily-checks"
+                },
+                {
+                    label: "Bookmarks",
+                    value: "/bookmarks"
+                },
+                {
+                    label: "Protocols",
+                    value: "/protocols"
+                },
+                {
+                    label: "Stats",
+                    value: "/stats"
+                },
+                {
+                    label: "QR Code",
+                    value: "/qrscanner"
+                },
+                {
+                    label: "Raw Data",
+                    value: "/raw-data"
+                },
+                {
+                    label: "Help",
+                    value: "/help"
+                },
+            ]
+            : [ // participant mode
+                {
+                    label: "Results",
+                    value: "/view-results"
+                },
+                {
+                    label: "Bookmarks",
+                    value: "/bookmarks"
+                }
+            ]
 
 
     function resizeAsNecessary(entry: ResizeObserverEntry) {
@@ -253,10 +266,20 @@ export function NavBar() {
              className={"nav-bar"}>
             <ColorSchemeSwitcher/>
             <MenuWidget options={navLinks}/>
-            <CurrentParticipantTimeWidget style={{visibility: showParticipantTime ? "visible" : "hidden"}}
+            <CurrentParticipantTimeWidget style={{display: showParticipantTime && enableTesterMode ? "inline-flex" : "none"}}
                                           useIcons={useIcons}/>
-            <div>v{__APP_VERSION__}{import.meta.env.MODE[0]}</div>
-            <EventTimeWidget style={{visibility: showEventTime ? "visible" : "hidden"}} useIcons={useIcons}/>
+
+            {navLinks.map((option: SelectOption) =>
+                    <NavLink key={option.label} to={option.value} className={({
+                        isActive
+                    }) => isActive ? "nav-link-active" : "nav-link-hidden"}
+                    >
+                        <div className={"no-wrap"}>{option.label}</div>
+                    </NavLink>
+
+                )}
+
+            <EventTimeWidget style={{display: showEventTime && enableTesterMode ? "inline-flex" : "none"}} useIcons={useIcons}/>
             <SettingsWidget/>
         </div>
     )

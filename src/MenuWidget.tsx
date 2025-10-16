@@ -23,21 +23,17 @@ export function MenuWidget(props: MenuWidgetProps) {
             <label className="header-menu-button" htmlFor="header-menu"><GiHamburgerMenu/></label>
             <label className="header-menu-overlay" htmlFor="header-menu"></label>
             <div className={"header-nav"}>
-                <ul>
-                    {props.options.map((option: SelectOption) =>
-                        <li key={option.value}>
-                            <NavLink key={option.label} to={option.value} className={({
-                                isActive,
-                                isPending
-                            }) => isPending ? "nav-link-pending" : isActive ? "nav-link-active" : ""}
-                                     viewTransition
-                                     onClick={() => dismissMenu()}
-                            >
-                                <div className={"no-wrap"}>{option.label}</div>
-                            </NavLink>
-
-                        </li>)}
-                </ul>
+                {props.options.map((option: SelectOption) =>
+                    <NavLink key={option.label} to={option.value} className={({
+                        isActive,
+                        isPending
+                    }) => isPending ? "nav-link-pending" : isActive ? "nav-link-active" : ""}
+                             viewTransition
+                             onClick={() => dismissMenu()}
+                    >
+                        <div className={"no-wrap"} style={{display:"flex"}}>{option.label}</div>
+                    </NavLink>
+                )}
             </div>
         </div>
     )

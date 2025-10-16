@@ -34,7 +34,7 @@ export function EventTimeWidget({useIcons = false, ...props}: { useIcons?: boole
 
     useTimingSignal(updateUi)
 
-    props.style = {...props.style, ...{display: "flex", gap: "0.3em"}}
+    props.style = {...props.style, ...{gap: "0.3em"}}
     return (
         <div {...props}
              className={`number-field thin-border smooth-background-change svg-container no-wrap ${getEventElapsedTimeClass()}`}>

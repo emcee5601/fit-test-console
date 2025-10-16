@@ -16,15 +16,16 @@
 
 .header-nav {
     position: absolute;
-    top: 1em;
+    display: grid;
     left: 0;
+    padding: 1em;
     width: fit-content;
     max-height: 90vh;
     overflow-y: scroll;
     font-size: 1.5em;
-    padding-inline: 1em;
+    justify-items: stretch;
     opacity: 1;
-    background-color: lightgrey;
+    background-color: whitesmoke;
     transform: translateX(-100%);
     will-change: transform;
     transition: 0.2s transform linear;
@@ -41,7 +42,8 @@
 
         ~ .header-menu-overlay {
             pointer-events: initial;
-            opacity: 1;
+            background-color: darkgray;
+            opacity: 0.8;
             z-index: 1;
         }
     }

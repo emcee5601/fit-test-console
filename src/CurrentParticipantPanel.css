@@ -1,0 +1,39 @@
+.overlay-participant-info {
+    position: absolute;
+    padding: 1em;
+    opacity: 1;
+    background-color: whitesmoke;
+    transform: translateY(-100%);
+    will-change: transform;
+    transition: 0.2s transform linear;
+    z-index: 10;
+}
+
+.participant-checkbox-overlay {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: 0.2s opacity ease-in-out;
+}
+
+.participant-info-checkbox {
+    appearance: none;
+    display:none;
+
+    &:checked {
+        ~ .overlay-participant-info {
+            transform: translateY(0);
+        }
+
+        ~ .participant-checkbox-overlay {
+            pointer-events: initial;
+            background-color: darkgray;
+            opacity: 0.8;
+            z-index: 1;
+        }
+    }
+}

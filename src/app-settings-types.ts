@@ -1,9 +1,9 @@
-import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
 import {DataSource} from "src/data-source.ts";
-import {StageDefinition} from "src/simple-protocol.ts";
 import {ParticleConcentrationEvent} from "src/portacount-client-8020.ts";
 import {Activity, ConnectionStatus, SampleSource} from "src/portacount/porta-count-state.ts";
 import {SegmentState} from "src/protocol-executor/segment-state.ts";
+import {StandardStageDefinition} from "src/simple-protocol.ts";
+import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
 
 /**
  * this is for convenience. code outside of this module should use AppSettings enum.
@@ -44,6 +44,7 @@ export enum AppSettings {
     USE_IDLE_AMBIENT_VALUES = "use-idle-ambient-values",
     NORMALIZE_MASK_LIST_NAMES = "normalize-mask-list-names",
     AUTO_DETECT_BAUD_RATE = "auto-detect-baud-rate",
+    ENABLE_TESTER_MODE = "enable-tester-mode",
 
     // session only settings (these start with "so-". todo: can we merge these from another enum into this?
     STATS_FIRST_DATE = "so-stats-first-date",
@@ -261,6 +262,7 @@ export const AppSettingsDefaults = {
     "use-idle-ambient-values": false,
     "normalize-mask-list-names": true,
     "auto-detect-baud-rate": true,
+    "enable-tester-mode": false,
 
     "so-stats-first-date": new Date(0), // epoch, sentinel value
     "so-stats-last-date": new Date(), // today
@@ -296,7 +298,7 @@ export type ValidSettings = keyof typeof AppSettingsDefaults;
 // todo: rename this to phase? so we don't share the same first letter as Stage
 export type ProtocolSegment = {
     index: number, // segment index
-    stage: StageDefinition,
+    stage: StandardStageDefinition,
     stageIndex: number,
     exerciseNumber: number | null, // this is usually stageIndex+1 (to be 1-based), but sometimes it's shifted by some
                                    // amount, in order to skip 0-duration stages

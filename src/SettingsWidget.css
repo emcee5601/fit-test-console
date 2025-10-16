@@ -16,14 +16,13 @@
 
 .settings-nav {
     position: absolute;
-    top: 2em;
     right: 0;
     width: 80vw;
     max-height: 90vh;
     overflow-y: scroll;
-    padding-inline: 1em;
+    padding: 1em;
     opacity: 1;
-    background-color: lightgrey;
+    background-color: whitesmoke;
     transform: translateX(100%);
     will-change: transform;
     transition: 0.2s transform linear;
@@ -40,7 +39,8 @@
 
         ~ .settings-overlay {
             pointer-events: initial;
-            opacity: 1;
+            background-color: darkgray;
+            opacity: 0.8;
             z-index: 1;
         }
     }

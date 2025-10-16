@@ -393,8 +393,6 @@ td.results {
 }
 
 .nav-link-active {
-    color: white;
-    background-color: blue;
     font-weight: bold;
     font-size: larger;
     /*font-style: italic;*/
@@ -404,10 +402,21 @@ td.results {
 .nav-link-pending {
     background-color: lightblue;
 }
+.nav-link-hidden {
+    display: none;
+}
 
 #nav-bar {
     container-type: inline-size;
     container-name: nav-bar-container;
+}
+
+.nav-bar {
+    display: flex;
+    justify-content: space-between;
+    height: 100%;
+    box-sizing: border-box;
+    background-color: light-dark(whitesmoke, black);
 }
 
 .icon-text {
@@ -486,6 +495,8 @@ td input.simple-mask-selector {
     border: 1px solid;
     box-shadow: 2px 2px 2px;
     box-sizing: border-box;
+    margin-inline-end: 3px;
+    margin-block-end: 3px;
 }
 
 .participant-info {
@@ -498,11 +509,3 @@ td input.simple-mask-selector {
     }
 }
 
-.nav-bar {
-    display: flex;
-    justify-content: space-between;
-    height: 100%;
-    padding-bottom: 0.5em;
-    box-sizing: border-box;
-    background-color: light-dark(whitesmoke, black);
-}

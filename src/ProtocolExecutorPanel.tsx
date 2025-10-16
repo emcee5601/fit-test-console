@@ -239,17 +239,18 @@ export function ProtocolExecutorPanel() {
     function getProtocolStageElements() {
         const elements: ReactElement[] = []
         let exerciseNum = 0;
-        stages.forEach((stage, index) => {
+        stages.forEach((stage, stageIndex) => {
             if (stage.mask_sample) {
                 exerciseNum++;
             }
-            const isCurrentStage = currentSegment && currentSegment.stageIndex === index;
+            const isCurrentStage = currentSegment && currentSegment.stageIndex === stageIndex;
             const refParts = isCurrentStage ? {elementRef: currentStageDivRef} : {}
-
-            elements.push(<ProtocolStageElement key={index} {...refParts} stage={stage}
+            elements.push(<ProtocolStageElement key={stageIndex} {...refParts}
+                                                stage={stage}
                                                 exerciseNum={stage.mask_sample ? exerciseNum : undefined}
                                                 currentTestResults={currentTestData}
                                                 currentEstimate={isCurrentStage ? estimatedFitFactor : undefined}
+                                                stageIndex={stageIndex}
             />)
         });
         return elements;

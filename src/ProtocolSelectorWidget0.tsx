@@ -70,7 +70,7 @@ export function ProtocolSelectorWidget0() {
                 onChange={(event) => setProtocol(event.target.value)}
                 value={selectedProtocol}
                 disabled={protocolExecutionState === "Executing"}
-                style={{width: "100%", height: "inherit"}}
+                style={{width: "calc(100% - 3px)", height: "inherit"}}
         >
             {protocolNames.map((protocolName) => <option key={protocolName}
                                                          value={protocolName}>{protocolName === selectedProtocol ? getDecoratedSelectedProtocol() : getProtocolNameWithDuration(protocolName)}</option>)}

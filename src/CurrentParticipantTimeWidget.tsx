@@ -48,7 +48,7 @@ export function CurrentParticipantTimeWidget({useIcons = false, ...props}: {
 
     useTimingSignal(updateUi)
 
-    props.style = {...props.style, ...{display: "flex", gap: "0.3em"}}
+    props.style = {...props.style, ...{gap: "0.3em"}}
     return (
         <div {...props}
              className={`thin-border number-field smooth-background-change svg-container no-wrap ${getParticipantElapsedTimeClass()}`}>

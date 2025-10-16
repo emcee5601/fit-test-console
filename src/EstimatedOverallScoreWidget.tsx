@@ -28,6 +28,10 @@ export function EstimatedOverallScoreWidget() {
         }
     }, []);
 
+    function restartFromExercise(exerciseNum: number) {
+        appContext.protocolExecutor.restartFromExercise(exerciseNum);
+    }
+
     // for testing:
     // for(let i = 1; i <=8; i++) {
     //     currentTestData[`Ex ${i}`] = i**2+0.01
@@ -47,7 +51,8 @@ export function EstimatedOverallScoreWidget() {
                         return key.startsWith("Ex ") && isFinite(v) && v > 1.0
                     })
                     .map(([key,value]) => {
-                        return <ExerciseScoreBox key={key} label={key} score={Number(value)}/>
+                        const exerciseNum = Number(key.substring(3))
+                        return <ExerciseScoreBox key={key} label={key} score={Number(value)} onClick={() => restartFromExercise(exerciseNum)}/>
                     })
             }
             <ExerciseScoreBox label={<AiTwotoneExperiment/>} score={Number(currentTestData.Final??overallScore)}/>

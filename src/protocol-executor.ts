@@ -359,14 +359,34 @@ export class ProtocolExecutor {
             console.debug("can't resume: no current stage")
             return
         }
+        this.resumeFromStage(currentStageIndex);
+    }
+
+    private resumeFromStage(currentStageIndex: number) {
         const firstSegmentCurrentStage = this.segments.find((segment) => segment.stageIndex === currentStageIndex)
         if (firstSegmentCurrentStage === undefined) {
             console.debug("can't resume: can't determine first segment in current stage")
             return
         }
         console.debug(`resuming at segment ${firstSegmentCurrentStage.index} stage ${firstSegmentCurrentStage.stageIndex}`)
+        this.dataCollector.setInstructions(""); // reset this so we can detect a change in instructions and say them
+                                                // again
         this.saveSetting(AppSettings.CURRENT_MASK_AVERAGE, NaN) // reset
         this.executeSegment(firstSegmentCurrentStage.index)
+    }
+
+    public restartFromExercise(exerciseNum: number) {
+        if(this.state !== "Paused") {
+            console.debug(`can only restartFrom when Paused, current state is ${this.state}`)
+            return
+        }
+        // find the first segment of the target exercise
+        const segmentForExercise = this.segments.find((segment) => segment.exerciseNumber === exerciseNum)
+        if(segmentForExercise === undefined) {
+            console.debug(`can't restart from ex ${exerciseNum}: can't determine stage for exercise ${exerciseNum}`)
+            return
+        }
+        this.resumeFromStage(segmentForExercise.stageIndex)
     }
 
     /**

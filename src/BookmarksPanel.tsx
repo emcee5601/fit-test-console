@@ -53,7 +53,6 @@ export function BookmarksPanel() {
     return (
         <div id={"bookmarks"}
              style={{height: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: "1em"}}>
-            Bookmarks
             <div>
                 {qrcodeUrl &&
                     <div className={"full-screen-overlay"}>
