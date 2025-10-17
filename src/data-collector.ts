@@ -463,7 +463,8 @@ export class DataCollector {
         if (!this.currentTestData.ParticleCounts) {
             this.currentTestData.ParticleCounts = []
         }
-        this.currentTestData.ParticleCounts.push({type: event.sampleSource, count: event.concentration})
+        const stddev = event.stddev ? {stddev: event.stddev} : {};
+        this.currentTestData.ParticleCounts.push({type: event.sampleSource, count: event.concentration, ...stddev})
         this.updateCurrentRowInDatabase()
     }
 

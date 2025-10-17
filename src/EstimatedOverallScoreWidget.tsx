@@ -5,7 +5,7 @@ import {DataCollectorListener} from "src/data-collector.ts";
 import {ExerciseScoreBox} from "src/ExerciseScoreBox.tsx";
 import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
 import {useScoreBasedColors} from "src/use-score-based-colors.ts";
-import {getEstimatedOverallScore} from "src/utils.ts";
+import {getEstimatedOverallScore, getMaskParticleCountForExercise} from "src/utils.ts";
 
 
 export function EstimatedOverallScoreWidget() {
@@ -41,21 +41,34 @@ export function EstimatedOverallScoreWidget() {
     const overallScoreRef = useRef<HTMLDivElement>(null);
     const overallScore = getEstimatedOverallScore(currentTestData);
     useScoreBasedColors(overallScoreRef, overallScore)
+    const exerciseFieldData = Object.entries(currentTestData)
+        .filter(([key, value]) => {
+            const v = Number(value)
+            // keep only exercises with in-bound results
+            return key.startsWith("Ex ") && isFinite(v) && v > 1.0
+        });
     return (
-        <div style={{display:"contents"}}>
+        <div style={{display: "contents"}}>
             {
-                Object.entries(currentTestData)
-                    .filter(([key,value]) => {
-                        const v = Number(value)
-                        // keep only exercises with in-bound results
-                        return key.startsWith("Ex ") && isFinite(v) && v > 1.0
-                    })
-                    .map(([key,value]) => {
+                exerciseFieldData
+                    .map(([key, value]) => {
                         const exerciseNum = Number(key.substring(3))
-                        return <ExerciseScoreBox key={key} label={key} score={Number(value)} onClick={() => restartFromExercise(exerciseNum)}/>
+                        const particleCount = getMaskParticleCountForExercise(exerciseNum, currentTestData)
+                        const pct = particleCount && particleCount.stddev
+                            ? particleCount.stddev / particleCount.count
+                            : NaN
+                        const score = Number(value);
+                        return <ExerciseScoreBox key={key} label={key} score={score} stddev={pct}
+                                                 onClick={() => restartFromExercise(exerciseNum)}/>
                     })
             }
-            <ExerciseScoreBox label={<AiTwotoneExperiment/>} score={Number(currentTestData.Final??overallScore)}/>
+            <ExerciseScoreBox label={<AiTwotoneExperiment/>} score={Number(currentTestData.Final ?? overallScore)}
+                              stddev={
+                                  Math.sqrt((currentTestData.ParticleCounts ?? [])
+                                      .map((particleCount) =>
+                                          (particleCount?.stddev ?? 0) / (particleCount?.count ?? 0.01))
+                                      .reduce((res, pct) => res + pct ** 2, 0))
+                              }/>
         </div>
     )
 }

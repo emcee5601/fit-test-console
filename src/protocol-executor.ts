@@ -14,7 +14,7 @@ import {
 import {ProtocolExecutorListener} from "src/protocol-executor/protocol-executor-listener.ts";
 import {SegmentState} from "src/protocol-executor/segment-state.ts";
 import {convertStagesToSegments} from "src/protocol-executor/utils.ts";
-import {avg, calculateSegmentConcentration} from "src/utils.ts";
+import {avg, calculateSegmentConcentration, calculateSegmentConcentrationAndStddev} from "src/utils.ts";
 import {DataCollector} from "./data-collector.ts";
 import {ExternalController} from "./external-control.ts";
 import {ParticleConcentrationEvent, PortaCountClient8020, PortaCountListener} from "./portacount-client-8020.ts";
@@ -434,8 +434,9 @@ export class ProtocolExecutor {
             return nextSegmentIndex
         }
         // we're closing a sampling segment
-        const segmentConcentration = calculateSegmentConcentration(segment);
-        this.dataCollector.recordParticleCount(new ParticleConcentrationEvent(segmentConcentration, segment.source, ControlSource.External))
+        const {average: segmentConcentration, stddev} = calculateSegmentConcentrationAndStddev(segment);
+        // round stddev to save space.
+        this.dataCollector.recordParticleCount(new ParticleConcentrationEvent(segmentConcentration, segment.source, ControlSource.External, Math.round(stddev)))
 
         if (segment.source === SampleSource.AMBIENT) {
             if (this.lastAmbientSegment) {

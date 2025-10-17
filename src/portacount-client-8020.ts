@@ -123,12 +123,14 @@ export class ParticleConcentrationEvent extends PortaCountEvent {
     readonly sampleSource: SampleSource
     readonly controlSource: ControlSource
     readonly concentration: number
+    readonly stddev?: number;
 
-    constructor(concentration: number, sampleSource: SampleSource, controlSource: ControlSource) {
+    constructor(concentration: number, sampleSource: SampleSource, controlSource: ControlSource, stddev?: number) {
         super();
         this.concentration = concentration;
         this.sampleSource = sampleSource
         this.controlSource = controlSource;
+        this.stddev = stddev
     }
 
 }

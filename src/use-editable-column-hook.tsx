@@ -1,15 +1,19 @@
+import {numberInputClasses, Unstable_NumberInput as NumberInput} from "@mui/base/Unstable_NumberInput";
+import {useTheme} from '@mui/system';
 import {CellContext, RowData} from "@tanstack/react-table";
 import React, {useCallback, useContext, useEffect, useRef} from "react";
 import {useInView} from "react-intersection-observer";
-import {numberInputClasses, Unstable_NumberInput as NumberInput} from "@mui/base/Unstable_NumberInput";
-import {useTheme} from '@mui/system';
-import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
-import {convertFitFactorToFiltrationEfficiency, getFitFactorCssClass} from "src/utils.ts";
 import {AppContext} from "src/app-context.ts";
-import {SmartTextArea} from "src/SmartTextArea.tsx";
 import {MaskSelectorWidget} from "src/MaskSelectorWidget.tsx";
-import {ControlSource, SampleSource} from "src/portacount/porta-count-state.ts";
+import {ControlSource} from "src/portacount/porta-count-state.ts";
+import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
+import {SmartTextArea} from "src/SmartTextArea.tsx";
 import {useScoreBasedColors} from "src/use-score-based-colors.ts";
+import {
+    convertFitFactorToFiltrationEfficiency,
+    getFitFactorCssClass,
+    getMaskParticleCountForExercise
+} from "src/utils.ts";
 
 declare module '@tanstack/react-table' {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -60,7 +64,7 @@ export function useEditableExerciseResultColumn<T extends SimpleResultsDBRecord,
     const {exerciseNum} = id.match(/.*?(?<exerciseNum>[0-9]+)$/)?.groups ?? {exerciseNum: 0} // ex 0 == final
     const protocolHasThisManyExercises = row.original.ProtocolName && appContext.settings.numExercisesForProtocol[row.original.ProtocolName] >= Number(exerciseNum) || false;
     const editable = row.original.TestController === ControlSource.Manual && protocolHasThisManyExercises
-    const maskConcentration = (row.original.ParticleCounts ?? []).filter((particleCount) => particleCount.type === SampleSource.MASK).at(Number(exerciseNum) - 1)?.count ?? 0
+    const maskConcentration = getMaskParticleCountForExercise(Number(exerciseNum), row.original)?.count ?? 0
 
     const fitFactor = Number(value);
     const efficiencyPercentage = convertFitFactorToFiltrationEfficiency(fitFactor);

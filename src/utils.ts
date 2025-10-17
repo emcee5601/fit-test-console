@@ -4,7 +4,7 @@ import {RefObject} from "react";
 import {ProtocolSegment} from "src/app-settings-types.ts";
 import {ParticleConcentrationEvent} from "src/portacount-client-8020.ts";
 
-import {ConnectionStatus} from "src/portacount/porta-count-state.ts";
+import {ConnectionStatus, SampleSource} from "src/portacount/porta-count-state.ts";
 import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
 
 const aliases = {
@@ -447,7 +447,7 @@ export function formatInteger4(value: number): string {
     if (value >= 10000) {
         return Math.round(value / 1000).toFixed(0) + 'k';
     } else {
-        if(!value.toFixed) {
+        if (!value.toFixed) {
             console.debug("unexpected value:", value)
         }
         return value.toFixed(0)
@@ -492,10 +492,30 @@ export function isMobile() {
     return window.navigator.userAgent.includes("Mobi")
 }
 
-export function calculateSegmentConcentration(segment: ProtocolSegment): number {
+export function getMaskParticleCountForExercise(exerciseNum: number, record: SimpleResultsDBRecord) {
+    return (record.ParticleCounts ?? []).filter((particleCount) => particleCount.type === SampleSource.MASK).at(exerciseNum - 1)
+}
+
+export function calculateSegmentConcentrationAndStddev(segment: ProtocolSegment) {
     // don't round this here
     // portacount seems to return a minimum value of 0.01 here, so we'll do the same
-    return Math.max(0.01, segment.data.reduce((sum, currentValue: ParticleConcentrationEvent) => sum + currentValue.concentration, 0) / segment.data.length);
+    const concentration = Math.max(0.01, segment.data.reduce((sum, currentValue: ParticleConcentrationEvent) => sum + currentValue.concentration, 0) / segment.data.length);
+
+    // https://en.wikipedia.org/wiki/Standard_deviation#Rapid_calculation_methods
+    const [, q] = segment.data.map((pce) => pce.concentration)
+        .reduce(([a, q], xk, k) => {
+            const ak = a + (xk - a) / (k+1);
+            const qk = q + (xk - a) * (xk - ak);
+            return [ak, qk]
+        }, [0, 0]);
+
+    const variance = q / segment.data.length;
+    const stddev = Math.sqrt(variance);
+    return {average: concentration, stddev: stddev};
+}
+
+export function calculateSegmentConcentration(segment: ProtocolSegment): number {
+    return calculateSegmentConcentrationAndStddev(segment).average
 }
 
 export function getEstimatedOverallScore(currentTestData: SimpleResultsDBRecord) {
