@@ -1,7 +1,7 @@
 {
   "name": "fit-test-console",
   "private": true,
-  "version": "2.3.0",
+  "version": "2.4.0",
   "homepage": "https://emcee5601.github.io/fit-test-console",
   "type": "module",
   "scripts": {
