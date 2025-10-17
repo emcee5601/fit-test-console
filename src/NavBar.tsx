@@ -7,6 +7,7 @@ import {CurrentParticipantTimeWidget} from "src/CurrentParticipantTimeWidget.tsx
 import {EventTimeWidget} from "src/EventTimeWidget.tsx";
 import {MenuWidget} from "src/MenuWidget.tsx";
 import {SettingsWidget} from "src/SettingsWidget.tsx";
+import {SimulatorWidget} from "src/SimulatorWidget.tsx";
 import {useSetting} from "src/use-setting.ts";
 import {isMobile} from "src/utils.ts";
 import {useWakeLock} from "./use-wake-lock.ts";
@@ -280,6 +281,7 @@ export function NavBar() {
                 )}
 
             <EventTimeWidget style={{display: showEventTime && enableTesterMode ? "inline-flex" : "none"}} useIcons={useIcons}/>
+            <SimulatorWidget/>
             <SettingsWidget/>
         </div>
     )

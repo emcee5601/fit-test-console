@@ -5,7 +5,7 @@ import {CurrentParticipantPanel} from "./CurrentParticipantPanel.tsx";
 export function ParticipantPanel() {
     return (
         <div id={"participant-panel"} style={{display: "flex", flexDirection: "column"}}>
-            <CurrentParticipantPanel mode={"compact"}/>
+            <CurrentParticipantPanel/>
             <CurrentParticipantResults/>
         </div>
     )

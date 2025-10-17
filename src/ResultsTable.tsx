@@ -1,10 +1,6 @@
 /**
  * Table to store the results of fit tests.
  */
-import React, {Dispatch, SetStateAction, useContext, useEffect, useState} from 'react'
-
-import './ResultsTable.css'
-
 import {
     ColumnDef,
     ColumnFiltersState,
@@ -19,24 +15,27 @@ import {
 
 import {useVirtualizer} from '@tanstack/react-virtual'
 import "react-datepicker/dist/react-datepicker.css";
+import {deepCopy} from "json-2-csv/lib/utils";
+import React, {Dispatch, SetStateAction, useCallback, useContext, useEffect, useState} from 'react'
+
+import './ResultsTable.css'
+import {AppSettings} from "src/app-settings-types.ts";
+import {MaskPerfFunctionPlot} from "src/MaskPerfFunctionPlot.tsx";
+import {exportToFile, importFromFile} from "src/results-transfer-util.ts";
+import {BooleanToggleButton} from "src/ToggleButton.tsx";
+import {AppContext} from "./app-context.ts";
+import {DataCollector, DataCollectorListener} from "./data-collector.ts";
+import {ReactTableCsvExportWidget} from "./ReactTableCsvExportWidget.tsx";
+import {ReactTableQrCodeExportWidget} from "./ReactTableQrCodeExportWidget.tsx";
+import {ResultsTableColumnFilter} from "./ResultsTableColumnFilter.tsx";
+import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 import {
     useEditableColumn,
     useEditableExerciseResultColumn,
     useEditableMaskColumn
 } from "./use-editable-column-hook.tsx";
-import {useSkipper} from "./use-skipper-hook.ts";
-import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
-import {AppContext} from "./app-context.ts";
-import {DataCollector, DataCollectorListener} from "./data-collector.ts";
-import {ResultsTableColumnFilter} from "./ResultsTableColumnFilter.tsx";
-import {ReactTableCsvExportWidget} from "./ReactTableCsvExportWidget.tsx";
-import {ReactTableQrCodeExportWidget} from "./ReactTableQrCodeExportWidget.tsx";
 import {useSetting} from "./use-setting.ts";
-import {BooleanToggleButton} from "src/ToggleButton.tsx";
-import {deepCopy} from "json-2-csv/lib/utils";
-import {AppSettings} from "src/app-settings-types.ts";
-import {exportFile, importFile} from "src/results-transfer-util.ts";
-import {MaskPerfFunctionPlot} from "src/MaskPerfFunctionPlot.tsx";
+import {useSkipper} from "./use-skipper-hook.ts";
 
 //This is a dynamic row height example, which is more complicated, but allows for a more realistic table.
 //See https://tanstack.com/virtual/v3/docs/examples/react/table for a simpler fixed row height example.
@@ -226,6 +225,7 @@ export function ResultsTable({
     const [columnFilters, setColumnFilters] = useSetting<ColumnFiltersState>(columnFilterSettingKey)
     const [showMaskPerfGraph] = useSetting<boolean>(AppSettings.SHOW_MASK_PERF_GRAPH)
     const [sorting, setSorting] = useSetting<SortingState>(columnSortingSettingKey)
+    const [testTemplate] = useSetting<Partial<SimpleResultsDBRecord>>(AppSettings.TEST_TEMPLATE)
     const [columnVisibility, setColumnVisibility] = useState(hideColumns.reduce((result: {
         [key: string]: boolean
     }, column: string) => {
@@ -367,6 +367,16 @@ export function ResultsTable({
         return `${columnId.replace(/\s+/g, "_")}-column`
     }
 
+    const getExportFileNameHint = useCallback(() =>  {
+        if (columnFilterSettingKey === AppSettings.PARTICIPANT_RESULTS_TABLE_FILTER) {
+            // the filter is not actually being used. The dataset is being filtered before this table is created
+            const participantName = (testTemplate.Participant??"").toLowerCase().replace(/[^a-zA-Z]+/g, "-")
+            return `cft-results${participantName ? `-${participantName}` : ""}`
+        } else {
+            return "cft-results"
+        }
+    },[columnFilters, columnFilterSettingKey])
+
     return (
         <div className={"results-table-container"}>
             <style id={"per-column-styles"}>{
@@ -389,14 +399,15 @@ export function ResultsTable({
                     <button onClick={() => deleteSelectedRecords()}>Delete selected</button>}
                 <ReactTableCsvExportWidget table={table}/>
                 <ReactTableQrCodeExportWidget table={table}/>
-                <button onClick={() => exportFile(table)}>Export JSON</button>
+                <button onClick={() => exportToFile(table, getExportFileNameHint())}>Export JSON</button>
                 <button onClick={() => {
-                    importFile().then((results) => {
-                        if(results.newRecords.length > 0) {
+                    importFromFile().then((results) => {
+                        if (results.newRecords.length > 0) {
                             setTableData(results.allRecords)
                         }
                     })
-                }}>Import JSON</button>
+                }}>Import JSON
+                </button>
 
             </div>
             <div
@@ -500,7 +511,8 @@ export function ResultsTable({
                     </tbody>
                 </table>
             </div>
-            {showMaskPerfGraph && <MaskPerfFunctionPlot records={table.getSortedRowModel().flatRows.map((row) => row.original)}/>}
+            {showMaskPerfGraph &&
+                <MaskPerfFunctionPlot records={table.getSortedRowModel().flatRows.map((row) => row.original)}/>}
         </div>
     )
 }

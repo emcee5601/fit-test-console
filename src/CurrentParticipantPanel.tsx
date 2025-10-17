@@ -1,19 +1,16 @@
+import {BsFastForwardBtnFill} from "react-icons/bs";
 import {HiOutlineClipboardList} from "react-icons/hi";
 import {IoPersonSharp} from "react-icons/io5";
 import {PiFaceMask} from "react-icons/pi";
+import {AppSettings} from "src/app-settings-types.ts";
+import {MaskSelectorWidget} from "src/MaskSelectorWidget.tsx";
+import {OverlayPanelWidget} from "src/OverlayPanelWidget.tsx";
+import {TestNotesSelectorWidget} from "src/TestNotesSelectorWidget.tsx";
+import {TodayParticipantSelectorWidget} from "src/TodayParticipantSelectorWidget.tsx";
 import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
 import {useSetting} from "./use-setting.ts";
-import {MaskSelectorWidget} from "src/MaskSelectorWidget.tsx";
-import {TodayParticipantSelectorWidget} from "src/TodayParticipantSelectorWidget.tsx";
-import {TestNotesSelectorWidget} from "src/TestNotesSelectorWidget.tsx";
-import {BsFastForwardBtnFill} from "react-icons/bs";
-import {AppSettings} from "src/app-settings-types.ts";
-import "./CurrentParticipantPanel.css"
 
-type DisplayMode = "compact" | "editor" | "overlay-editor"
-
-type CurrentParticipantPanelProps = {mode:DisplayMode}
-export function CurrentParticipantPanel(props: CurrentParticipantPanelProps) {
+export function CurrentParticipantPanel() {
     const [testTemplate, setTestTemplate, getTestTemplate] = useSetting<Partial<SimpleResultsDBRecord>>(AppSettings.TEST_TEMPLATE)
 
     function updateCurrentParticipant(value: string) {
@@ -58,64 +55,60 @@ export function CurrentParticipantPanel(props: CurrentParticipantPanelProps) {
     // todo: 3 modes: compact display mode, editing mode, overlay editing mode
     return (
         <>
-            <input className="participant-info-checkbox" id="participant-info-checkbox" type="checkbox"/>
-            <label id="compact-participant-info" htmlFor="participant-info-checkbox"
-                   style={{
-                       display: props.mode === "compact" ? "inline-flex" : "none",
-                       flexWrap: "nowrap",
-                       overflow: "scroll",
-                       gap: "0.7em",
-                       width: "100%"
-                   }}>
+            <OverlayPanelWidget buttonIcon={<div id="compact-participant-info"
+                                                   style={{
+                                                       display: "inline-flex",
+                                                       flexWrap: "nowrap",
+                                                       overflowX: "scroll",
+                                                       gap: "0.7em",
+                                                       width: "100%",
+                                                   }}>
                 <span className="svg-container"><IoPersonSharp/>{testTemplate.Participant}</span>
                 <span className="svg-container" style={{textWrap: "nowrap"}}><PiFaceMask/>{testTemplate.Mask}</span>
                 <span className="svg-container"
                       style={{textWrap: "nowrap"}}><HiOutlineClipboardList/>{testTemplate.Notes}</span>
-            </label>
-            <div id="current-participant-panel" className={props.mode === "editor" ? "" : "overlay-participant-info"}>
-                <div>
-                    <div id={"participant-parameters"}
-                         style={{
-                             display: "flex",
-                             textAlign: "start",
-                             flexDirection: "row",
-                             flexWrap: "wrap",
-                             gap: "2px",
-                         }}>
-                        <div className={`thin-border-2 participant-info`}>
-                            <TodayParticipantSelectorWidget
-                                value={testTemplate.Participant}
-                                onChange={(value) => updateCurrentParticipant(value || "")}
-                                label={
-                                    <span id={`smart-text-area-participant-label`}
-                                          className={"smart-text-area-label"}>Name <div className={"svg-container"}>
+            </div>
+            } position={"top"}>
+                <div id={"participant-parameters"}
+                     style={{
+                         display: "flex",
+                         textAlign: "start",
+                         flexDirection: "row",
+                         flexWrap: "wrap",
+                         gap: "2px",
+                     }}>
+                    <div className={`thin-border-2 participant-info`}>
+                        <TodayParticipantSelectorWidget
+                            value={testTemplate.Participant}
+                            onChange={(value) => updateCurrentParticipant(value || "")}
+                            label={
+                                <span id={`smart-text-area-participant-label`}
+                                      className={"smart-text-area-label"}>Name <div className={"svg-container"}>
                                     <BsFastForwardBtnFill onClick={() => nextParticipant()}/>
                                 </div></span>
-                                }
-                            />
-                        </div>
-                        <div className={`thin-border-2 participant-info`}>
-                            <MaskSelectorWidget value={testTemplate.Mask}
-                                                id={"mask"}
-                                                onChange={(value) => updateCurrentMask(value || "")}
-                                                label={
-                                                    <span id={`smart-text-area-mask-label`}
-                                                          className={"smart-text-area-label"}>Mask <div
-                                                        className={"svg-container"}>
+                            }
+                        />
+                    </div>
+                    <div className={`thin-border-2 participant-info`}>
+                        <MaskSelectorWidget value={testTemplate.Mask}
+                                            id={"mask"}
+                                            onChange={(value) => updateCurrentMask(value || "")}
+                                            label={
+                                                <span id={`smart-text-area-mask-label`}
+                                                      className={"smart-text-area-label"}>Mask <div
+                                                    className={"svg-container"}>
                                                     <BsFastForwardBtnFill onClick={() => nextMask()}/>
                                                 </div></span>
-                                                }
-                            />
-                        </div>
-                        <div className={`thin-border-2 participant-info remainder`} style={{flexGrow: 1}}>
-                            <TestNotesSelectorWidget value={testTemplate.Notes} label={"Notes"}
-                                                     onChange={(value) => updateCurrentNotes(value || "")}
-                            />
-                        </div>
+                                            }
+                        />
+                    </div>
+                    <div className={`thin-border-2 participant-info remainder`} style={{flexGrow: 1}}>
+                        <TestNotesSelectorWidget value={testTemplate.Notes} label={"Notes"}
+                                                 onChange={(value) => updateCurrentNotes(value || "")}
+                        />
                     </div>
                 </div>
-            </div>
-            <label className="participant-checkbox-overlay" htmlFor="participant-info-checkbox"></label>
+            </OverlayPanelWidget>
         </>
     )
 }

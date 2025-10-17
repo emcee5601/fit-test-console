@@ -15,7 +15,7 @@ import {TestInstructionsPanel} from "src/TestInstructionsPanel.tsx";
 export function TestPanel() {
     return (
         <div id="test-panel" style={{height: "inherit", display: "flex", flexDirection: "column"}}>
-            <CurrentParticipantPanel mode={"compact"}/>
+            <CurrentParticipantPanel/>
             <div className={"inline-flex"}>
                 <EstimatedFitFactorWidget/>
                 <div style={{flexGrow:1}}>

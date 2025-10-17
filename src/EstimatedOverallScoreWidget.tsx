@@ -12,6 +12,7 @@ export function EstimatedOverallScoreWidget() {
     const appContext = useContext(AppContext)
     const dataCollector = appContext.dataCollector;
     const [currentTestData, setCurrentTestData] = useState<SimpleResultsDBRecord>({} as SimpleResultsDBRecord)
+    const [displayScoreAsFE, setDisplayScoreAsFE] = useState<boolean>(false)
     useEffect(() => {
         const dataCollectorListener: DataCollectorListener = {
             newTestStarted(data: SimpleResultsDBRecord) {
@@ -48,7 +49,9 @@ export function EstimatedOverallScoreWidget() {
             return key.startsWith("Ex ") && isFinite(v) && v > 1.0
         });
     return (
+        // add toggle to switch between FF and FE
         <div style={{display: "contents"}}>
+            <input type="checkbox" onClick={() => setDisplayScoreAsFE(!displayScoreAsFE)}/>
             {
                 exerciseFieldData
                     .map(([key, value]) => {
@@ -59,10 +62,12 @@ export function EstimatedOverallScoreWidget() {
                             : NaN
                         const score = Number(value);
                         return <ExerciseScoreBox key={key} label={key} score={score} stddev={pct}
+                                                 displayScoreAsFE={displayScoreAsFE}
                                                  onClick={() => restartFromExercise(exerciseNum)}/>
                     })
             }
             <ExerciseScoreBox label={<AiTwotoneExperiment/>} score={Number(currentTestData.Final ?? overallScore)}
+                              displayScoreAsFE={displayScoreAsFE}
                               stddev={
                                   Math.sqrt((currentTestData.ParticleCounts ?? [])
                                       .map((particleCount) =>

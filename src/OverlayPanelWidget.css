@@ -1,9 +1,8 @@
-.header-menu-button {
+.overlay-panel-widget-button {
     cursor: pointer;
-    font-size: 1.5em;
 }
 
-.header-menu-overlay {
+.overlay-panel-widget-overlay {
     position: fixed;
     top: 0;
     right: 0;
@@ -14,33 +13,46 @@
     transition: 0.2s opacity ease-in-out;
 }
 
-.header-nav {
+.overlay-panel-widget-content {
     position: absolute;
-    display: grid;
-    left: 0;
     padding: 1em;
-    width: fit-content;
+    max-width: 90vw;
     max-height: 90vh;
     overflow-y: scroll;
-    font-size: 1.5em;
-    justify-items: stretch;
     opacity: 1;
     background-color: whitesmoke;
-    transform: translateX(-100%);
     will-change: transform;
     transition: 0.2s transform linear;
     z-index: 10;
+
+    &.left {
+        transform: translateX(-100%);
+        left: 0;
+    }
+    &.right {
+        transform: translateX(100%);
+        right: 0;
+    }
+    &.top {
+        transform: translateY(-100%);
+        top: 0;
+    }
+    &.bottom {
+        transform: translateX(100%);
+        bottom: 0;
+    }
 }
 
-.header-toggle-menu {
+.overlay-panel-widget-checkbox {
     appearance: none;
+    display: none;
 
     &:checked {
-        ~ .header-nav {
-            transform: translateX(0);
+        ~ .overlay-panel-widget-content {
+            transform: translateX(0) translateY(0);
         }
 
-        ~ .header-menu-overlay {
+        ~ .overlay-panel-widget-overlay {
             pointer-events: initial;
             background-color: darkgray;
             opacity: 0.8;

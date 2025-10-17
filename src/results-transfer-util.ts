@@ -112,12 +112,12 @@ export function getRecordsToExport<T extends SimpleResultsDBRecord>(table: Table
     return table.getRowModel().rows.map((row) => row.original);
 }
 
-export function exportFile<T extends SimpleResultsDBRecord>(table: Table<T>) {
+export function exportToFile<T extends SimpleResultsDBRecord>(table: Table<T>, filenameHint: string = "cft-results") {
     const records = getRecordsToExport(table)
-    downloadData(JSON.stringify(records), "cft-results", "json")
+    downloadData(JSON.stringify(records), filenameHint, "json")
 }
 
-export async function importFile(): Promise<ImportResults> {
+export async function importFromFile(): Promise<ImportResults> {
     if (!("showOpenFilePicker" in window)) {
         const errorMsg = "showOpenFilePicker not supported. Unable to import file.";
         console.error(errorMsg)
