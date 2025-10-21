@@ -55,17 +55,17 @@ export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({
 
         while(recordsToExport.length>0) {
             let url: string|null = null;
-            let i: number = 0
+            let i: number = 1
             let candidateUrl: string|null = null;
-            for(; i < recordsToExport.length; i++) {
-                const candidates = recordsToExport.toSpliced(i)
+            let candidates:T[] = []
+            for(; i <= recordsToExport.length; i++) {
+                candidates = recordsToExport.toSpliced(i)
                 candidateUrl = getUrlForData(candidates)
                 /**
                  * v40 codes can store 4296 alphanum, 2953 binary at ECC level L
                  */
                 if(candidateUrl.length <= 2953) {
                     url = candidateUrl
-                    // console.debug(`url length is ${url.length}`)
                 } else {
                     break
                 }
@@ -73,6 +73,7 @@ export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({
             if(url) {
                 urls.push(url);
                 recordsToExport.splice(0, i)
+                // console.debug(`num records: ${candidates.length}`, candidates.map((record) => record.ID).join(", "))
             } else {
                 // if we didn't get a url, it means the first record is too large to encode
                 console.warn(`could not encode data. resulting url for 1 record is too long at ${candidateUrl?.length}`)
