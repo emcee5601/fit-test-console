@@ -3,6 +3,7 @@
  */
 import {
     ColumnDef,
+    ColumnFilter,
     ColumnFiltersState,
     flexRender,
     getCoreRowModel,
@@ -216,6 +217,11 @@ export function ResultsTable({
                 },
                 header: 'Protocol',
             },
+            {
+                accessorKey: 'DataSource',
+                header: 'DataSource',
+                filterFn: safeRegExpFilter,
+            }
         ],
         [numExerciseColumns, selectedRows]
     )
@@ -223,6 +229,7 @@ export function ResultsTable({
     const [enableSelection, setEnableSelection] = useState<boolean>(false)
     const [autoResetPageIndex, skipAutoResetPageIndex] = useSkipper()
     const [columnFilters, setColumnFilters] = useSetting<ColumnFiltersState>(columnFilterSettingKey)
+    const [showSimulatorResults] = useSetting<boolean>(AppSettings.SHOW_SIMULATOR_RESULTS)
     const [showMaskPerfGraph] = useSetting<boolean>(AppSettings.SHOW_MASK_PERF_GRAPH)
     const [sorting, setSorting] = useSetting<SortingState>(columnSortingSettingKey)
     const [testTemplate] = useSetting<Partial<SimpleResultsDBRecord>>(AppSettings.TEST_TEMPLATE)
@@ -234,6 +241,7 @@ export function ResultsTable({
     }, {}))
     useEffect(() => {
         columnVisibility["Select"] = enableSelection;
+        columnVisibility["DataSource"] = false;
         setColumnVisibility(deepCopy(columnVisibility))
         if (!enableSelection) {
             setSelectedRows([]) // clear
@@ -332,6 +340,15 @@ export function ResultsTable({
                 : undefined,
         overscan: 5,
     })
+
+    useEffect(() => {
+        // apply column filter based on settings
+        setColumnFilters((prev) => {
+            return [...prev.filter((cf) => cf.id !== "DataSource"), new (class CFS implements ColumnFilter {
+                id ="DataSource";
+                value = "^((?!Simulator).)*$";
+        })].filter((cf) => cf.id !== "DataSource" || !showSimulatorResults)
+    })}, [showSimulatorResults]);
 
     useEffect(() => {
         dynamicallyAdjustNumExerciseColumns();

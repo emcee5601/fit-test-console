@@ -255,6 +255,7 @@ export function SettingsPanel() {
                                         <BooleanSettingToggleButton setting={AppSettings.USE_IDLE_AMBIENT_VALUES}/>
                                         <BooleanSettingToggleButton setting={AppSettings.SAMPLE_MASK_WHEN_IDLE}/>
                                         <BooleanSettingToggleButton setting={AppSettings.SHOW_STDDEV}/>
+                                        <BooleanSettingToggleButton setting={AppSettings.SHOW_SIMULATOR_RESULTS}/>
                                         <BooleanSettingToggleButton
                                             setting={AppSettings.ENABLE_SIMULATOR}/>
                                         <BooleanToggleButton trueLabel={"Show Danger Zone"}

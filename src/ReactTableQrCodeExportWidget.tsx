@@ -53,24 +53,24 @@ export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({
         const recordsToExport = getRecordsToExport(table);
         const urls = []
 
-        while(recordsToExport.length>0) {
-            let url: string|null = null;
+        while (recordsToExport.length > 0) {
+            let url: string | null = null;
             let i: number = 1
-            let candidateUrl: string|null = null;
-            let candidates:T[] = []
-            for(; i <= recordsToExport.length; i++) {
+            let candidateUrl: string | null = null;
+            let candidates: T[] = []
+            for (; i <= recordsToExport.length; i++) {
                 candidates = recordsToExport.toSpliced(i)
                 candidateUrl = getUrlForData(candidates)
                 /**
                  * v40 codes can store 4296 alphanum, 2953 binary at ECC level L
                  */
-                if(candidateUrl.length <= 2953) {
+                if (candidateUrl.length <= 2953) {
                     url = candidateUrl
                 } else {
                     break
                 }
             }
-            if(url) {
+            if (url) {
                 urls.push(url);
                 recordsToExport.splice(0, i)
                 // console.debug(`num records: ${candidates.length}`, candidates.map((record) => record.ID).join(", "))
@@ -107,17 +107,19 @@ export function ReactTableQrCodeExportWidget<T extends SimpleResultsDBRecord>({
         <>
             {qrcodeUrls.length > 0 &&
                 <div className={"full-screen-overlay"}>
-                    <div style={{display:"flex", flexDirection:"column"}}>
-                    {qrcodeUrls.map((url, index) =>
-                        <div key={index} onClick={() => setQrcodeUrls([])} className="qrcode-container">
-                            <span
-                                style={{display: "block"}}>Fit test results {getFilterSummary()} ({index + 1} / {qrcodeUrls.length})</span>
-                            <span style={{display: "block"}}>{baseLocation}</span>
-                            <QRCodeSVG value={url}
-                                       size={512}
-                                       marginSize={4}
-                                       title={"Fit Test Results"}/>
-                        </div>)}
+                    <div style={{display: "flex", flexDirection: "column"}}>
+                        {qrcodeUrls.map((url, index) =>
+                            <div key={index} onClick={() => setQrcodeUrls([])} className="qrcode-container">
+                                <a href={url}>
+                                    <span
+                                        style={{display: "block"}}>Fit test results {getFilterSummary()} ({index + 1} / {qrcodeUrls.length})</span>
+                                </a>
+                                <span style={{display: "block"}}>{baseLocation}</span>
+                                <QRCodeSVG value={url}
+                                           size={512}
+                                           marginSize={4}
+                                           title={"Fit Test Results"}/>
+                            </div>)}
                     </div>
                 </div>}
             <button {...props} onClick={() => generateQRCodes()}>QR Code</button>

@@ -4151,6 +4151,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"detectincognitojs@npm:^1.6.2":
+  version: 1.6.2
+  resolution: "detectincognitojs@npm:1.6.2"
+  checksum: 10c0/56f6a168f1be750e1c7a4fadc1359057a0fa58f7933f741fbfcdf53e791a90cf3ed6f57f742220e3ff374af1f0278873e92136f345e3f8af77e4ff96c85ae133
+  languageName: node
+  linkType: hard
+
 "diff-sequences@npm:^29.6.3":
   version: 29.6.3
   resolution: "diff-sequences@npm:29.6.3"
@@ -5068,6 +5075,7 @@ __metadata:
     "@yudiel/react-qr-scanner": "npm:^2.3.1"
     ajv: "npm:^8.17.1"
     ch34x-webusb-serial-ts: "https://github.com/emcee5601/ch34x-webusb-serial-ts"
+    detectincognitojs: "npm:^1.6.2"
     echarts: "npm:^5.5.1"
     echarts-for-react: "npm:^3.0.2"
     eslint: "npm:^9.13.0"

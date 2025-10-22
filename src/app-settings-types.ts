@@ -46,6 +46,7 @@ export enum AppSettings {
     AUTO_DETECT_BAUD_RATE = "auto-detect-baud-rate",
     ENABLE_TESTER_MODE = "enable-tester-mode",
     SHOW_STDDEV = "show-stddev",
+    SHOW_SIMULATOR_RESULTS = "show-simulator-results",
 
     // session only settings (these start with "so-". todo: can we merge these from another enum into this?
     STATS_FIRST_DATE = "so-stats-first-date",
@@ -265,6 +266,7 @@ export const AppSettingsDefaults = {
     "auto-detect-baud-rate": true,
     "enable-tester-mode": false,
     "show-stddev": false,
+    "show-simulator-results": true,
 
     "so-stats-first-date": new Date(0), // epoch, sentinel value
     "so-stats-last-date": new Date(), // today
