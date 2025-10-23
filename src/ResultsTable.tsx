@@ -85,7 +85,7 @@ export function ResultsTable({
             sortUndefined: undefined,
             sortingFn: compareNumericString,
             sortDescFirst: true,
-            size: 70,
+            size: 60,
         };
     }
 

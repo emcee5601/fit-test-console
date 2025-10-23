@@ -163,6 +163,10 @@ export function NavBar() {
                     value: "/daily-checks"
                 },
                 {
+                    label: "Cleanup Assistant",
+                    value: "/cleanup-assistant"
+                },
+                {
                     label: "Bookmarks",
                     value: "/bookmarks"
                 },
@@ -267,20 +271,21 @@ export function NavBar() {
              className={"nav-bar"}>
             <ColorSchemeSwitcher/>
             <MenuWidget options={navLinks}/>
-            <CurrentParticipantTimeWidget style={{display: showParticipantTime && enableTesterMode ? "inline-flex" : "none"}}
-                                          useIcons={useIcons}/>
+            <CurrentParticipantTimeWidget
+                style={{display: showParticipantTime && enableTesterMode ? "inline-flex" : "none"}}
+                useIcons={useIcons}/>
 
             {navLinks.map((option: SelectOption) =>
-                    <NavLink key={option.label} to={option.value} className={({
-                        isActive
-                    }) => isActive ? "nav-link-active" : "nav-link-hidden"}
-                    >
-                        <div className={"no-wrap"}>{option.label}</div>
-                    </NavLink>
+                <NavLink key={option.label} to={option.value} className={({
+                    isActive
+                }) => isActive ? "nav-link-active" : "nav-link-hidden"}
+                >
+                    <div className={"no-wrap"}>{option.label}</div>
+                </NavLink>
+            )}
 
-                )}
-
-            <EventTimeWidget style={{display: showEventTime && enableTesterMode ? "inline-flex" : "none"}} useIcons={useIcons}/>
+            <EventTimeWidget style={{display: showEventTime && enableTesterMode ? "inline-flex" : "none"}}
+                             useIcons={useIcons}/>
             <SimulatorWidget/>
             <SettingsWidget/>
         </div>

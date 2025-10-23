@@ -1,11 +1,15 @@
-import {useCallback, useContext, useEffect, useState} from "react";
-import {AppContext} from "src/app-context.ts";
-import {ParticleConcentrationEvent, PortaCountListener} from "src/portacount-client-8020.ts";
 import MovingAverage from "moving-average";
-import {InfoBox} from "src/InfoBox.tsx";
+import {useCallback, useContext, useEffect, useState} from "react";
 import {BsCheckCircleFill, BsXCircleFill} from "react-icons/bs";
+import {AppContext} from "src/app-context.ts";
+import {AppSettings} from "src/app-settings-types.ts";
+import {DriverSelectorWidget} from "src/DriverSelectorWidget.tsx";
+import {InfoBox} from "src/InfoBox.tsx";
+import {ParticleConcentrationEvent, PortaCountListener} from "src/portacount-client-8020.ts";
+import {ConnectionStatus, SampleSource} from "src/portacount/porta-count-state.ts";
+import {SPEECH} from "src/speech.ts";
+import {useSetting} from "src/use-setting.ts";
 import {formatFitFactor} from "src/utils.ts";
-import {SampleSource} from "src/portacount/porta-count-state.ts";
 
 type State =
     "idle"
@@ -41,16 +45,22 @@ export function DailyChecksPanel() {
     // const maskAverage = useMemo(() => MovingAverage(requiredMaskSampleTime), []);
     // const ambientAverage = useMemo(() => MovingAverage(requiredAmbientSampleTime), [])
     const [state, setState] = useState<State>("idle")
-    const [instructions, setInstructions] = useState<string>("Press start to begin")
+    const [instructions, setInstructions] = useState<string>("Press start to begin Daily Checks.")
     const [startTime, setStartTime] = useState<number>(0)
     const [firstAmbientCount, setFirstAmbientCount] = useState<number>(0)
     const [secondAmbientCount, setSecondAmbientCount] = useState<number>(0)
     const [maskCount, setMaskCount] = useState<number>(0)
     const [fitFactor, setFitFactor] = useState<number>(0)
     const [uiNeedsUpdate, setUiNeedsUpdate] = useState({})
+    const [connectionStatus] = useSetting<ConnectionStatus>(AppSettings.CONNECTION_STATUS)
+
     const updateUI = useCallback(() => {
         setUiNeedsUpdate({})
     }, []);
+
+    useEffect(() => {
+        SPEECH.sayIt(instructions)
+    }, [instructions]);
 
     // todo: use protocol executor to run a 1 exercise test for the max FF check.
     // todo: move state machine out of React?
@@ -103,9 +113,9 @@ export function DailyChecksPanel() {
                         console.debug(`max mask count: ${maxMaskCount}`)
                         if (maxMaskCount > minimumRequiredParticles) {
                             setState("waiting-for-zero-check")
-                            setInstructions("Attach zero filter")
                             externalController.beep()
                             setParticleCheckPassed(true)
+                            setInstructions("Particle check passed, attach zero filter.")
                             setMinMaskCount(1000) // reset
                         }
                         break;
@@ -114,9 +124,9 @@ export function DailyChecksPanel() {
                             // todo: wait a few seconds for this. use another moving average to check
                             setState("purge-ambient-1")
                             externalController.sampleAmbient()
-                            setInstructions("reading from ambient")
                             setStartTime(Date.now())
                             setZeroCheckPassed(true)
+                            setInstructions("Zero check passed. Reading from ambient")
                         }
                         break;
                     case "purge-ambient-1":
@@ -162,12 +172,13 @@ export function DailyChecksPanel() {
                         if (Date.now() - startTime > requiredAmbientSampleTimeMs + purgeTimeMs) {
                             setSecondAmbientCount(ambientAverage.movingAverage())
                             setState("done")
-                            setInstructions("done")
                             // make sure we don't have infinite ff
                             const ff = 0.5 * (firstAmbientCount + secondAmbientCount) / Math.max(0.01, maskCount);
                             setFitFactor(ff)
-                            setMaxFitFactorCheckPassed(ff > minPassingFitFactor)
-                            externalController.sampleMask()
+                            const ffCheckPassed = ff > minPassingFitFactor;
+                            setMaxFitFactorCheckPassed(ffCheckPassed)
+                            setInstructions(`done - max fit factor check ${ffCheckPassed?"passed": "failed"}`)
+                            externalController.sampleAmbient()
                             externalController.beep()
                             externalController.beep()
                         }
@@ -198,7 +209,10 @@ export function DailyChecksPanel() {
     return (
         <div id={"daily-check-panel"} style={{width:"fit-content", justifySelf:"center"}}>
             <div>{instructions}</div>
-            <button onClick={() => start()}>Press to start</button>
+            <div className={"inline-flex"}>
+            <DriverSelectorWidget compact={true}/>
+            <button onClick={() => start()} disabled={connectionStatus === ConnectionStatus.DISCONNECTED}>Press to start</button>
+            </div>
             <InfoBox label={"State"}>{state}</InfoBox>
             <InfoBox label={"Particle count check"}>{iconify(particleCheckPassed)}</InfoBox>
             <InfoBox label={"Zero check"}>{iconify(zeroCheckPassed)}</InfoBox>

@@ -3,9 +3,10 @@ import {AiTwotoneExperiment} from "react-icons/ai";
 import {AppContext} from "src/app-context.ts";
 import {DataCollectorListener} from "src/data-collector.ts";
 import {ExerciseScoreBox} from "src/ExerciseScoreBox.tsx";
+import {SampleSource} from "src/portacount/porta-count-state.ts";
 import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
 import {useScoreBasedColors} from "src/use-score-based-colors.ts";
-import {getEstimatedOverallScore, getMaskParticleCountForExercise} from "src/utils.ts";
+import {getEstimatedOverallScore} from "src/utils.ts";
 
 
 export function EstimatedOverallScoreWidget() {
@@ -56,12 +57,8 @@ export function EstimatedOverallScoreWidget() {
                 exerciseFieldData
                     .map(([key, value]) => {
                         const exerciseNum = Number(key.substring(3))
-                        const particleCount = getMaskParticleCountForExercise(exerciseNum, currentTestData)
-                        const pct = particleCount && particleCount.stddev
-                            ? particleCount.stddev / particleCount.count
-                            : NaN
                         const score = Number(value);
-                        return <ExerciseScoreBox key={key} label={key} score={score} stddev={pct}
+                        return <ExerciseScoreBox key={key} label={key} score={score}
                                                  displayScoreAsFE={displayScoreAsFE}
                                                  onClick={() => restartFromExercise(exerciseNum)}/>
                     })
@@ -70,6 +67,7 @@ export function EstimatedOverallScoreWidget() {
                               displayScoreAsFE={displayScoreAsFE}
                               stddev={
                                   Math.sqrt((currentTestData.ParticleCounts ?? [])
+                                      .filter((pc) => pc.type === SampleSource.AMBIENT)
                                       .map((particleCount) =>
                                           (particleCount?.stddev ?? 0) / (particleCount?.count ?? 0.01))
                                       .reduce((res, pct) => res + pct ** 2, 0))

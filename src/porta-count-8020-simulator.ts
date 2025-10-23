@@ -36,10 +36,11 @@ export class PortaCount8020Simulator {
     private readonly _portaCountState: PortaCountState = new PortaCountState();
     private readonly encoder: TextEncoder = new TextEncoder();
     private _started: boolean = false;
-    private bias: number = 0; // how much to shift concentration values returned by simulator. as a percentage. + or -
-    private baseConcentration: number = 0;
-    private lastCommandTimeMs: number = 0;
-    private targetMaskFF: number = 100;
+
+     targetCount: number = 2000;
+     targetCountVariancePct: number = 10;
+     targetMaskFF: number = 100;
+     targetMaskFFVariancePct: number = 15;
 
 
     constructor() {
@@ -148,27 +149,11 @@ export class PortaCount8020Simulator {
         );
     }
 
-    private random(): number {
-        if (Date.now() - this.lastCommandTimeMs > 3 * 60 * 1000) {
-            // more than 3 minutes has elapsed since the last command. We can reset the start point
-            this.baseConcentration = (1 + 5 * Math.random()) * 1000
-            this.targetMaskFF = (2 + 20 * Math.random())
-            console.debug(`simulator resetting baseConcentration to ${this.baseConcentration}, targetMaskFF to ${this.targetMaskFF}`)
-            this.lastCommandTimeMs = Date.now()
-        }
-
-        this.baseConcentration += Math.round(Math.random() * 200)
-        return this.baseConcentration;
-    }
-
-    private randomize() {
-        const maxBias = 30; // percentage points
-        this.bias = (Math.random() * maxBias - (maxBias / 2)) / 100;
-        this.lastCommandTimeMs = Date.now();
+    private getNextCount(): number {
+        return Math.round(this.targetCount * (1+(Math.random()-0.5) * 2*this.targetCountVariancePct / 100))
     }
 
     private executeCommand(command: string) {
-        this.randomize()
         switch (command) {
             case ExternalController.REQUEST_RUNTIME_STATUS_OF_BATTERY_AND_SIGNAL_PULSE: {
                 this.sendResponse("RGG\n")
@@ -266,14 +251,11 @@ export class PortaCount8020Simulator {
     private generateConcentration(): string {
         let concentration: number
         if (this._portaCountState.sampleSource === SampleSource.MASK) {
-            concentration = this.random() / this.targetMaskFF
+            concentration = this.getNextCount() / (this.targetMaskFF * (1+(Math.random()-0.5) * 2*this.targetMaskFFVariancePct / 100))
         } else {
             // ambient
-            concentration = this.random()
+            concentration = this.getNextCount()
         }
-
-        // apply bias
-        concentration = (1.0 - this.bias) * concentration
 
         let response: string
         if (this._portaCountState.controlSource === ControlSource.External) {

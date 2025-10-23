@@ -4,13 +4,16 @@ import {CellContext, RowData} from "@tanstack/react-table";
 import React, {useCallback, useContext, useEffect, useRef} from "react";
 import {useInView} from "react-intersection-observer";
 import {AppContext} from "src/app-context.ts";
+import {AppSettings} from "src/app-settings-types.ts";
 import {MaskSelectorWidget} from "src/MaskSelectorWidget.tsx";
-import {ControlSource} from "src/portacount/porta-count-state.ts";
+import {ControlSource, SampleSource} from "src/portacount/porta-count-state.ts";
 import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
 import {SmartTextArea} from "src/SmartTextArea.tsx";
 import {useScoreBasedColors} from "src/use-score-based-colors.ts";
+import {useSetting} from "src/use-setting.ts";
 import {
-    convertFitFactorToFiltrationEfficiency,
+    avg,
+    convertFitFactorToFiltrationEfficiency, formatFitFactor,
     getFitFactorCssClass,
     getMaskParticleCountForExercise
 } from "src/utils.ts";
@@ -35,11 +38,12 @@ export function useEditableExerciseResultColumn<T extends SimpleResultsDBRecord,
     table
 }: CellContext<T, V>) {
     const appContext = useContext(AppContext)
-    const {index} = row;
+    const {index, original: record} = row;
     const initialValue = getValue()
     // We need to keep and update the state of the cell normally
     const [value, setValue] = React.useState<V>(initialValue)
     const divRef = useRef<HTMLDivElement>(null);
+    const [showStddev] = useSetting<boolean>(AppSettings.SHOW_STDDEV)
 
     /**
      * Since we're using DebouncedInput, we'll get an update event quickly. This happen before the component
@@ -68,32 +72,55 @@ export function useEditableExerciseResultColumn<T extends SimpleResultsDBRecord,
 
     const fitFactor = Number(value);
     const efficiencyPercentage = convertFitFactorToFiltrationEfficiency(fitFactor);
+
+    // ambient counts should be more stable than mask, so only use ambient stddev to estimate ff stddev
+    const ambientCounts = (record.ParticleCounts ?? [])
+        .filter((pc) => pc.type === SampleSource.AMBIENT);
+    const estimatedAmbient = avg(...ambientCounts.map((pc) => pc.count))
+    const ambientStddev = Math.sqrt(ambientCounts
+        .map((pc) => pc.stddev ?? 0)
+        .reduce((res, pct) => res + pct ** 2, 0))
+    // console.debug(`ambientStddev ${ambientStddev}, estimatedAmbient ${estimatedAmbient}, ex num ${exerciseNum}, mask
+    // conc ${maskConcentration}`)
+    const estimatedStddevPct = ambientStddev / estimatedAmbient
+
     const classes = getFitFactorCssClass(value as string, protocolHasThisManyExercises)
     useScoreBasedColors(divRef, fitFactor, protocolHasThisManyExercises)
 
     return (
-        <div className={[classes, "table-cell"].join(" ")} style={{
-            width: "100%",
-            display: "inline-flex",
-            flexDirection: "column",
-        }} ref={divRef}>
-            <div className={"inline-flex"}>
-                {editable
-                    ? <SmartTextArea
-                        id={`${row.original.ID}-${id}`}
-                        resize={false}
-                        oneLine={true}
-                        // style={{minWidth: 0, minHeight: 0, width: "calc(100% - 0.3em)"}}
-                        initialValue={value ? value as string : ""}
-                        onChange={value => setValue(value as V)}
-                        onBlur={onBlur}
-                        placeholder={`${id}`}
-                    />
-                    : <div>{value}</div>
-                }{(value && row.original.ParticleCounts && maskConcentration === 0) && "*"}
+        <>
+            <style>{`
+            .editable-cell {
+               background-color: transparent;
+               color: inherit;
+               padding: 0;
+               height: 1.5em;
+               max-width: 100%;
+               border: none;
+               font-size: inherit;
+               text-overflow: ellipsis;
+            }
+`}</style>
+            <div className={[classes, "table-cell"].join(" ")} style={{
+                width: "100%",
+                display: "inline-flex",
+                flexDirection: "column",
+            }} ref={divRef}>
+                <div className={"inline-flex"}>
+                    {editable
+                        // todo: use a hidden input field for editable cells and always render formatted FF values. When the formatted FF is clicked, show the hidden input if editable.
+                        ? <input value={value ? value as string : ""}
+                                 onChange={e => setValue(e.target.value as V)}
+                                 onBlur={onBlur} placeholder={`${id}`}
+                                 className={"editable-cell"}
+                        />
+                        :
+                        <div>{(fitFactor > 0) && formatFitFactor(fitFactor)}{(showStddev && exerciseNum === 0 && fitFactor > 0 && estimatedStddevPct > 0) && `±${Math.round(estimatedStddevPct * fitFactor)}`}</div>
+                    }{(value && row.original.ParticleCounts && maskConcentration === 0) && "*"}
+                </div>
+                {fitFactor > 0 && <span className={"efficiency"}>{efficiencyPercentage}%</span>}
             </div>
-            {fitFactor > 0 && <span className={"efficiency"}>{efficiencyPercentage}%</span>}
-        </div>
+        </>
     )
 }
 

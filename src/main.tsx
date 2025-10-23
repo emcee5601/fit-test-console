@@ -2,6 +2,7 @@ import {StrictMode, Suspense} from 'react'
 import {createRoot} from 'react-dom/client'
 import './index.css'
 import {HashRouter, Route, Routes} from "react-router";
+import {CleanupAssistant} from "src/assets/CleanupAssistant.tsx";
 import {BookmarksPanel} from "src/BookmarksPanel.tsx";
 import {DailyChecksPanel} from "src/DailyChecksPanel.tsx";
 import {HelpPanel} from "src/HelpPanel.tsx";
@@ -47,6 +48,7 @@ createRoot(document.getElementById('root')!).render(
                         <Route path={"qrscanner"} element={<QRScanner/>}/>
                         <Route path={"unsupported-browser"} element={<UnsupportedBrowser/>}/>
                         <Route path={"daily-checks"} element={<DailyChecksPanel/>}/>
+                        <Route path={"cleanup-assistant"} element={<CleanupAssistant/>}/>
                         <Route path={"bookmarks"} element={<BookmarksPanel/>}/>
                         <Route path={"help"} element={<HelpPanel/>}/>
                     </Route>

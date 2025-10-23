@@ -281,9 +281,19 @@ export function feToFf(filtrationEfficiency: number) {
 }
 
 export function formatFe(efficiency: number): string {
-    return (efficiency > 0 && efficiency <= 99.999)
-        ? efficiency.toFixed(efficiency < 90 ? 0 : efficiency < 99.9 ? 1 : efficiency < 99.99 ? 2 : 3)
-        : "?"
+    if(efficiency>99.99) {
+        return ">99.99"
+    }
+    if(efficiency>99.9) {
+        return efficiency.toFixed(2)
+    }
+    if(efficiency>90) {
+        return efficiency.toFixed(1)
+    }
+    if(efficiency>0) {
+        return efficiency.toFixed(0)
+    }
+    return "?"
 }
 
 export function formatFF(fitFactor: number): string {
@@ -497,7 +507,6 @@ export function getMaskParticleCountForExercise(exerciseNum: number, record: Sim
 }
 
 export function calculateSegmentConcentrationAndStddev(segment: ProtocolSegment) {
-    // don't round this here
     // portacount seems to return a minimum value of 0.01 here, so we'll do the same
     const concentration = Math.max(0.01, segment.data.reduce((sum, currentValue: ParticleConcentrationEvent) => sum + currentValue.concentration, 0) / segment.data.length);
 
@@ -511,7 +520,8 @@ export function calculateSegmentConcentrationAndStddev(segment: ProtocolSegment)
 
     const variance = q / segment.data.length;
     const stddev = Math.sqrt(variance);
-    return {average: concentration, stddev: stddev};
+    // round concentration numbers > 10, otherwise limit to 2 decimal places
+    return {average: concentration > 10 ? Math.round(concentration) : Number(concentration.toFixed(2)), stddev: stddev};
 }
 
 export function calculateSegmentConcentration(segment: ProtocolSegment): number {
