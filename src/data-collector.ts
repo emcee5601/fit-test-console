@@ -80,6 +80,10 @@ export class DataCollector {
         this.resultsDatabase = RESULTS_DB;
     }
 
+    hasCurrentTestData(): boolean {
+        return this.currentTestData !== null;
+    }
+
     get saveLinesToDb(): boolean {
         return this._dataSource !== DataSource.Simulator;
     }
@@ -184,18 +188,18 @@ export class DataCollector {
         }
     }
 
-    async recordTestStart(controlSource: ControlSource, timestamp = new Date().toLocaleString()) {
+    async recordTestStart(controlSource: ControlSource, timestamp = new Date().toLocaleString(), protocol = this.settings.selectedProtocol) {
         if (!this.resultsDatabase) {
             console.log("database not ready");
             return;
         }
-        if (!this.settings.selectedProtocol) {
+        if (!protocol) {
             console.log("protocols not loaded (not ready)")
             return;
         }
         this.lastExerciseNum = 0;
         const newTestData = await this.resultsDatabase.createNewTest(timestamp,
-            this.settings.selectedProtocol,
+            protocol,
             controlSource,
             controlSource === ControlSource.Manual ? DataSource.Manual : this.dataSource,
             this.portaCountClient?.settings.serialNumber);
@@ -222,6 +226,9 @@ export class DataCollector {
         this.dispatch(new NewTestStartedEvent(newTestData))
     }
 
+    recordNextExerciseResult(ff: number) {
+        this.recordExerciseResult(this.lastExerciseNum+1, ff)
+    }
     recordExerciseResult(exerciseNum: number | string, ff: number) {
         const fun = () => {
             if (!this.currentTestData) {
@@ -389,6 +396,7 @@ export class DataCollector {
 
         testStarted: (timestamp: number) => {
             this.appendToProcessedData(`\nStarting a new test. ${new Date(timestamp).toLocaleString()}\n`);
+            // todo: set the current protocol stage? CURRENT_STAGE_INDEX
             this.setInstructionsForExercise(1);
             this.inProgressTestPromiseChain = this.recordTestStart(ControlSource.Internal, new Date(timestamp).toLocaleString());
             const now = Date.now();
@@ -415,7 +423,7 @@ export class DataCollector {
                 // switch to Executing every time we get these in case we plug the device in midway through a test
                 this.settings.saveSetting<ProtocolExecutionState>(AppSettings.PROTOCOL_EXECUTION_STATE, "Executing");
                 // todo: look through the current protocol and find the correct next stage (or none if done, but don't go to idle)
-                this.settings.saveSetting(AppSettings.CURRENT_STAGE_INDEX, exerciseNum+1);
+                this.settings.saveSetting(AppSettings.CURRENT_STAGE_INDEX, exerciseNum-1);
                 this.settings.saveSetting(AppSettings.STAGE_START_TIME, Date.now());
             } else {
                 // test finished

@@ -14,6 +14,7 @@ import {
 import {ProtocolExecutorListener} from "src/protocol-executor/protocol-executor-listener.ts";
 import {SegmentState} from "src/protocol-executor/segment-state.ts";
 import {convertStagesToSegments} from "src/protocol-executor/utils.ts";
+import {SPEECH} from "src/speech.ts";
 import {avg, calculateSegmentConcentration, calculateSegmentConcentrationAndStddev} from "src/utils.ts";
 import {DataCollector} from "./data-collector.ts";
 import {ExternalController} from "./external-control.ts";
@@ -187,7 +188,7 @@ export class ProtocolExecutor {
         })
     }
 
-    set protocol(protocolName: string) {
+    private set protocol(protocolName: string) {
         if (this.state === "Executing") {
             console.warn("attempted to set protocol while protocol is executing. ignoring. this is not allowed.")
             return;
@@ -301,10 +302,18 @@ export class ProtocolExecutor {
         segment.data.splice(0) // make sure this is reset
         this.currentSegmentIndex = segmentIndex;
         this.saveSetting(AppSettings.CURRENT_STAGE_INDEX, segment.stageIndex)
-        if (segmentIndex === 0 || segment.stageIndex !== this.segments[segmentIndex - 1].stageIndex) {
+        const isFirstSegmentInStage = segmentIndex === 0 || segment.stageIndex !== this.segments[segmentIndex - 1].stageIndex;
+        if (isFirstSegmentInStage) {
             // this is the first segment of the stage.
             this.saveSetting(AppSettings.CURRENT_STAGE_INDEX, segment.stageIndex)
             this.saveSetting(AppSettings.STAGE_START_TIME, segment.segmentStartTimeMs)
+
+            if (segment.exerciseNumber) {
+                // this is where protocol executor updates the instructions, which in turn speaks the instructions
+                SPEECH.sayIt(`Exercise ${segment.exerciseNumber}: ${segment.stage.instructions}`)
+            } else {
+                SPEECH.sayIt(segment.stage.instructions)
+            }
         }
 
         // console.log(`staging segment`, segment);
@@ -318,14 +327,6 @@ export class ProtocolExecutor {
                 this.controller.sampleMask()
                 this.maskSampleCollector.reset()
                 break;
-        }
-
-        if (segment.duration > 0) {
-            if (segment.exerciseNumber) {
-                this.dataCollector.setInstructions(`Exercise ${segment.exerciseNumber}: ${segment.stage.instructions}`)
-            } else {
-                this.dataCollector.setInstructions("Breathe normally")
-            }
         }
     }
 

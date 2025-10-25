@@ -31,7 +31,6 @@ export enum AppSettings {
     EVENT_END_HHMM = "event-end-hhmm", // in local time
     SHOW_ELAPSED_PARTICIPANT_TIME = "show-elapsed-participant-time",
     SHOW_REMAINING_EVENT_TIME = "show-remaining-event-time",
-    AUTO_CREATE_FAST_PROTOCOLS = "auto-create-fast-protocols",
     ENABLE_WEB_SERIAL_DRIVERS = "enable-webserial-drivers",
     ENABLE_TEST_INSTRUCTIONS_ZOOM = "enable-test-instructions-zoom",
     BOOKMARKS = "bookmarks",
@@ -47,6 +46,7 @@ export enum AppSettings {
     ENABLE_TESTER_MODE = "enable-tester-mode",
     SHOW_STDDEV = "show-stddev",
     SHOW_SIMULATOR_RESULTS = "show-simulator-results",
+    ENABLE_CONTROL_SOURCE_WIDGET = "enable-control-source-widget",
 
     // session only settings (these start with "so-". todo: can we merge these from another enum into this?
     STATS_FIRST_DATE = "so-stats-first-date",
@@ -87,6 +87,7 @@ export enum AppSettings {
     SAMPLE_SOURCE_IN_VIEW = "so-sample-source-in-view",
     IS_PROTOCOL_RUNNING = "so-is-protocol-running",
     LAST_KNOWN_SETTINGS_KEYS_HASH = "last-known-settings-keys-hash", // hash of sorted settings keys
+    AUTO_CREATE_FAST_PROTOCOLS = "auto-create-fast-protocols",
 } // this class should use AppSettingsType for type checking/ validations to ensure every setting has a default.
 /**
  * Settings can be of these types.
@@ -143,6 +144,60 @@ export const AppSettingsDefaults = {
                 ].join(" "),
                 "Head movement. Look up, down, left, and right. Repeat."
             ],
+            "Modified CNC (B2)": [
+                // swap order bending over and talking
+                {
+                    "title": "Prep",
+                    "instructions": "Breathe normally while we sample the air.",
+                    "ambient_purge": 4,
+                    "ambient_sample": 20,
+                    "mask_purge": 0,
+                    "mask_sample": 0
+                },
+                {
+                    "title": "Talking",
+                    "instructions": [
+                        "Talk out loud slowly, loud enough to be heard by the test administrator.",
+                        "Or count backwards from 100.",
+                    ].join(" "),
+                    "ambient_purge": 0,
+                    "ambient_sample": 0,
+                    "mask_purge": 4,
+                    "mask_sample": 30
+                },
+                {
+                    "title": "Bending over",
+                    "instructions": "Bend at the waist as if going to touch your toes. Inhale 2 times at the bottom.",
+                    "ambient_purge": 0,
+                    "ambient_sample": 0,
+                    "mask_purge": 4,
+                    "mask_sample": 30
+                },
+                {
+                    "title": "Head side-to-side",
+                    "instructions": "Slowly turn head from side to side. Inhale 2 times at each extreme.",
+                    "ambient_purge": 0,
+                    "ambient_sample": 0,
+                    "mask_purge": 4,
+                    "mask_sample": 30
+                },
+                {
+                    "title": "Head up-and-down",
+                    "instructions": "Slowly move head up and down. Inhale 2 times at each extreme.",
+                    "ambient_purge": 0,
+                    "ambient_sample": 0,
+                    "mask_purge": 4,
+                    "mask_sample": 30
+                },
+                {
+                    "title": "Finalize",
+                    "instructions": "Breathe normally while we sample the air again.",
+                    "ambient_purge": 4,
+                    "ambient_sample": 9,
+                    "mask_purge": 0,
+                    "mask_sample": 0
+                }
+            ],
             "Modified CNC (B)": [
                 {
                     "instructions": "prep",
@@ -160,7 +215,7 @@ export const AppSettingsDefaults = {
                 },
                 {
                     "instructions": ["Talking.",
-                        "Talk out loud slowly and loud enough to be head by the test administrator.",
+                        "Talk out loud slowly and loud enough to be heard by the test administrator.",
                         "Count backwards from 100,",
                         "or read the Rainbow Passage:",
                         "When the sunlight strikes raindrops in the air, they act as a prism and form a rainbow.",
@@ -263,10 +318,11 @@ export const AppSettingsDefaults = {
     "sample-mask-when-idle": false,
     "use-idle-ambient-values": false,
     "normalize-mask-list-names": true,
-    "auto-detect-baud-rate": true,
+    "auto-detect-baud-rate": false,
     "enable-tester-mode": false,
     "show-stddev": false,
     "show-simulator-results": true,
+    "enable-control-source-widget": false,
 
     "so-stats-first-date": new Date(0), // epoch, sentinel value
     "so-stats-last-date": new Date(), // today
@@ -285,8 +341,8 @@ export const AppSettingsDefaults = {
     "so-is-protocol-running": false,
     "so-connection-status": ConnectionStatus.DISCONNECTED,
     "so-protocol-execution-state": "Idle",
-    "so-protocol-start-time" : 0,
-    "so-stage-start-time" : 0,
+    "so-protocol-start-time": 0,
+    "so-stage-start-time": 0,
     "so-current-stage-index": 0,
 
     "default-to-previous-participant": false, // deprecated

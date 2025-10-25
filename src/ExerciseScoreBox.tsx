@@ -19,7 +19,7 @@ export function ExerciseScoreBox({label, score, displayScoreAsFE = false, stddev
     return (
         <fieldset className={"exercise-score-box"} ref={ref} onClick={onClick}>
             <legend>{label}</legend>
-            {displayValue}{showStddev && stddev && `±${Math.round(stddev * score)}`}
+            {displayValue}{showStddev && stddev ? `±${Math.round(stddev * score)}`:''}
         </fieldset>
 
     )

@@ -52,7 +52,6 @@ export function CurrentParticipantPanel() {
     }
 
 
-    // todo: 3 modes: compact display mode, editing mode, overlay editing mode
     return (
         <>
             <OverlayPanelWidget buttonIcon={<div id="compact-participant-info"

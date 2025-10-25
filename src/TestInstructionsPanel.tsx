@@ -6,14 +6,13 @@ import {getStageDuration} from "src/protocol-executor/utils.ts";
 import {updateBackgroundFillProgress} from "src/update-background-fill-progress.ts";
 import {useSetting} from "src/use-setting.ts";
 import {AppContext} from "./app-context.ts";
-import {DataCollectorListener} from "./data-collector.ts";
 
 const LOREM_IPSUM = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
 
 export function TestInstructionsPanel() {
     const appContext = useContext(AppContext)
-    const dataCollector = appContext.dataCollector
     const [instructions, setInstructions] = useState<string>("")
+    const [stageTitle, setStageTitle] = useState<string>("")
     const ref = useRef<HTMLTextAreaElement>(null)
     const [fontSizeSliderValue, setFontSizeSliderValue] = useState<number>(2)
     const [currentStageIndex] = useSetting<number>(AppSettings.CURRENT_STAGE_INDEX)
@@ -21,24 +20,26 @@ export function TestInstructionsPanel() {
     const [selectedProtocol] = useSetting<string>(AppSettings.SELECTED_PROTOCOL)
     const [protocolExecutionState] = useSetting<ProtocolExecutionState>(AppSettings.PROTOCOL_EXECUTION_STATE)
 
-    const dataCollectorListener: DataCollectorListener = {
-        instructionsChanged(instructions: string) {
-            setInstructions(instructions.replace(/\.\s+/, ".\n"))
-        },
-    }
-
-    useEffect(() => {
-        dataCollector.addListener(dataCollectorListener)
-        return () => {
-            dataCollector.removeListener(dataCollectorListener)
-        };
-    }, []);
-
     useEffect(() => {
         if (ref.current) {
             ref.current.style.fontSize = `${fontSizeSliderValue}em`
         }
     }, [fontSizeSliderValue]);
+
+    useEffect(() => {
+        const protocolDefinition = appContext.settings.getProtocolDefinition(selectedProtocol);
+        const stage = protocolDefinition[currentStageIndex]
+        if(stage.instructions) {
+            setInstructions(stage.instructions.replace(/\.\s+/, ".\n"))
+        } else {
+            console.warn(`no instructions for protocol ${selectedProtocol} stage ${currentStageIndex}`)
+            setInstructions("-")
+        }
+        // todo: set instructions to final score when available
+        if(stage.title) {
+            setStageTitle(stage.title)
+        }
+    }, [currentStageIndex, selectedProtocol]);
 
 
     useAnimationFrame(() => {
@@ -60,7 +61,7 @@ export function TestInstructionsPanel() {
 
     return (
         <fieldset style={{display: "flex", flexDirection: "column", flexGrow: 1}} className={"info-box-compact"}>
-            <legend>Instructions <input type="range" min={1} max={5} value={fontSizeSliderValue} step={0.01}
+            <legend>Instructions ({stageTitle}) <input type="range" min={1} max={5} value={fontSizeSliderValue} step={0.01}
                                         onChange={(event) => setFontSizeSliderValue(Number(event.target.value))}/>
             </legend>
             <textarea id="test-instructions"

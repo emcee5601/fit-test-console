@@ -107,6 +107,7 @@ export function createDeviceSynchronizedProtocol(protocolName: string): Standard
         if (templateStage.mask_sample) {
             exerciseNum++;
             const stage: StandardStageDefinition = {
+                title: templateStage.title,
                 instructions: templateStage.instructions,
                 ambient_purge: portaCountSettings.ambientPurge || ProtocolDefaults.defaultAmbientPurgeDuration,
                 ambient_sample: portaCountSettings.ambientSample || ProtocolDefaults.defaultAmbientSampleDuration,
@@ -121,7 +122,8 @@ export function createDeviceSynchronizedProtocol(protocolName: string): Standard
         }
     })
     dsProtocol.push({
-        instructions: "finalize",
+        title: "Finalize",
+        instructions: "Breathe normally",
         ambient_purge: portaCountSettings.ambientPurge,
         ambient_sample: portaCountSettings.ambientSample,
         mask_purge: 0,
@@ -314,6 +316,7 @@ function initParticipantListUpdator() {
 
 function initConfigDefaults() {
     Object.entries(AppSettingsDefaults).forEach(([key, value]) => {
+        // todo: support url references in value so we can load a file instead of inlining it in the default values
         defaultConfigManager.setDefault(key, value)
     })
 }

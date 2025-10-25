@@ -47,6 +47,7 @@ export function ProtocolStageElement({
         }
     }, [stageRef])
 
+    const stageName = stage.title || stage.instructions.split(".")[0];
     return (
         <div className={"protocol-stage-element"}
              ref={elementRef}
@@ -58,7 +59,7 @@ export function ProtocolStageElement({
              }}
         >
             <div ref={stageRef} style={{position: 'absolute', top: 0, left: 0, minWidth:0, maxWidth: "100%", width: "100%", opacity: "1"}}
-                 className={"stage-name"}>{durationSlug} {exerciseNum ? `Ex ${exerciseNum}:` : null} {stage.instructions.split(".")[0]} {override && `(${override})`}
+                 className={"stage-name"}>{durationSlug} {exerciseNum ? `Ex ${exerciseNum}:` : null} {stageName} {override && `(${override})`}
             </div>
             <div className={"stage-segments"}>
                 <ProtocolSegmentElement duration={stage.ambient_purge} source={SampleSource.AMBIENT}

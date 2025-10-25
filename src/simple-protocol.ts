@@ -14,6 +14,7 @@ export type ExerciseInstructions = string
  * ambient. If no purge duration is specified, it is taken from default.
  */
 export type StandardStageDefinition = {
+    title: string,
     instructions: ExerciseInstructions,
     ambient_purge: number,
     ambient_sample: number,
@@ -56,6 +57,14 @@ export const ProtocolDefaults = {
     defaultAmbientSampleDuration: 5,
     defaultMaskPurgeDuration: 4, // todo: this should be calibrated for each device
     defaultMaskSampleDuration: 40,
+}
+
+function extractTitle(item: InstructionOrStage) {
+    return typeof item === "string"
+        ? (item as string).split(/\./)[0] // take the first part of the instruction
+        : (item as StandardStageDefinition).title // preferred
+        ?? (item as StageDefinition).instructions.split(/\./)[0]  // legacy
+        ?? "oops no title or instructions?!"
 }
 
 function extractInstructions(item: InstructionOrStage) {
@@ -171,6 +180,7 @@ export function standardizeProtocolDefinitions(protocols: ProtocolDefinitions): 
 
         instructionsOrStages.forEach((instructionOrStage) => {
             stages.push({
+                title: extractTitle(instructionOrStage),
                 instructions: extractInstructions(instructionOrStage),
                 ambient_sample: extractAmbientSampleDuration(instructionOrStage),
                 mask_sample: extractMaskSampleDuration(instructionOrStage),
@@ -184,7 +194,8 @@ export function standardizeProtocolDefinitions(protocols: ProtocolDefinitions): 
             // shorthand use the ambient from the first non-zero ambient stage? no customizations, so we can add
             // default ambient stage at the end
             stages.push({
-                instructions: "Finalizing",
+                title: "Finalizing",
+                instructions: "Breathe normally while we sample the air.",
                 ambient_purge: ProtocolDefaults.defaultAmbientPurgeDuration,
                 ambient_sample: ProtocolDefaults.defaultAmbientSampleDuration,
                 mask_purge: 0,

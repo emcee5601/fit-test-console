@@ -233,7 +233,6 @@ export function SettingsPanel() {
                                         <BooleanSettingToggleButton setting={AppSettings.SYNC_DEVICE_STATE_ON_CONNECT}/>
                                         <BooleanSettingToggleButton setting={AppSettings.AUTO_UPDATE_MASK_LIST}/>
                                         <BooleanSettingToggleButton setting={AppSettings.NORMALIZE_MASK_LIST_NAMES}/>
-                                        <BooleanSettingToggleButton setting={AppSettings.AUTO_CREATE_FAST_PROTOCOLS}/>
                                         <div className={"labeled-setting"}>
                                             <select id="download-file-format-selector" defaultValue={dataToDownload}
                                                     onChange={downloadFileFormatChanged}>
@@ -254,6 +253,7 @@ export function SettingsPanel() {
                                         <BooleanSettingToggleButton setting={AppSettings.ENABLE_TESTER_MODE}/>
                                         <BooleanSettingToggleButton setting={AppSettings.USE_IDLE_AMBIENT_VALUES}/>
                                         <BooleanSettingToggleButton setting={AppSettings.SAMPLE_MASK_WHEN_IDLE}/>
+                                        <BooleanSettingToggleButton setting={AppSettings.ENABLE_CONTROL_SOURCE_WIDGET}/>
                                         <BooleanSettingToggleButton setting={AppSettings.SHOW_STDDEV}/>
                                         <BooleanSettingToggleButton setting={AppSettings.SHOW_SIMULATOR_RESULTS}/>
                                         <BooleanSettingToggleButton

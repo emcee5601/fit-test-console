@@ -59,10 +59,6 @@ export function ProtocolExecutorPanel() {
         setZoomInstructions(enableInstructionsZoom && activity === Activity.Testing)
     }, [enableInstructionsZoom, activity]);
 
-    useEffect(() => {
-        setProtocolDurationSeconds(appContext.settings.getProtocolDuration(selectedProtocolName))
-    }, [selectedProtocolName]);
-
 
     function updateSegment(segment: ProtocolSegment) {
         setCurrentSegment(segment);

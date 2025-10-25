@@ -7,6 +7,7 @@ import {PortaCountCommandWidget} from "src/PortaCountCommandWidget.tsx";
 import {PortaCountLastLineWidget} from "src/PortaCountLastLineWidget.tsx";
 import {ProtocolExecutorPanel} from "src/ProtocolExecutorPanel.tsx";
 import {ProtocolSelectorWidget0} from "src/ProtocolSelectorWidget0.tsx";
+import {RecordCurrentEstimateButton} from "src/RecordCurrentEstimateButton.tsx";
 import {SampleSourceWidget} from "src/SampleSourceWidget.tsx";
 import {StartPauseProtocolButton} from "src/StartPauseProtocolButton.tsx";
 import {StopProtocolButton} from "src/StopProtocolButton.tsx";
@@ -27,13 +28,14 @@ export function TestPanel() {
                  style={{
                      display: 'inline-flex',
                      width: 'fit-content',
-                     gap: "0.3em",
+                     gap: "1em",
                      alignItems: "center",
                      height: "fit-content",
                      flexWrap: "wrap",
                      justifyContent: "start"
                  }}>
                 <DriverSelectorWidget compact={true}/>
+                <RecordCurrentEstimateButton/>
                 <StartPauseProtocolButton/>
                 <StopProtocolButton/>
                 <SampleSourceWidget/>
