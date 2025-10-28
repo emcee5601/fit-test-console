@@ -30,6 +30,8 @@ export interface SimpleResultsDBRecord {
     [key: string]: string | number | undefined | ParticleCount[],
 }
 
+export type TestTemplate = Partial<SimpleResultsDBRecord>;
+
 class SimpleResultsDB extends AbstractDB {
     static DEFAULT_DB_NAME = "fit-test-data-db";
     static TEST_RESULTS_OBJECT_STORE = "test-results-table-data";
@@ -64,7 +66,7 @@ class SimpleResultsDB extends AbstractDB {
             return new Promise((_resolve, reject) => reject(`${this.dbName} database not ready`));
         }
 
-        const record: Partial<SimpleResultsDBRecord> = {
+        const record: TestTemplate = {
             Time: timestamp,
             ProtocolName: protocolName,
             TestController: testController,
@@ -121,7 +123,7 @@ class SimpleResultsDB extends AbstractDB {
      * @param record
      */
     async addRecord(record: SimpleResultsDBRecord) {
-        const partial:Partial<SimpleResultsDBRecord> = record;
+        const partial:TestTemplate = record;
         delete(partial.ID)
         return this.put(SimpleResultsDB.TEST_RESULTS_OBJECT_STORE, partial as SimpleResultsDBRecord);
     }

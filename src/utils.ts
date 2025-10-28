@@ -2,7 +2,7 @@ import {isNull, isNumber, isUndefined} from "json-2-csv/lib/utils";
 
 import {RefObject} from "react";
 import {ProtocolSegment} from "src/app-settings-types.ts";
-import {ParticleConcentrationEvent} from "src/portacount-client-8020.ts";
+import {ParticleCountStats} from "src/particle-count-stats.ts";
 
 import {ConnectionStatus, SampleSource} from "src/portacount/porta-count-state.ts";
 import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
@@ -281,16 +281,16 @@ export function feToFf(filtrationEfficiency: number) {
 }
 
 export function formatFe(efficiency: number): string {
-    if(efficiency>99.99) {
+    if (efficiency > 99.99) {
         return ">99.99"
     }
-    if(efficiency>99.9) {
+    if (efficiency > 99.9) {
         return efficiency.toFixed(2)
     }
-    if(efficiency>90) {
+    if (efficiency > 90) {
         return efficiency.toFixed(1)
     }
-    if(efficiency>0) {
+    if (efficiency > 0) {
         return efficiency.toFixed(0)
     }
     return "?"
@@ -506,22 +506,30 @@ export function getMaskParticleCountForExercise(exerciseNum: number, record: Sim
     return (record.ParticleCounts ?? []).filter((particleCount) => particleCount.type === SampleSource.MASK).at(exerciseNum - 1)
 }
 
-export function calculateSegmentConcentrationAndStddev(segment: ProtocolSegment) {
-    // portacount seems to return a minimum value of 0.01 here, so we'll do the same
-    const concentration = Math.max(0.01, segment.data.reduce((sum, currentValue: ParticleConcentrationEvent) => sum + currentValue.concentration, 0) / segment.data.length);
-
-    // https://en.wikipedia.org/wiki/Standard_deviation#Rapid_calculation_methods
-    const [, q] = segment.data.map((pce) => pce.concentration)
+export function calcStats(values: number[]): ParticleCountStats {
+    // todo: optionally exclude invalid values
+    const [, q] = values
         .reduce(([a, q], xk, k) => {
-            const ak = a + (xk - a) / (k+1);
+            const ak = a + (xk - a) / (k + 1);
             const qk = q + (xk - a) * (xk - ak);
             return [ak, qk]
         }, [0, 0]);
 
-    const variance = q / segment.data.length;
+    const variance = q / values.length;
     const stddev = Math.sqrt(variance);
+    const mean = values.reduce((sum, val) => sum + val, 0) / values.length
+    return {mean: mean, stddev: stddev, num: values.length}
+}
+
+export function calculateSegmentConcentrationAndStddev(segment: ProtocolSegment) {
+    // portacount seems to return a minimum value of 0.01 here, so we'll do the same
+    const {stddev, mean} = calcStats(segment.data.map((pce) => pce.concentration));
+
     // round concentration numbers > 10, otherwise limit to 2 decimal places
-    return {average: concentration > 10 ? Math.round(concentration) : Number(concentration.toFixed(2)), stddev: stddev};
+    return {
+        average: mean > 10 ? Math.round(mean) : Number(Math.max(0.01, mean).toFixed(2)),
+        stddev: stddev
+    };
 }
 
 export function calculateSegmentConcentration(segment: ProtocolSegment): number {

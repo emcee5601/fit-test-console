@@ -2,16 +2,14 @@ import {AppSettings, AppSettingType, ValidSettings} from "src/app-settings-types
 import {defaultConfigManager} from "src/config/config-context.tsx";
 import {ConfigListener} from "src/config/config-manager.ts";
 import {getStageDuration} from "src/protocol-executor/utils.ts";
-import {JSONContent} from "vanilla-jsoneditor";
+import {validateProtocols} from "src/protocol-validator.ts";
 import {DataSource} from "./data-source.ts";
 import {
-    ProtocolDefinitions,
-    StandardizedProtocolDefinitions,
-    standardizeProtocolDefinitions,
+    StandardizedProtocolDefinitions, standardizeProtocolDefinitions,
     StandardProtocolDefinition,
     StandardStageDefinition
 } from "./simple-protocol.ts";
-import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
+import {TestTemplate} from "./SimpleResultsDB.ts";
 
 function isSessionOnlySetting(setting: ValidSettings) {
     return setting.toLowerCase().startsWith("so-")
@@ -98,7 +96,7 @@ class AppSettingsContext {
     }
 
 
-    getDefault<T extends AppSettingType>(setting: AppSettings): T {
+    getDefault<T extends AppSettingType>(setting: ValidSettings): T {
         return defaultConfigManager.getDefaultValue<T>(setting);
     }
 
@@ -184,24 +182,25 @@ class AppSettingsContext {
         return Object.keys(this.protocolDefinitions)
     }
 
+    resetToDefault<T>(setting: ValidSettings):T {
+        console.debug(`resetting setting ${setting} to defaults`)
+        const defaultValue = this.getDefault<T>(setting);
+        this.saveSetting(setting, defaultValue)
+        return defaultValue
+    }
+
     private get protocolDefinitions(): StandardizedProtocolDefinitions {
         // todo: cache these. for now, fetch them every time
-        const baseProtocols: StandardizedProtocolDefinitions = standardizeProtocolDefinitions(this.getSetting<JSONContent>(AppSettings.PROTOCOL_INSTRUCTION_SETS).json as ProtocolDefinitions);
-
-        return baseProtocols;
+        const protocolDefs = standardizeProtocolDefinitions(this.getSetting<StandardizedProtocolDefinitions>(AppSettings.PROTOCOL_INSTRUCTION_SETS));
+        if (validateProtocols(protocolDefs)) {
+            return protocolDefs;
+        }
+        console.debug("could not parse protocols from settings, resetting to default")
+        return this.resetToDefault(AppSettings.PROTOCOL_INSTRUCTION_SETS)
     }
 
-    // this isn't used anywhere yet
-    private set protocolDefinitions(value: ProtocolDefinitions) {
-        this.saveSetting(AppSettings.PROTOCOL_INSTRUCTION_SETS, {"json": value})
-    }
-
-    public getTestTemplate(): Partial<SimpleResultsDBRecord> {
+    public getTestTemplate(): Readonly<TestTemplate> {
         return this.getSetting(AppSettings.TEST_TEMPLATE)
-    }
-
-    setTestTemplate(value: Partial<SimpleResultsDBRecord>) {
-        this.saveSetting(AppSettings.TEST_TEMPLATE, value)
     }
 
     /**
@@ -273,7 +272,7 @@ class AppSettingsContext {
         const stages: StandardStageDefinition[] = this.protocolDefinitions[protocolName] ?? [];
         const currentStage = stages[currentStageIndex];
         const currentStageElapsedMs = Date.now() - stageStartTime
-        const msRemaining = stages.filter((_stage, index) => currentStageIndex < index).reduce((result, stage) => result + 1000*getStageDuration(stage), Math.max(0, 1000*getStageDuration(currentStage) - currentStageElapsedMs))
+        const msRemaining = stages.filter((_stage, index) => currentStageIndex < index).reduce((result, stage) => result + 1000 * getStageDuration(stage), Math.max(0, 1000 * getStageDuration(currentStage) - currentStageElapsedMs))
         return msRemaining;
     }
 }

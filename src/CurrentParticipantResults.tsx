@@ -1,12 +1,12 @@
 import {useCallback, useContext, useEffect, useState} from "react";
 import {AppContext} from "src/app-context.ts";
-import {useSetting} from "src/use-setting.ts";
-import {RESULTS_DB, SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
+import {AppSettings, AppSettingType} from "src/app-settings-types.ts";
 import {SettingsListener} from "src/app-settings.ts";
 import {LabeledSection} from "src/LabeledSection.tsx";
-import {ResultsTable} from "src/ResultsTable.tsx";
-import {AppSettings, AppSettingType} from "src/app-settings-types.ts";
 import {ManualEntryButton} from "src/ManualEntryButton.tsx";
+import {ResultsTable} from "src/ResultsTable.tsx";
+import {RESULTS_DB, SimpleResultsDBRecord, TestTemplate} from "src/SimpleResultsDB.ts";
+import {useSetting} from "src/use-setting.ts";
 
 export function CurrentParticipantResults() {
     const appContext = useContext(AppContext)
@@ -18,7 +18,7 @@ export function CurrentParticipantResults() {
     }, []);
 
     const [selectedProtocol] = useSetting<string>(AppSettings.SELECTED_PROTOCOL)
-    const [testTemplate] = useSetting<Partial<SimpleResultsDBRecord>>(AppSettings.TEST_TEMPLATE)
+    const [testTemplate] = useSetting<TestTemplate>(AppSettings.TEST_TEMPLATE)
     const [currentParticipantResults, setCurrentParticipantResults] = useState([] as SimpleResultsDBRecord[])
 
     useEffect(() => {

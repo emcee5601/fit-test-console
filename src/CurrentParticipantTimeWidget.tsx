@@ -1,18 +1,18 @@
 /**
  * Display the amount of time with the current participant. Continous time only.
  */
-import {formatDuration} from "src/utils.ts";
-import {useSetting} from "src/use-setting.ts";
-import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
 import {HTMLAttributes, useState} from "react";
-import {useTimingSignal} from "src/timing-signal.ts";
 import {IoPersonSharp} from "react-icons/io5";
 import {AppSettings} from "src/app-settings-types.ts";
+import {TestTemplate} from "src/SimpleResultsDB.ts";
+import {useTimingSignal} from "src/timing-signal.ts";
+import {useSetting} from "src/use-setting.ts";
+import {formatDuration} from "src/utils.ts";
 
 export function CurrentParticipantTimeWidget({useIcons = false, ...props}: {
     useIcons?: boolean
 } & HTMLAttributes<HTMLDivElement>) {
-    const [testTemplate] = useSetting<Partial<SimpleResultsDBRecord>>(AppSettings.TEST_TEMPLATE)
+    const [testTemplate] = useSetting<TestTemplate>(AppSettings.TEST_TEMPLATE)
     const [minutesPerParticipant] = useSetting<number>(AppSettings.MINUTES_ALLOTTED_PER_PARTICIPANT)
     const [elapsedTimeString, setElapsedTimeString] = useState<string>("")
 

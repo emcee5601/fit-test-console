@@ -1,17 +1,21 @@
 /**
  * Collects particle counts in the background.
  */
+import {AppSettings} from "src/app-settings-types.ts";
+import {APP_SETTINGS_CONTEXT} from "src/app-settings.ts";
+import {NO_PARTICLE_COUNT_STATS, ParticleCountStats} from "src/particle-count-stats.ts";
 import {ParticleConcentrationEvent, PortaCountListener} from "src/portacount-client-8020.ts";
 import {SampleSource} from "src/portacount/porta-count-state.ts";
-import {AppSettings, ValidSettings} from "src/app-settings-types.ts";
-import {APP_SETTINGS_CONTEXT} from "src/app-settings.ts";
+import {calcStats} from "src/utils.ts";
+
+type AmbientOrMask = AppSettings.CURRENT_MASK_AVERAGE | AppSettings.CURRENT_AMBIENT_AVERAGE;
 
 export class ParticleSampleCollector implements PortaCountListener {
     static readonly DEFAULT_MAX_AGE_MS = 60 * 1000; // 1 minute
     private readonly history: ParticleConcentrationEvent[] = []
     private readonly source: SampleSource
     private readonly maxAgeMs: number;
-    private readonly settingName: ValidSettings;
+    private readonly settingName: AmbientOrMask;
     private nextSampleTimeMs: number = 0;
 
     constructor(source: SampleSource, maxAgeMs: number = ParticleSampleCollector.DEFAULT_MAX_AGE_MS) {
@@ -22,15 +26,16 @@ export class ParticleSampleCollector implements PortaCountListener {
 
     particleConcentrationReceived(concentrationEvent: ParticleConcentrationEvent): void {
         const now = Date.now();
-        if(concentrationEvent.sampleSource === this.source && now > this.nextSampleTimeMs) {
+        if (concentrationEvent.sampleSource === this.source && now > this.nextSampleTimeMs) {
             this.history.push(concentrationEvent);
             const index = this.history.findLastIndex((event) => now - event.timestamp > this.maxAgeMs)
-            if(index > -1 ) {
+            if (index > -1) {
                 // prune
-                // console.debug(new Date(), `pruning ${this.source} at index ${index}, history length is `, this.history.length)
-                this.history.splice(0,index+1);
+                // console.debug(new Date(), `pruning ${this.source} at index ${index}, history length is `,
+                // this.history.length)
+                this.history.splice(0, index + 1);
             }
-            APP_SETTINGS_CONTEXT.saveSetting(this.settingName, this.getAvg(10*60*1000, 0)) // try to get all the data
+            APP_SETTINGS_CONTEXT.saveSetting(this.settingName, this.getStats(10 * 60 * 1000, 0))
         }
     }
 
@@ -39,13 +44,13 @@ export class ParticleSampleCollector implements PortaCountListener {
         return this.history.filter((event) => now - event.timestamp < eventMaxAgeMs);
     }
 
-    getAvg(eventMaxAgeMs: number, minSamples: number = 5): number {
+    getStats(eventMaxAgeMs: number, minSamples: number = 5): ParticleCountStats {
         const events = this.getEvents(eventMaxAgeMs)
-        if(events.length < minSamples) {
+        if (events.length < minSamples) {
             console.debug(`${this.source} collector not enough samples for ${minSamples} samples with max age ${eventMaxAgeMs}ms; only have ${events.length} samples.`)
-            return -1
+            return NO_PARTICLE_COUNT_STATS
         }
-        return events.reduce((total, cur) => total + cur.concentration, 0) / events.length
+        return calcStats(events.map((pce) => pce.concentration))
     }
 
     isPurging(): boolean {
@@ -53,10 +58,14 @@ export class ParticleSampleCollector implements PortaCountListener {
     }
 
     reset(purgeDurationMs: number = 0) {
-        if(purgeDurationMs) {
+        if (purgeDurationMs) {
             this.nextSampleTimeMs = Date.now() + purgeDurationMs
         }
         this.history.splice(0);
-        APP_SETTINGS_CONTEXT.saveSetting(this.settingName, NaN)
+        this.resetStats(this.settingName);
+    }
+
+    private resetStats(settingName: AmbientOrMask) {
+        APP_SETTINGS_CONTEXT.saveSetting(settingName, NO_PARTICLE_COUNT_STATS)
     }
 }

@@ -1,4 +1,4 @@
-import {RESULTS_DB, SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
+import {RESULTS_DB, SimpleResultsDBRecord, TestTemplate} from "./SimpleResultsDB.ts";
 import {deepCopy} from "json-2-csv/lib/utils";
 import stringifyDeterministically from "json-stringify-deterministic";
 import {Table} from "@tanstack/react-table";
@@ -9,7 +9,7 @@ import {downloadData} from "src/download-helper.ts";
  * IDs are unique only per instance of the app.
  * @param record
  */
-export function getComparableRecord(record: Partial<SimpleResultsDBRecord>) {
+export function getComparableRecord(record: TestTemplate) {
     return stringifyDeterministically(sanitizeRecord(record));
 }
 
@@ -19,7 +19,7 @@ export function getComparableRecord(record: Partial<SimpleResultsDBRecord>) {
  * @param left
  * @param right
  */
-export function isDuplicateRecord(left: Partial<SimpleResultsDBRecord>, right: Partial<SimpleResultsDBRecord>) {
+export function isDuplicateRecord(left: TestTemplate, right: TestTemplate) {
     return left.Time === right.Time
         && (left.ID === right.ID
             || (
@@ -34,7 +34,7 @@ export function isDuplicateRecord(left: Partial<SimpleResultsDBRecord>, right: P
  * Strip the metadata portion of the record: ID, import indicator
  * @param record
  */
-export function sanitizeRecord(record: Partial<SimpleResultsDBRecord>) {
+export function sanitizeRecord(record: TestTemplate) {
     const partial = deepCopy(record);
     delete partial.ID;
     delete partial["source"];

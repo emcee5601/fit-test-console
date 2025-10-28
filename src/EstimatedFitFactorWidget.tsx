@@ -6,6 +6,7 @@ import {TbLeaf2} from "react-icons/tb";
 import "src/estimated-fit-factor-widget.css"
 import {AppContext} from "src/app-context.ts";
 import {AppSettings} from "src/app-settings-types.ts";
+import {ParticleCountStats} from "src/particle-count-stats.ts";
 import {ProtocolExecutionState} from "src/protocol-execution-state.ts";
 import {useScoreBasedColors} from "src/use-score-based-colors.ts";
 import {useSetting} from "src/use-setting.ts";
@@ -16,8 +17,8 @@ export function EstimatedFitFactorWidget() {
     const appContext = useContext(AppContext);
     const [protocolExecutionState] = useSetting<ProtocolExecutionState>(AppSettings.PROTOCOL_EXECUTION_STATE)
     const divRef = useRef<HTMLDivElement>(null);
-    const [currentAmbientAverage] = useSetting<number>(AppSettings.CURRENT_AMBIENT_AVERAGE)
-    const [currentMaskAverage] = useSetting<number>(AppSettings.CURRENT_MASK_AVERAGE)
+    const [currentAmbientAverage] = useSetting<ParticleCountStats>(AppSettings.CURRENT_AMBIENT_AVERAGE)
+    const [currentMaskAverage] = useSetting<ParticleCountStats>(AppSettings.CURRENT_MASK_AVERAGE)
     const [score, setScore] = useState<number>(calculateScore(currentAmbientAverage, currentMaskAverage))
 
     useEffect(() => {
@@ -28,8 +29,8 @@ export function EstimatedFitFactorWidget() {
 
     useScoreBasedColors(divRef, score);
 
-    function calculateScore(ambient: number, mask: number) {
-        return ambient / Math.max(0.01, mask);
+    function calculateScore(ambient: ParticleCountStats, mask: ParticleCountStats) {
+        return ambient.mean / Math.max(0.01, mask.mean);
     }
 
     function maybeResetAmbient() {
@@ -56,11 +57,14 @@ export function EstimatedFitFactorWidget() {
         }
     }
 
+    const stddev = Math.round(100*currentAmbientAverage.stddev/currentAmbientAverage.mean);
     return (
         <div id={"estimated-fit-factor"} ref={divRef} className={"eff-container thin-border"} style={{height: "auto"}}>
-            <div className={"eff-item"} onClick={maybeResetAmbient}><TbLeaf2/>{isAmbientPurging() ? <MdOutlinePending /> : formatInteger4(currentAmbientAverage)}
+            {/*todo: show how old the oldest datapoint is*/}
+            <div className={"eff-item"} onClick={maybeResetAmbient}><TbLeaf2/>{isAmbientPurging() ? <MdOutlinePending /> : formatInteger4(currentAmbientAverage.mean)} n={currentAmbientAverage.num} &sigma;={isNaN(stddev)  ? "?": `${stddev}%`}
             </div>
-            <div className={"eff-item"} onClick={maybeResetMask}><PiFaceMask/>{isMaskPurging() ? <MdOutlinePending /> : formatInteger4(currentMaskAverage)}</div>
+            <div className={"eff-item"} onClick={maybeResetMask}><PiFaceMask/>{isMaskPurging() ? <MdOutlinePending /> : formatInteger4(currentMaskAverage.mean)} n={currentMaskAverage.num}
+            </div>
             <div className={"eff-item"}><AiTwotoneExperiment/>{formatFitFactor(score)}</div>
             <div className={"percentage"}>{convertFitFactorToFiltrationEfficiency(score)}%</div>
         </div>

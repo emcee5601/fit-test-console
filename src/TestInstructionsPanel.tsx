@@ -3,6 +3,7 @@ import {AppSettings} from "src/app-settings-types.ts";
 import {useAnimationFrame} from "src/assets/use-animation-frame.ts";
 import {ProtocolExecutionState} from "src/protocol-execution-state.ts";
 import {getStageDuration} from "src/protocol-executor/utils.ts";
+import {TestTemplate} from "src/SimpleResultsDB.ts";
 import {updateBackgroundFillProgress} from "src/update-background-fill-progress.ts";
 import {useSetting} from "src/use-setting.ts";
 import {AppContext} from "./app-context.ts";
@@ -19,6 +20,7 @@ export function TestInstructionsPanel() {
     const [stageStartTime] = useSetting<number>(AppSettings.STAGE_START_TIME)
     const [selectedProtocol] = useSetting<string>(AppSettings.SELECTED_PROTOCOL)
     const [protocolExecutionState] = useSetting<ProtocolExecutionState>(AppSettings.PROTOCOL_EXECUTION_STATE)
+    const [testTemplate] = useSetting<TestTemplate>(AppSettings.TEST_TEMPLATE)
 
     useEffect(() => {
         if (ref.current) {
@@ -27,6 +29,16 @@ export function TestInstructionsPanel() {
     }, [fontSizeSliderValue]);
 
     useEffect(() => {
+        console.debug(`protocolExecutionState ${protocolExecutionState}`)
+        if(protocolExecutionState === "Idle") {
+            // done executing, show final result
+            console.debug("test template is ", testTemplate)
+            if(testTemplate.Final) {
+                setInstructions(`Test complete. Final score is ${testTemplate.Final}.`)
+                setStageTitle("Summary")
+            }
+            return;
+        }
         const protocolDefinition = appContext.settings.getProtocolDefinition(selectedProtocol);
         const stage = protocolDefinition[currentStageIndex]
         if(stage.instructions) {
@@ -35,11 +47,10 @@ export function TestInstructionsPanel() {
             console.warn(`no instructions for protocol ${selectedProtocol} stage ${currentStageIndex}`)
             setInstructions("-")
         }
-        // todo: set instructions to final score when available
         if(stage.title) {
             setStageTitle(stage.title)
         }
-    }, [currentStageIndex, selectedProtocol]);
+    }, [currentStageIndex, selectedProtocol, protocolExecutionState, testTemplate]);
 
 
     useAnimationFrame(() => {

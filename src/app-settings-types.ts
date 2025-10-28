@@ -1,9 +1,10 @@
 import {DataSource} from "src/data-source.ts";
+import {NO_PARTICLE_COUNT_STATS} from "src/particle-count-stats.ts";
 import {ParticleConcentrationEvent} from "src/portacount-client-8020.ts";
 import {Activity, ConnectionStatus, SampleSource} from "src/portacount/porta-count-state.ts";
 import {SegmentState} from "src/protocol-executor/segment-state.ts";
 import {StandardStageDefinition} from "src/simple-protocol.ts";
-import {SimpleResultsDBRecord} from "src/SimpleResultsDB.ts";
+import {TestTemplate} from "src/SimpleResultsDB.ts";
 
 /**
  * this is for convenience. code outside of this module should use AppSettings enum.
@@ -93,15 +94,6 @@ export enum AppSettings {
  * Settings can be of these types.
  */
 export type AppSettingType = unknown
-// boolean
-// | string
-// | string[]
-// | number
-// | JSONContent
-// | SortingState
-// | ColumnFiltersState
-// | Partial<SimpleResultsDBRecord>
-// | Date;
 
 /**
  * Settings names and default values.
@@ -126,13 +118,97 @@ export const AppSettingsDefaults = {
     "show-external-control": false,
     "baud-rate": 1200,
     "protocol-instruction-sets": {
-        "json": {
-            "w1": [
-                "Normal breathing. Breathe normally",
-                "Heavy breathing. Take deep breaths.",
-                [
-                    "Jaw movement.",
-                    "Read the rainbow passage:",
+        "w1": [
+            "Normal breathing. Breathe normally",
+            "Heavy breathing. Take deep breaths.",
+            [
+                "Jaw movement.",
+                "Read the rainbow passage:",
+                "When the sunlight strikes raindrops in the air, they act as a prism and form a rainbow.",
+                "The rainbow is a division of white light into many beautiful colors.",
+                "These take the shape of a long round arch, with its path high above,",
+                "and its two ends apparently beyond the horizon.",
+                "There is, according to legend, a boiling pot of gold at one end.",
+                "People look, but no one ever finds it.",
+                "When a man looks for something beyond his reach,",
+                "his friends say he is looking for the pot of gold at the end of the rainbow."
+            ].join(" "),
+            "Head movement. Look up, down, left, and right. Repeat."
+        ],
+        "Modified CNC (B2)": [
+            // swap order bending over and talking
+            {
+                "title": "Prep",
+                "instructions": "Breathe normally while we sample the air.",
+                "ambient_purge": 4,
+                "ambient_sample": 20,
+                "mask_purge": 0,
+                "mask_sample": 0
+            },
+            {
+                "title": "Talking",
+                "instructions": [
+                    "Talk out loud slowly, loud enough to be heard by the test administrator.",
+                    "Or count backwards from 100.",
+                ].join(" "),
+                "ambient_purge": 0,
+                "ambient_sample": 0,
+                "mask_purge": 4,
+                "mask_sample": 30
+            },
+            {
+                "title": "Bending over",
+                "instructions": "Bend at the waist as if going to touch your toes. Inhale 2 times at the bottom.",
+                "ambient_purge": 0,
+                "ambient_sample": 0,
+                "mask_purge": 4,
+                "mask_sample": 30
+            },
+            {
+                "title": "Head side-to-side",
+                "instructions": "Slowly turn head from side to side. Inhale 2 times at each extreme.",
+                "ambient_purge": 0,
+                "ambient_sample": 0,
+                "mask_purge": 4,
+                "mask_sample": 30
+            },
+            {
+                "title": "Head up-and-down",
+                "instructions": "Slowly move head up and down. Inhale 2 times at each extreme.",
+                "ambient_purge": 0,
+                "ambient_sample": 0,
+                "mask_purge": 4,
+                "mask_sample": 30
+            },
+            {
+                "title": "Finalize",
+                "instructions": "Breathe normally while we sample the air again.",
+                "ambient_purge": 4,
+                "ambient_sample": 9,
+                "mask_purge": 0,
+                "mask_sample": 0
+            }
+        ],
+        "Modified CNC (B)": [
+            {
+                "instructions": "prep",
+                "ambient_purge": 4,
+                "ambient_sample": 20,
+                "mask_purge": 0,
+                "mask_sample": 0
+            },
+            {
+                "instructions": "Bending over. Bend at the waist as if going to touch your toes. Inhale 2 times at the bottom.",
+                "ambient_purge": 0,
+                "ambient_sample": 0,
+                "mask_purge": 4,
+                "mask_sample": 30
+            },
+            {
+                "instructions": ["Talking.",
+                    "Talk out loud slowly and loud enough to be heard by the test administrator.",
+                    "Count backwards from 100,",
+                    "or read the Rainbow Passage:",
                     "When the sunlight strikes raindrops in the air, they act as a prism and form a rainbow.",
                     "The rainbow is a division of white light into many beautiful colors.",
                     "These take the shape of a long round arch, with its path high above,",
@@ -142,156 +218,70 @@ export const AppSettingsDefaults = {
                     "When a man looks for something beyond his reach,",
                     "his friends say he is looking for the pot of gold at the end of the rainbow."
                 ].join(" "),
-                "Head movement. Look up, down, left, and right. Repeat."
-            ],
-            "Modified CNC (B2)": [
-                // swap order bending over and talking
-                {
-                    "title": "Prep",
-                    "instructions": "Breathe normally while we sample the air.",
-                    "ambient_purge": 4,
-                    "ambient_sample": 20,
-                    "mask_purge": 0,
-                    "mask_sample": 0
-                },
-                {
-                    "title": "Talking",
-                    "instructions": [
-                        "Talk out loud slowly, loud enough to be heard by the test administrator.",
-                        "Or count backwards from 100.",
-                    ].join(" "),
-                    "ambient_purge": 0,
-                    "ambient_sample": 0,
-                    "mask_purge": 4,
-                    "mask_sample": 30
-                },
-                {
-                    "title": "Bending over",
-                    "instructions": "Bend at the waist as if going to touch your toes. Inhale 2 times at the bottom.",
-                    "ambient_purge": 0,
-                    "ambient_sample": 0,
-                    "mask_purge": 4,
-                    "mask_sample": 30
-                },
-                {
-                    "title": "Head side-to-side",
-                    "instructions": "Slowly turn head from side to side. Inhale 2 times at each extreme.",
-                    "ambient_purge": 0,
-                    "ambient_sample": 0,
-                    "mask_purge": 4,
-                    "mask_sample": 30
-                },
-                {
-                    "title": "Head up-and-down",
-                    "instructions": "Slowly move head up and down. Inhale 2 times at each extreme.",
-                    "ambient_purge": 0,
-                    "ambient_sample": 0,
-                    "mask_purge": 4,
-                    "mask_sample": 30
-                },
-                {
-                    "title": "Finalize",
-                    "instructions": "Breathe normally while we sample the air again.",
-                    "ambient_purge": 4,
-                    "ambient_sample": 9,
-                    "mask_purge": 0,
-                    "mask_sample": 0
-                }
-            ],
-            "Modified CNC (B)": [
-                {
-                    "instructions": "prep",
-                    "ambient_purge": 4,
-                    "ambient_sample": 20,
-                    "mask_purge": 0,
-                    "mask_sample": 0
-                },
-                {
-                    "instructions": "Bending over. Bend at the waist as if going to touch your toes. Inhale 2 times at the bottom.",
-                    "ambient_purge": 0,
-                    "ambient_sample": 0,
-                    "mask_purge": 4,
-                    "mask_sample": 30
-                },
-                {
-                    "instructions": ["Talking.",
-                        "Talk out loud slowly and loud enough to be heard by the test administrator.",
-                        "Count backwards from 100,",
-                        "or read the Rainbow Passage:",
-                        "When the sunlight strikes raindrops in the air, they act as a prism and form a rainbow.",
-                        "The rainbow is a division of white light into many beautiful colors.",
-                        "These take the shape of a long round arch, with its path high above,",
-                        "and its two ends apparently beyond the horizon.",
-                        "There is, according to legend, a boiling pot of gold at one end.",
-                        "People look, but no one ever finds it.",
-                        "When a man looks for something beyond his reach,",
-                        "his friends say he is looking for the pot of gold at the end of the rainbow."
-                    ].join(" "),
-                    "ambient_purge": 0,
-                    "ambient_sample": 0,
-                    "mask_purge": 4,
-                    "mask_sample": 30
-                },
-                {
-                    "instructions": "Head side-to-side. Slowly turn head from side to side. Inhale 2 times at each extreme.",
-                    "ambient_purge": 0,
-                    "ambient_sample": 0,
-                    "mask_purge": 4,
-                    "mask_sample": 30
-                },
-                {
-                    "instructions": "Head up-and-down. Slowly move head up and down. Inhale 2 times at each extreme.",
-                    "ambient_purge": 0,
-                    "ambient_sample": 0,
-                    "mask_purge": 4,
-                    "mask_sample": 30
-                },
-                {
-                    "instructions": "finalize",
-                    "ambient_purge": 4,
-                    "ambient_sample": 9,
-                    "mask_purge": 0,
-                    "mask_sample": 0
-                }
-            ],
-            "osha": [
-                "Normal breathing. In a normal standing position, without talking, the subject shall breathe normally",
-                "Deep breathing. In a normal standing position, the subject shall breathe slowly and deeply, taking caution so as not to hyperventilate",
-                "Turning head side to side. Standing in place, the subject shall slowly turn his/her head from side to side between the extreme positions on each side. The head shall be held at each extreme momentarily so the subject can inhale at each side.",
-                "Moving head up and down. Standing in place, the subject shall slowly move his/her head up and down. The subject shall be instructed to inhale in the up position (i.e., when looking toward the ceiling).",
-                "Talking. The subject shall talk out loud slowly and loud enough so as to be heard clearly by the test conductor. The subject can read from a prepared text such as the Rainbow Passage, count backward from 100, or recite a memorized poem or song.",
-                "Grimace. The test subject shall grimace by smiling or frowning. (This applies only to QNFT testing; it is not performed for QLFT)",
-                "Bending over. The test subject shall bend at the waist as if he/she were to touch his/her toes. Jogging in place shall be substituted for this exercise in those test environments such as shroud type QNFT or QLFT units that do not permit bending over at the waist.",
-                "Normal breathing. Same as exercise (1)."
-            ],
-            "Singing": [
-                {
-                    "ambient_purge": 4,
-                    "ambient_sample": 20,
-                    "instructions": "prep",
-                    "mask_purge": 0,
-                    "mask_sample": 0
-                },
-                {
-                    "ambient_purge": 0,
-                    "ambient_sample": 0,
-                    "instructions": "Sing!",
-                    "mask_purge": 4,
-                    "mask_sample": 240
-                },
-                {
-                    "ambient_purge": 4,
-                    "ambient_sample": 9,
-                    "instructions": "finalize",
-                    "mask_purge": 0,
-                    "mask_sample": 0
-                }
-            ],
-        }
+                "ambient_purge": 0,
+                "ambient_sample": 0,
+                "mask_purge": 4,
+                "mask_sample": 30
+            },
+            {
+                "instructions": "Head side-to-side. Slowly turn head from side to side. Inhale 2 times at each extreme.",
+                "ambient_purge": 0,
+                "ambient_sample": 0,
+                "mask_purge": 4,
+                "mask_sample": 30
+            },
+            {
+                "instructions": "Head up-and-down. Slowly move head up and down. Inhale 2 times at each extreme.",
+                "ambient_purge": 0,
+                "ambient_sample": 0,
+                "mask_purge": 4,
+                "mask_sample": 30
+            },
+            {
+                "instructions": "finalize",
+                "ambient_purge": 4,
+                "ambient_sample": 9,
+                "mask_purge": 0,
+                "mask_sample": 0
+            }
+        ],
+        "osha": [
+            "Normal breathing. In a normal standing position, without talking, the subject shall breathe normally",
+            "Deep breathing. In a normal standing position, the subject shall breathe slowly and deeply, taking caution so as not to hyperventilate",
+            "Turning head side to side. Standing in place, the subject shall slowly turn his/her head from side to side between the extreme positions on each side. The head shall be held at each extreme momentarily so the subject can inhale at each side.",
+            "Moving head up and down. Standing in place, the subject shall slowly move his/her head up and down. The subject shall be instructed to inhale in the up position (i.e., when looking toward the ceiling).",
+            "Talking. The subject shall talk out loud slowly and loud enough so as to be heard clearly by the test conductor. The subject can read from a prepared text such as the Rainbow Passage, count backward from 100, or recite a memorized poem or song.",
+            "Grimace. The test subject shall grimace by smiling or frowning. (This applies only to QNFT testing; it is not performed for QLFT)",
+            "Bending over. The test subject shall bend at the waist as if he/she were to touch his/her toes. Jogging in place shall be substituted for this exercise in those test environments such as shroud type QNFT or QLFT units that do not permit bending over at the waist.",
+            "Normal breathing. Same as exercise (1)."
+        ],
+        "Singing": [
+            {
+                "ambient_purge": 4,
+                "ambient_sample": 20,
+                "instructions": "prep",
+                "mask_purge": 0,
+                "mask_sample": 0
+            },
+            {
+                "ambient_purge": 0,
+                "ambient_sample": 0,
+                "instructions": "Sing!",
+                "mask_purge": 4,
+                "mask_sample": 240
+            },
+            {
+                "ambient_purge": 4,
+                "ambient_sample": 9,
+                "instructions": "finalize",
+                "mask_purge": 0,
+                "mask_sample": 0
+            }
+        ],
     },
     "selected-protocol": "w1",
     "keep-screen-awake": true,
-    "test-template": {} as Partial<SimpleResultsDBRecord>,
+    "test-template": {} as TestTemplate,
     "enable-simulator": false,
     "enable-auto-connect": true,
     "simulator-file-speed": 300, // baud
@@ -336,8 +326,8 @@ export const AppSettingsDefaults = {
     "so-connection-status-in-view": true,
     "so-activity": Activity.Disconnected,
     "so-zoom-instructions": false,
-    "so-current-ambient-average": NaN,
-    "so-current-mask-average": NaN,
+    "so-current-ambient-average": NO_PARTICLE_COUNT_STATS,
+    "so-current-mask-average": NO_PARTICLE_COUNT_STATS,
     "so-is-protocol-running": false,
     "so-connection-status": ConnectionStatus.DISCONNECTED,
     "so-protocol-execution-state": "Idle",

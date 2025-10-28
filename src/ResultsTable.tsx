@@ -29,7 +29,7 @@ import {DataCollector, DataCollectorListener} from "./data-collector.ts";
 import {ReactTableCsvExportWidget} from "./ReactTableCsvExportWidget.tsx";
 import {ReactTableQrCodeExportWidget} from "./ReactTableQrCodeExportWidget.tsx";
 import {ResultsTableColumnFilter} from "./ResultsTableColumnFilter.tsx";
-import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
+import {SimpleResultsDBRecord, TestTemplate} from "./SimpleResultsDB.ts";
 import {
     useEditableColumn,
     useEditableExerciseResultColumn,
@@ -232,7 +232,7 @@ export function ResultsTable({
     const [showSimulatorResults] = useSetting<boolean>(AppSettings.SHOW_SIMULATOR_RESULTS)
     const [showMaskPerfGraph] = useSetting<boolean>(AppSettings.SHOW_MASK_PERF_GRAPH)
     const [sorting, setSorting] = useSetting<SortingState>(columnSortingSettingKey)
-    const [testTemplate] = useSetting<Partial<SimpleResultsDBRecord>>(AppSettings.TEST_TEMPLATE)
+    const [testTemplate] = useSetting<TestTemplate>(AppSettings.TEST_TEMPLATE)
     const [columnVisibility, setColumnVisibility] = useState(hideColumns.reduce((result: {
         [key: string]: boolean
     }, column: string) => {

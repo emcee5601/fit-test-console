@@ -7,11 +7,11 @@ import {MaskSelectorWidget} from "src/MaskSelectorWidget.tsx";
 import {OverlayPanelWidget} from "src/OverlayPanelWidget.tsx";
 import {TestNotesSelectorWidget} from "src/TestNotesSelectorWidget.tsx";
 import {TodayParticipantSelectorWidget} from "src/TodayParticipantSelectorWidget.tsx";
-import {SimpleResultsDBRecord} from "./SimpleResultsDB.ts";
+import {TestTemplate} from "./SimpleResultsDB.ts";
 import {useSetting} from "./use-setting.ts";
 
 export function CurrentParticipantPanel() {
-    const [testTemplate, setTestTemplate, getTestTemplate] = useSetting<Partial<SimpleResultsDBRecord>>(AppSettings.TEST_TEMPLATE)
+    const [testTemplate, setTestTemplate, getTestTemplate] = useSetting<TestTemplate>(AppSettings.TEST_TEMPLATE)
 
     function updateCurrentParticipant(value: string) {
         value = value.trim() // strip extraneous spaces
@@ -31,7 +31,7 @@ export function CurrentParticipantPanel() {
         updateTestTemplate({Notes: value});
     }
 
-    function updateTestTemplate(props: Partial<SimpleResultsDBRecord>) {
+    function updateTestTemplate(props: TestTemplate) {
         // propagate changes to settings (don't edit testTemplate directly since it's passed as reference from settings)
         const newTemplate = {}
         // get the realtime value of template here since changes otherwise propagate via useState is too slow.

@@ -1,5 +1,6 @@
 import {AppSettings, AppSettingType, ProtocolSegment, ValidSettings} from "src/app-settings-types.ts";
 import {APP_SETTINGS_CONTEXT} from "src/app-settings.ts";
+import {NO_PARTICLE_COUNT_STATS, ParticleCountStats} from "src/particle-count-stats.ts";
 import {ParticleSampleCollector} from "src/particle-sample-collector.ts";
 import {ControlSource, SampleSource} from "src/portacount/porta-count-state.ts";
 import {ProtocolExecutionState} from "src/protocol-execution-state.ts";
@@ -15,7 +16,11 @@ import {ProtocolExecutorListener} from "src/protocol-executor/protocol-executor-
 import {SegmentState} from "src/protocol-executor/segment-state.ts";
 import {convertStagesToSegments} from "src/protocol-executor/utils.ts";
 import {SPEECH} from "src/speech.ts";
-import {avg, calculateSegmentConcentration, calculateSegmentConcentrationAndStddev} from "src/utils.ts";
+import {
+    avg,
+    calculateSegmentConcentration,
+    calculateSegmentConcentrationAndStddev
+} from "src/utils.ts";
 import {DataCollector} from "./data-collector.ts";
 import {ExternalController} from "./external-control.ts";
 import {ParticleConcentrationEvent, PortaCountClient8020, PortaCountListener} from "./portacount-client-8020.ts";
@@ -372,7 +377,7 @@ export class ProtocolExecutor {
         console.debug(`resuming at segment ${firstSegmentCurrentStage.index} stage ${firstSegmentCurrentStage.stageIndex}`)
         this.dataCollector.setInstructions(""); // reset this so we can detect a change in instructions and say them
                                                 // again
-        this.saveSetting(AppSettings.CURRENT_MASK_AVERAGE, NaN) // reset
+        this.saveSetting<ParticleCountStats>(AppSettings.CURRENT_MASK_AVERAGE, NO_PARTICLE_COUNT_STATS) // reset
         this.executeSegment(firstSegmentCurrentStage.index)
     }
 
