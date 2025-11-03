@@ -191,11 +191,17 @@ class AppSettingsContext {
 
     private get protocolDefinitions(): StandardizedProtocolDefinitions {
         // todo: cache these. for now, fetch them every time
-        const protocolDefs = standardizeProtocolDefinitions(this.getSetting<StandardizedProtocolDefinitions>(AppSettings.PROTOCOL_INSTRUCTION_SETS));
-        if (validateProtocols(protocolDefs)) {
-            return protocolDefs;
+        try {
+            const protocolDefs = standardizeProtocolDefinitions(this.getSetting<StandardizedProtocolDefinitions>(AppSettings.PROTOCOL_INSTRUCTION_SETS));
+            if (validateProtocols(protocolDefs)) {
+                return protocolDefs;
+            } else {
+                console.log("Protocol definitions could not be validated")
+            }
+        } catch (e) {
+            console.warn("Exception while parsing protocol definitions:", e)
         }
-        console.debug("could not parse protocols from settings, resetting to default")
+        console.debug("resetting protocol definitions to default")
         return this.resetToDefault(AppSettings.PROTOCOL_INSTRUCTION_SETS)
     }
 
