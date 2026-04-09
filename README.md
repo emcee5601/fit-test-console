@@ -2,6 +2,8 @@
 
 This app is deployed to https://emcee5601.github.io/fit-test-console/ whenever a version tag is created.
 
+It is a PWA and can be installed for offline use. Requires Chrome. Does not work on iOS (it doesn't support webserial).
+
 Older versions deploy here nightly: https://emcee5601.github.io/mftc-old/ ([source](https://github.com/emcee5601/mftc-old))
 
 
